@@ -2,21 +2,6 @@
 The Floppy drive piano project.  Using a Raspberry Pi, AVR Micro-controllers and MIDI to play tunes on 3.5" floppy drives. 
 
 
-- [FlopPiano](#floppiano)
-- [The 3.5" Floppy Drives (Firmware)](#the-35-floppy-drives-firmware)
-  - [Flashing the firmware to an ATtiny1604](#flashing-the-firmware-to-an-attiny1604)
-  - [Helpful Resources](#helpful-resources)
-  - [Notes on the I2C communication (Pi -\> Floppy Drive Firmware)](#notes-on-the-i2c-communication-pi---floppy-drive-firmware)
-    - [The 'FIRST' Byte](#the-first-byte)
-    - [The 'SECOND' Byte](#the-second-byte)
-    - [The 'THIRD' and 'FOURTH' byte](#the-third-and-fourth-byte)
-    - [I2C General Call](#i2c-general-call)
-- [The Raspberry Pi](#the-raspberry-pi)
-  - [Pi Setup](#pi-setup)
-  - [Drive Commander](#drive-commander)
-    - [Wiring](#wiring)
-    - [Usage](#usage)
-
 
 # The 3.5" Floppy Drives (Firmware)
 
@@ -160,5 +145,37 @@ $ python DriveCommader.py
 Then type the command "help" for more details
 
 
+# Scratch area
 
- 
+
+https://asciimatics.readthedocs.io/en/stable/
+
+
+https://en.wikipedia.org/wiki/Piano_key_frequencies
+
+
+midi
+
+https://mido.readthedocs.io/
+https://www.cs.cmu.edu/~music/cmsip/readings/davids-midi-spec.htm
+
+config and logging
+
+https://docs.python.org/3/library/configparser.html
+https://docs.python.org/3/library/logging.html#logging-levels
+
+
+keys
+
+https://python-evdev.readthedocs.io/en/latest/apidoc.html#module-evdev.ecodes
+
+
+threading
+
+https://stackoverflow.com/questions/27435284/multiprocessing-vs-multithreading-vs-asyncio
+
+
+
+midi over serial:
+
+https://www.youtube.com/watch?v=RbdNczYovHQ&list=PLdo8Yy3t6I_aRZ5J5XFXvSiB4jupAClke&index=4
