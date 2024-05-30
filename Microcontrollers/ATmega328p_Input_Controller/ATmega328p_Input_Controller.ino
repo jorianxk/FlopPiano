@@ -40,7 +40,7 @@
  * |----------------------------|-------------------------------------------|------------------------------------------------------------------|
  * |     input_states[0]        |               keys  1 -  8                | [KEY_01, KEY_02, KEY_03, KEY_04, KEY_05, KEY_06, KEY_07, KEY_08] | 
  * |     input_states[1]        |               keys  9 - 16                | [KEY_09, KEY_10, KEY_11, KEY_12, KEY_13, KEY_14, KEY_15, KEY_16] | 
- * |     input_states[2]        |               keys 17 - 24                | [KEY_17, KEY_18, KEY_19, KEY_20, KEY_21, KEY_22, KEY_23, KEY_18] | 
+ * |     input_states[2]        |               keys 17 - 24                | [KEY_17, KEY_18, KEY_19, KEY_20, KEY_21, KEY_22, KEY_23, KEY_24] | 
  * |     input_states[3]        |               keys 25 - 32                | [KEY_25, KEY_26, KEY_26, KEY_28, KEY_29, KEY_30, KEY_31, KEY_32] | 
  * |     input_states[4]        | key 33 & modulate(MOD) & extra/unused(UU) | [KEY_33,    MOD,     UU,     UU,     UU,     UU,     UU,     UU] | 
  * |     input_states[5]        |           pitch bend upper byte(PU)       | [PU_MSB,    ...,    ...,    ...,    ...,    ...,    ..., PU_LSB] |
@@ -59,7 +59,8 @@
 byte input_states[7] = {0b11110000, 0b00001111, 0b11001100, 0b00110011, 0b10000001, 0b10101010, 0b01010101};
 //TEST a var to hold time for a non-blocking delay - remove 
 long oldTime = 0;
-
+// Test adc value
+int pot = 0;
 
 void setup() {
   /*
@@ -82,11 +83,21 @@ void loop() {
    //------------------------------------TESTING CODE-------------------------------------------------//
    //Remove after writing the actual code
 
-   //A loop that flips all the bits in every byte
-   for(int idx =0; idx<sizeof(input_states); idx++){
+   //A loop that flips all the bits in the first four bytes
+   for(int idx =0; idx<5; idx++){
       input_states[idx] = (input_states[idx]) ^ (0b11111111); //Just flip all the bits 
    } 
 
+   input_states[5] = byte(pot >> 8);
+   input_states[6] = byte(pot);
+
+   pot++;
+
+   if(pot >= 1024){
+      pot = 0;
+   }
+   
+   
    //non-blocking delay for 100ms
    oldTime = millis();
 
