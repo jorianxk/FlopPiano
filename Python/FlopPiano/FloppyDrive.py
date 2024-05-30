@@ -26,30 +26,6 @@ class FloppyDrive:
     """
     A class the represents a floppy drive
     """
-
-    class CrashMode (Enum):
-        """
-        A Enum to hold Floppy drive crash modes
-
-        *  Crash mode - the two crash mode bits represent which crash mode the
-        *  drive will use. Two bit combined give four possible states:
-        *    MSB LSB
-        *     0   0  - Crash prevention OFF
-        *     0   1  - Crash prevention ON (BOW Mode)
-        *     1   0  - Crash prevention ON (FLIP Mode)
-        *     1   1  - Not used (results in crash prevention mode off if set)
-        *     
-        *     BOW mode: The drive will step until end of travel then flip
-        *     direction (like a violin bow changing direction at the end of a
-        *     bow stroke)
-        *     
-        *     FLIP mode: THe drive will flip direction after every step/pulse
-        """
-        OFF = 0b00
-        BOW = 0b01
-        FLIP = 0b10
-
-
     #clock speed of the attiny1604
     __clk_freq__ = 20000000 
     #prescaler setting on attin1604
