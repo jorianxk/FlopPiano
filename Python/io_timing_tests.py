@@ -163,8 +163,8 @@ def timingTest():
     print("Total Time:",(time.time()- totalTime)-2)   
 
 
-timingTest()
-#testAll()
+#timingTest()
+testAll()
 
 
 

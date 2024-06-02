@@ -22,7 +22,7 @@ bow = False
 transpose = -12
 #test_midi_file = 'Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
-test_midi_file = 'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'Testing_MIDI/bloody.mid'
 #test_midi_file = 'Testing_MIDI/brahms-symphony3-3-theme-piano-solo.mid'
 #test_midi_file = 'Testing_MIDI/castle_deep.mid'
@@ -451,9 +451,9 @@ def kill_all():
 
     for drive in kill_list:
         drive.enable = False
-        print(drive)
+        #print(drive)
         send(i2c_bus, drive, justCTRL=True)
-    
+    print("Stopped All drives")
 
 
 
@@ -536,6 +536,7 @@ if __name__ == '__main__':
     try:
         main()
     except:
+        #print(e)
         kill_all()
         
 

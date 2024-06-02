@@ -23,11 +23,7 @@ import time
 #   6 unused bits in the pitch bend upper byte(PU)(input_states[5]) in the 6 Most significant bits (MSBs), that we could use for expansion
 
 
-
-
-
-
-#TODO: fix comments
+#TODO: fix/add comments
 class FlopKeyboard:
 
     key_masks = (
@@ -82,7 +78,6 @@ class FlopKeyboard:
         0b00000001:'UNUSED_6'
         }
     )
-
 
     def __init__(self, *, i2c_bus:SMBus, i2c_address:int = 0x77, out_channel:int=0, midi_start_note = 35) -> None:
         self.bus = i2c_bus
@@ -174,7 +169,7 @@ class FlopKeyboard:
                             time = 0)        
 
         # If the key string is not 'UNUSED' or 'KEY_MOD' it must be a piano key
-        # state change. So the follwing code should generate 'note on' and 
+        # state change. So the following code should generate 'note on' and 
         # 'note off' midi messages depending on if the key was released or pressed
 
         if pressed:

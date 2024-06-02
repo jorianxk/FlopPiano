@@ -4,15 +4,7 @@ import mido
 import time
 
 
-
-
-midi_file = "Testing_MIDI/Beethoven-Moonlight-Sonata.mid"
-
 #print(mido.get_output_names())
-
-
-
-
 i2c_bus = SMBus(1) ## indicates /dev/ic2-1
 
 
@@ -229,6 +221,7 @@ def send(bus:SMBus,drive:FloppyDrive, justCTRL:bool=True)->None:
         bus.write_block_data(drive.address, CTRL, [])
     else:
         bus.write_block_data(drive.address, CTRL, [TOP[1], TOP[0]])
+
 def kill_all():
     kill_list =[FloppyDrive(address= 8),
                 FloppyDrive(address= 9),
