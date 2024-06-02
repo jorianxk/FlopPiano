@@ -19,7 +19,7 @@ import time
 # |     input_states[6]        |           pitch bend lower byte(PL)       | [PL_MSB,    ...,    ...,    ...,    ...,    ...,    ..., PL_LSB] |
 # |----------------------------|-------------------------------------------|------------------------------------------------------------------|
 #   
-# NOTE: If using a potientiometer for the pitch bend the ATmega328p only uses 10-bits for an analog read. That means that technically we have
+# NOTE: If using a potentiometer for the pitch bend the ATmega328p only uses 10-bits for an analog read. That means that technically we have
 #   6 unused bits in the pitch bend upper byte(PU)(input_states[5]) in the 6 Most significant bits (MSBs), that we could use for expansion
 
 
@@ -160,8 +160,8 @@ class FlopKeyboard:
         
         if key_code == 'KEY_MOD':
             #The modulation keystate changed,
-            #return the modulatation control change message (cc 1)
-            #with the value of the pressed state (on/pressed=1 and off/relased=0)
+            #return the modulation control change message (cc 1)
+            #with the value of the pressed state (on/pressed=1 and off/released=0)
             return Message('control_change',
                             channel = self.channel,
                             control = 1,
@@ -176,7 +176,7 @@ class FlopKeyboard:
             return Message('note_on', 
                             channel = self.channel,
                             note = self.key2MIDI[key_code],
-                            velocity = 1, #velociy must be >1 for note on 
+                            velocity = 1, #velocity must be >1 for note on 
                             time = 0)
         else:
             return Message('note_off',
