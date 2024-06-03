@@ -1,7 +1,5 @@
 from mido import Message
 from smbus import SMBus
-import time
-
 
 # We need 7 bytes to represent all the input states. The bytes are stored in an array to facilitate sending via I2C, and are cataloged below:                                                
 # 
@@ -24,7 +22,7 @@ import time
 
 
 #TODO: fix/add comments
-class FlopKeyboard:
+class FloppyKeyboard:
 
     key_masks = (
         { # Byte 1
@@ -83,7 +81,7 @@ class FlopKeyboard:
         self.bus = i2c_bus
         self.address = i2c_address
         self.channel = out_channel
-        self.key2MIDI = FlopKeyboard.genKey2MIDI(midi_start_note)
+        self.key2MIDI = FloppyKeyboard.genKey2MIDI(midi_start_note)
         self.lastState: list[int] = [0, 0, 0, 0, 0, 0 ,0] 
 
     def read(self)->list[Message]:
@@ -124,13 +122,13 @@ class FlopKeyboard:
             # print(f'Byte {byteNum+1}',"changes","{:08b}".format(changed_bits))
 
             #Now we have to compare which key was changed
-            for mask in FlopKeyboard.key_masks[byteNum]:
+            for mask in FloppyKeyboard.key_masks[byteNum]:
                 # If the mask & the changed bits is True, that key has changed
                 # and we need to figure out if was pressed or released
                 if (mask & changed_bits):
                     #If the mask & the newState is true then the key was Pressed
                     pressed = mask & newKeyStates[byteNum]
-                    message = self.key2msg(FlopKeyboard.key_masks[byteNum][mask], pressed)
+                    message = self.key2msg(FloppyKeyboard.key_masks[byteNum][mask], pressed)
                     messages.append(message)
  
         return messages
@@ -201,15 +199,12 @@ class FlopKeyboard:
         return key_map
               
 
-        
-
-        
-bus = SMBus(1) ## indicates /dev/ic2-1
-p = FlopKeyboard(i2c_bus=bus)
-
-while True:
-    for msg in p.read():
-        print(msg)
-    
-    print("-----------------------------")
-    time.sleep(0.3)
+# #Code to test       
+# if __name__ == '__main__':          
+#     bus = SMBus(1) ## indicates /dev/ic2-1
+#     p = FloppyKeyboard(i2c_bus=bus)
+#     while True:
+#         for msg in p.read():
+#             print(msg)        
+#         print("-----------------------------")
+#         time.sleep(0.3)
