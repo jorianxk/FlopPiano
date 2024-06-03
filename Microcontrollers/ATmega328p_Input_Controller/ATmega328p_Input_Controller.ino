@@ -1,8 +1,8 @@
 /*
  * FlopPiano - Keys and input sketch.
- * Version 0.5
+ * Version 0.9
  * 
- * 2024-05-27
+ * 2024-06-03
  * Jacob Brooks, Jorian Khan
  * 
  *                      
@@ -18,18 +18,20 @@
 //The I2C for this device, Pi expects to get keyboard data on 
 #define I2C_ADDR 0x77
 
-//Example pin defines
-//#define pitchbend_pin XX
-//#define MUX_Z_pin    XX
-//#define MUX_A_pin    xx
-//#define MUX_B_pin    xx
-//#define MUX_C_pin    xx
-//#define MUX_D_pin    xx
-//#define MUX1_INH_pin xx
-//#define MUX2_INH_pin xx
-//#define MUX3_INH_pin xx
+// debug toggles
+#define verboseSerial // if this is defined, write key states to serial along with other bullshit
+#define onetimeonly // if this is defined, will stop after only one loop to make the serial easier to read
 
-
+// pin assignments
+#define chip0ena 2 // enable pin for multiplexer 0 (active LOW)
+#define chip1ena 3 // enable pin for multiplexer 1 (active LOW)
+#define chip2ena 4 // enable pin for multiplexer 2 (active LOW)
+#define add0pin 5 // address 0 pin
+#define add1pin 6 // address 1 pin
+#define add2pin 7 // address 2 pin
+#define add3pin 8 // address 3 pin
+#define inpin 9 // pin to read switch state
+#define potpin A0 // pin for the potentiometer
 
 // We need 7 bytes to represent all the input states. The bytes are stored in an array to facilitate sending via I2C, and are cataloged below:                                                
 /*
@@ -52,65 +54,119 @@
  * 
  */
 
-//Set all inputs to zero by default
-//byte input_states[7] = {0, 0, 0, 0, 0, 0, 0};
+// function prototypes
+unsigned int readChip(int,int);
 
-//TEST Pattern: remove before real use
-byte input_states[7] = {0b11110000, 0b00001111, 0b11001100, 0b00110011, 0b10000001, 0b10101010, 0b01010101};
-//TEST a var to hold time for a non-blocking delay - remove 
-long oldTime = 0;
-// Test adc value
-int pot = 0;
+
+//Set all inputs to zero by default
+byte input_states[7] = {0, 0, 0, 0, 0, 0, 0};
+bool binAdd[4] = {0}; // bool array to hold multiplexer address
 
 void setup() {
-  /*
-   * Setup Pins here
-   */
 
+  // set up pins
+  pinMode(chip0ena, OUTPUT); digitalWrite(chip0ena, HIGH);
+  pinMode(chip1ena, OUTPUT); digitalWrite(chip1ena, HIGH);
+  pinMode(chip2ena, OUTPUT); digitalWrite(chip2ena, HIGH);
+  pinMode(add0pin, OUTPUT); digitalWrite(add0pin, LOW);
+  pinMode(add1pin, OUTPUT); digitalWrite(add1pin, LOW);
+  pinMode(add2pin, OUTPUT); digitalWrite(add2pin, LOW);
+  pinMode(add3pin, OUTPUT); digitalWrite(add3pin, LOW);
+  pinMode(inpin, INPUT_PULLUP);
+  
   //Setup I2C
   Wire.begin(I2C_ADDR); // join i2c bus with address #I2C_ADDR
   Wire.onRequest(requestEvent); //Register requestEvent
 
-  
+  // start serial if necessary
+  #ifdef verboseSerial
+    Serial.begin(115200);
+    Serial.println("Serial starting...");
+  #endif
 }
 
 void loop() {
   
-  /*
-   * Read all the inputs here. i.e. shift in values from the Muxs and read pitch bend/ modulate values
-   */
+  #ifdef verboseSerial
+    Serial.println("------------------------ NEW LOOP TIME -------------------------");
+    Serial.println("=^..^=   =^..^=   =^..^=    =^..^=    =^..^=    =^..^=    =^..^=");
+    Serial.println("----------------------------------------------------------------");
+  #endif
 
-   //------------------------------------TESTING CODE-------------------------------------------------//
-   //Remove after writing the actual code
+ // loop through each chip, pack into keystate array
+  readChip(2,0);
+  readChip(3,2);
+  readChip(4,4);
 
-   //A loop that flips all the bits in the first four bytes
-   for(int idx =0; idx<5; idx++){
-      input_states[idx] = (input_states[idx]) ^ (0b11111111); //Just flip all the bits 
-   } 
+  // read in potentiometer
+  unsigned int pot = analogRead(potpin); // variable to hold ADC read for potentiometer
+  input_states[5] = pot >> 8;
+  input_states[6] = pot;
 
-   input_states[5] = byte(pot >> 8);
-   input_states[6] = byte(pot);
+  Serial.println(pot);
 
-   pot++;
+  #ifdef verboseSerial
+    Serial.println("Input states: ***************************************************");
+    for (int i=0; i<7; i++){
+      Serial.println(input_states[i], BIN);
+    }
+  #endif
 
-   if(pot >= 1024){
-      pot = 0;
-   }
-   
-   
-   //non-blocking delay for 100ms
-   oldTime = millis();
-
-   while (millis() < oldTime + 100){
-      //do nothing
-   }
-   //------------------------------------ End TESTING CODE---------------------------------------------//
+  #ifdef onetimeonly
+    while(1);
+  #endif
 
 }
-
-
 
 void requestEvent(){
   //When we get a request send all the input states
   Wire.write(input_states,7);
+}
+
+unsigned int readChip(int pin, int arrayIndex){
+  #ifdef verboseSerial // if writing to serial, tell it which pin we are interested in reading from
+    Serial.println("************************************");
+    Serial.print("Reading chip on pin "); Serial.println(pin);
+  #endif
+  digitalWrite(pin, LOW); // turn on whichever chip enable is required
+
+  unsigned int states = 0;
+
+  for (int address=0; address<=15; address++) // loops through each combination of address pins
+  {
+    // convert address to binary array
+    for (int i = 3; i >= 0; i--) 
+    {
+      binAdd[i] = (address & (1 << i)) != 0;
+    }
+ 
+    #ifdef verboseSerial // if serial enabled, write the address shit there
+      Serial.print("Address "); Serial.print(address);
+      Serial.print(", bin: ");
+      for (int i=0; i<=3; i++)
+      {
+        Serial.print(binAdd[i]);
+      }
+      Serial.println(" ");
+    #endif
+
+    // write address to appropriate pins
+    digitalWrite(add0pin, binAdd[0]);
+    digitalWrite(add1pin, binAdd[1]);
+    digitalWrite(add2pin, binAdd[2]);
+    digitalWrite(add3pin, binAdd[3]);
+
+    states = (states << 1) | (!digitalRead(inpin)); // move the bits to the left 1 spot, put the new bit in the first position
+  }
+  
+  digitalWrite(pin, HIGH); // turn the chip off
+  
+  input_states[arrayIndex] = (states >> 8); // write input states to array index
+  input_states[arrayIndex + 1] = states; // write the rest of the input states to array index + 1
+
+  #ifdef verboseSerial // if verbose serial defined, write the keystate there
+    Serial.print("Keystates: ");
+    Serial.println(states, BIN);
+  #endif
+  return(states);
 }
