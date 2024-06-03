@@ -20,10 +20,10 @@ bow = False
 #test_midi_file = 'Testing_MIDI/Happy_Birthday_MIDI.mid'
 #test_midi_file = 'Testing_MIDI/Happy_Birthday.mid'
 #test_midi_file = 'Testing_MIDI/HappyBirthday.mid'
-test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
+#test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
 #test_midi_file = 'Testing_MIDI/imperial.mid'
 #test_midi_file = 'Testing_MIDI/knight_rider.mid'
-#test_midi_file = 'Testing_MIDI/level1.mid'
+test_midi_file = 'Testing_MIDI/level1.mid'
 #test_midi_file = 'Testing_MIDI/Liszt_La_Campanella.mid'
 #test_midi_file = 'Testing_MIDI/lostwoods.mid'
 #test_midi_file = 'Testing_MIDI/Mariage_Damour.mid'
@@ -64,9 +64,14 @@ for addr in range(8,18):
 player = FloppyDrivePlayer(available_drives)
 msgParser = MessageParser(player)
 
+transpose = 0
+
+
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():
+        if (msg.type == "note_on" or msg.type =="note_off"):
+            msg.note = msg.note + transpose
         msgParser.parseMessage(msg)
 except KeyboardInterrupt:
     print("Exiting..")

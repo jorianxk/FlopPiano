@@ -39,6 +39,12 @@ class FloppyDrive:
     #the alpha constant for frequency calculation
     __alpha__ = __clk_freq__ / (2 * __prescaler__)
     
+    #minimum midi note that can be sounded
+    __min_note__ = 27
+
+    #maximum midi note that can be sounded
+    __max_note__ = 127
+
     #init with default values of the firmware
     def __init__(self, *, address:int = 8,
                  enable:bool = False, 
@@ -216,10 +222,14 @@ class FloppyDrivePlayer(FloppyDriveHandler, MidiMessageListener):
         super().__init__(drives)
         self.available_drives = copy.copy(drives)
         self.active_notes = dict() 
+        self.transpose:int = 0
 
     def noteOnMsg(self, message:Message):
-        #This is a note_on 
-        if(not (message.note <27 or message.note>127)):
+
+        note = message.note + self.transpose
+        #check that the note can actually be sounded
+        if(not (note <FloppyDrive.__min_note__ or note>FloppyDrive.__max_note__)):
+        # if(not (message.note <FloppyDrive.__min_note__ or message.note>FloppyDrive.__max_note__)):
             #Cant play a note if all drives are busy
             if (len(self.available_drives)==0):
                 print("Can't play", message.note, "no available drives")
@@ -228,7 +238,7 @@ class FloppyDrivePlayer(FloppyDriveHandler, MidiMessageListener):
                 #get an available drive
                 next_drive:FloppyDrive = self.available_drives.pop()
                 #set up the drive to play the note 
-                next_drive.setFrequency(MIDINoteHelper.note2Freq(message.note))
+                next_drive.setFrequency(MIDINoteHelper.note2Freq(note))
                 next_drive.enable = True
 
                 #tell the drive to play the note
@@ -264,4 +274,19 @@ class FloppyDrivePlayer(FloppyDriveHandler, MidiMessageListener):
         pass
     
     def pitchwheelMsg(self, message:Message):
-        pass
+        
+        transpose = FloppyDrivePlayer.map_range(message.pitch, -8192,8192, -6, 6)
+        for note in self.active_notes:
+            newNote = note + transpose
+            if (not (newNote <FloppyDrive.__min_note__ or newNote>FloppyDrive.__max_note__)):
+                sounding_drive:FloppyDrive = self.active_notes[note]
+                sounding_drive.setFrequency(MIDINoteHelper.note2Freq(newNote))
+                self.updateDrive(sounding_drive, justCTRL=False)
+        self.transpose = transpose
+        print("Pitch bent by", transpose)
+        
+
+    
+    @classmethod
+    def map_range(cls, x, in_min, in_max, out_min, out_max):
+        return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
