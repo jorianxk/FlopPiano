@@ -1,12 +1,12 @@
 from FlopPiano.FloppyDrives import *
-from FlopPiano.MIDI import MessageParser
+from FlopPiano.Players import MessageParser, FloppyDrivePlayer
 import mido
 
 
 bow = False
 #test_midi_file = 'Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
-#test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'Testing_MIDI/bloody.mid'
 #test_midi_file = 'Testing_MIDI/brahms-symphony3-3-theme-piano-solo.mid'
 #test_midi_file = 'Testing_MIDI/castle_deep.mid'
@@ -23,7 +23,7 @@ bow = False
 #test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
 #test_midi_file = 'Testing_MIDI/imperial.mid'
 #test_midi_file = 'Testing_MIDI/knight_rider.mid'
-test_midi_file = 'Testing_MIDI/level1.mid'
+#test_midi_file = 'Testing_MIDI/level1.mid'
 #test_midi_file = 'Testing_MIDI/Liszt_La_Campanella.mid'
 #test_midi_file = 'Testing_MIDI/lostwoods.mid'
 #test_midi_file = 'Testing_MIDI/Mariage_Damour.mid'
@@ -54,12 +54,15 @@ test_midi_file = 'Testing_MIDI/level1.mid'
 
 available_drives:list[FloppyDrive] = []
 
+
+
+
 for addr in range(8,18):
     if bow:
-        available_drives.append(FloppyDrive(address=addr,
+        available_drives.append(FloppyDrive(i2c_bus=None.i2c_bus,address=addr,
                                             crash_mode=CrashMode.BOW))
     else:
-        available_drives.append(FloppyDrive(address=addr))
+        available_drives.append(FloppyDrive(i2c_bus=None, address=addr))
 
 player = FloppyDrivePlayer(available_drives)
 msgParser = MessageParser(player)
@@ -77,6 +80,7 @@ except KeyboardInterrupt:
     print("Exiting..")
 except Exception as e:
     print(e)
+    raise e
 finally:
     player.silenceDrives()
    

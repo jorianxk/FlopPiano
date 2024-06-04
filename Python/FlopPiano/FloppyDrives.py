@@ -1,8 +1,5 @@
 from enum import Enum
 from smbus import SMBus
-from .MIDI import MidiMessageListener, MIDINoteHelper
-from mido import Message
-import copy
 
 class CrashMode (Enum):
     """
@@ -39,14 +36,16 @@ class FloppyDrive:
     #the alpha constant for frequency calculation
     __alpha__ = __clk_freq__ / (2 * __prescaler__)
     
-    #minimum midi note that can be sounded
-    __min_note__ = 27
+    #minimum frequency that can be sounded
+    __min_frequency__ = 38.891
 
-    #maximum midi note that can be sounded
-    __max_note__ = 127
+    #maximum frequency that can be sounded
+    __max_frequency__ = 12543.854
 
     #init with default values of the firmware
-    def __init__(self, *, address:int = 8,
+    def __init__(self, *,
+                 i2c_bus:SMBus, 
+                 address:int = 8,
                  enable:bool = False, 
                  spin:bool = False,
                  top: int = 19111,
@@ -57,6 +56,7 @@ class FloppyDrive:
             firmware.
 
         Args:
+            i2c_bus (SMBus): the I2C buss object to use 
             address (int, optional): The I2C address for the drive. Defaults to
                 8.
             enable (bool, optional): The drive's  select/enable state. Defaults
@@ -67,71 +67,15 @@ class FloppyDrive:
             crash_mode (CrashMode, optional): The crash mode of the drive. 
                 Defaults to CrashMode.FLIP.
         """
-        
+        self.i2c_bus = i2c_bus
         self.address = address
         self.top = top #Top value of the drive 
         self.enable = enable #Drive enable state
         self.spin = spin #Drive spin state
         self.crash_mode = crash_mode #Crash prevention mode
 
-    def setFrequency(self, frequency:float) -> int:
-        """A function to set the frequency of the drive by setting the drive TOP
-
-            A valid frequency results in TOP value that is a unsigned 16 bit 
-            integer [0-65535].
-
-            TOP = round(alpha / frequency)
-
-            where,
-                alpha = C_f / (2 * N) 
-                C_f is the attiny's clock speed  = 20000000
-                N is the attiny's prescaler  = 4
-
-        Args:
-            frequency (float): The desired frequency of the drive
-
-        Raises:
-            ValueError: If the frequency value given results in a TOP value 
-                that is not a 16bit unsigned int
-            ZeroDivisionError: if frequency is zero             
-
-        Returns:
-            int: The the resultant TOP value from the desired frequency
-        """
-
-
-        proposed_top = round(FloppyDrive.__alpha__/frequency)
-
-        if((proposed_top < 0) or (proposed_top > 65535)):
-            raise ValueError (f'Frequency resulted in illegal TOP. '
-                              f'Given frequency: {frequency}, '
-                              f'Resultant TOP: {proposed_top}')
-        
-        self.top = proposed_top
-        return int(FloppyDrive.__alpha__/proposed_top)
-
-    def __repr__(self) -> str:
-        """Returns a string representation of the FloppyDrive
-
-        Returns:
-            str: _description_
-        """
-                
-        return ('FloppyDrive: '
-                f'[Address: {self.address} | '
-                f'Enable: {self.enable} | '
-                f'Spin: {self.spin} | '
-                f'Crash Prevent: {self.crash_mode} | '
-                f'TOP: {self.top}]')
-
-class FloppyDriveHandler():
-    
-    def __init__(self, drives:list[FloppyDrive]) -> None:
-        self.i2c_bus:SMBus =  SMBus(1) # indicates /dev/ic2-1
-        self.drives = drives
-    
     #TODO: update docstring
-    def updateDrive(self, drive:FloppyDrive, justCTRL:bool=True)->None:
+    def update(self, justCTRL:bool=False)->None:
         """
         A function to send all set CTRL Register values and TOP values a slave 
         drive, or to broadcast to the bus
@@ -181,9 +125,9 @@ class FloppyDriveHandler():
         #  is pulled HIGH and the drive is de-selected/disabled.
 
         #Prepare the CTRL Register 
-        CTRL = (drive.crash_mode.value << 2)     
-        CTRL = CTRL | (drive.spin << 1)
-        CTRL = CTRL | (drive.enable)
+        CTRL = (self.crash_mode.value << 2)     
+        CTRL = CTRL | (self.spin << 1)
+        CTRL = CTRL | (self.enable)
 
         #print("{:08b}".format(CTRL), CTRL)
 
@@ -194,7 +138,7 @@ class FloppyDriveHandler():
         #|  The third byte is the least significant byte of the TOP value |
         #|----------------------------------------------------------------|
 
-        TOP = drive.top.to_bytes(2,'little')
+        TOP = self.top.to_bytes(2,'little')
 
         
         ########################################################################
@@ -203,90 +147,66 @@ class FloppyDriveHandler():
 
 
 
-        # #are we just senting the CTRL register?
+        # #are we just sending the CTRL register?
         if(justCTRL):
-            self.i2c_bus.write_block_data(drive.address, CTRL, [])
+            self.i2c_bus.write_block_data(self.address, CTRL, [])
         else:
-            self.i2c_bus.write_block_data(drive.address, CTRL, [TOP[1], TOP[0]])
+            self.i2c_bus.write_block_data(self.address, CTRL, [TOP[1], TOP[0]])
 
     #TODO: update docstring
-    def silenceDrives(self)->None:
-        for drive in self.drives:
-            drive.enable = False
-            drive.spin = False
-            self.updateDrive(drive, justCTRL=True)
+    def silence(self)->None:
+        self.enable = False
+        self.update()
 
-class FloppyDrivePlayer(FloppyDriveHandler, MidiMessageListener):
+    def setFrequency(self, frequency:float) -> int:
+        """A function to set the frequency of the drive by setting the drive TOP
 
-    def __init__(self, drives: list[FloppyDrive]) -> None:
-        super().__init__(drives)
-        self.available_drives = copy.copy(drives)
-        self.active_notes = dict() 
-        self.transpose:int = 0
+            A valid frequency results in TOP value that is a unsigned 16 bit 
+            integer [0-65535].
 
-    def noteOnMsg(self, message:Message):
+            TOP = round(alpha / frequency)
 
-        note = message.note + self.transpose
-        #check that the note can actually be sounded
-        if(not (note <FloppyDrive.__min_note__ or note>FloppyDrive.__max_note__)):
-        # if(not (message.note <FloppyDrive.__min_note__ or message.note>FloppyDrive.__max_note__)):
-            #Cant play a note if all drives are busy
-            if (len(self.available_drives)==0):
-                print("Can't play", message.note, "no available drives")
-                print("    ", len(self.available_drives))
-            else:
-                #get an available drive
-                next_drive:FloppyDrive = self.available_drives.pop()
-                #set up the drive to play the note 
-                next_drive.setFrequency(MIDINoteHelper.note2Freq(note))
-                next_drive.enable = True
+            where,
+                alpha = C_f / (2 * N) 
+                C_f is the attiny's clock speed  = 20000000
+                N is the attiny's prescaler  = 4
 
-                #tell the drive to play the note
-                self.updateDrive(next_drive, justCTRL=False)
-                print("Playing", message.note, "on address", next_drive.address)
+        Args:
+            frequency (float): The desired frequency of the drive
 
-                #add the note to the active notes
-                self.active_notes[message.note] = next_drive
-        else:
-            print("Can't sound:", message)
+        Raises:
+            ValueError: If the frequency value given results in a TOP value 
+                that is not a 16bit unsigned int
+            ZeroDivisionError: if frequency is zero             
 
-    def noteOffMsg(self, message:Message):
-        #handle note off
-        #note_on velocity 0 is the same as note off
-        #print('Found note off',msg.note ,MIDI_LOOK_UP[msg.note])
-        #Get the drive that was playing the note
+        Returns:
+            int: The the resultant TOP value from the desired frequency
+        """
+        #if the frequency cant be sounded, dont change anything
+        if (frequency >= FloppyDrive.__min_frequency__ and 
+            frequency<= FloppyDrive.__max_frequency__):
 
-        try:
-            sounding_drive:FloppyDrive = self.active_notes.pop(message.note)
+            proposed_top = round(FloppyDrive.__alpha__/frequency)
 
-            #stop the drive from playing
-            sounding_drive.enable = False
-            self.updateDrive(sounding_drive, justCTRL=True)
-            print("Stopped", message.note, "on address", sounding_drive.address)
-
-            #add the drive back to the available drives
-            self.available_drives.append(sounding_drive)
-        except KeyError as ke:
-            print("Commanded to stop", message.note, "but it's not playing")
-        
+            if((proposed_top < 0) or (proposed_top > 65535)):
+                raise ValueError (f'Frequency resulted in illegal TOP. '
+                                  f'Given frequency: {frequency}, '
+                                  f'Resultant TOP: {proposed_top}')
+            
+            self.top = proposed_top
+            return int(FloppyDrive.__alpha__/proposed_top)
     
-    def controlChangeMsg(self, message:Message):
-        pass
-    
-    def pitchwheelMsg(self, message:Message):
-        
-        transpose = FloppyDrivePlayer.map_range(message.pitch, -8192,8192, -6, 6)
-        for note in self.active_notes:
-            newNote = note + transpose
-            if (not (newNote <FloppyDrive.__min_note__ or newNote>FloppyDrive.__max_note__)):
-                sounding_drive:FloppyDrive = self.active_notes[note]
-                sounding_drive.setFrequency(MIDINoteHelper.note2Freq(newNote))
-                self.updateDrive(sounding_drive, justCTRL=False)
-        self.transpose = transpose
-        print("Pitch bent by", transpose)
-        
+    def __repr__(self) -> str:
+        """Returns a string representation of the FloppyDrive
 
-    
-    @classmethod
-    def map_range(cls, x, in_min, in_max, out_min, out_max):
-        return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
+        Returns:
+            str: _description_
+        """
+                
+        return ('FloppyDrive: '
+                f'[Address: {self.address} | '
+                f'Enable: {self.enable} | '
+                f'Spin: {self.spin} | '
+                f'Crash Prevent: {self.crash_mode} | '
+                f'TOP: {self.top}]')
+

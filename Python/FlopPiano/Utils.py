@@ -1,7 +1,7 @@
-from mido import Message
+import math
 
-
-class MIDINoteHelper():
+class MIDIUtil():
+    #https://en.wikipedia.org/wiki/Piano_key_frequencies
     __MIDI_LOOK_UP__ = {
         0:{"freq":8.176,"name":""},
         1:{"freq":8.662,"name":""},
@@ -133,88 +133,36 @@ class MIDINoteHelper():
         127:{"freq":12543.854,"name":"G9"}
         }
 
-    @classmethod
-    def note2Freq(cls, note:int) -> float:
-        if(note<0 or note>127):
-            raise ValueError("Note must be in the range [0,127]")
-        return cls.__MIDI_LOOK_UP__[note]['freq']
-
-    @classmethod 
-    def note2notation(cls, note:int) -> str:
-        if(note<0 or note>127):
+    @staticmethod
+    def MIDI2Freq(note:int) -> float:
+        if(not MIDIUtil.isValidMIDI(note)):
             raise ValueError("Note must be in the range [0,127]")
         
-        return cls.__MIDI_LOOK_UP__[note]['name']
+        #n = note - 20
+        #freq = math.pow(2,(n-49)/12)*440
+        #freq = round(freq,3)
+        #return freq
+        return MIDIUtil.__MIDI_LOOK_UP__[note]['freq']
 
-class MidiMessageListener():
-
-    def noteOnMsg(self, message:Message):
-        pass
-
-    def noteOffMsg(self, message:Message):
-        pass
-    
-    def controlChangeMsg(self, message:Message):
-        pass
-    
-    def pitchwheelMsg(self, message:Message):
-        pass
-
-    def sysexMsg(self, message:Message):
-        pass
-    
-    def startMsg(self, message:Message):
-        pass
-
-    def stopMsg(self, message:Message):
-        pass
-
-    def resetMsg(self, message:Message):
-        pass
-
-class MessageParser():
-    
-    def __init__(self, listener:MidiMessageListener) -> None:
-        self.listener = listener
-    
-    def parseMessage(self, message:Message):
-        msgType = message.type
-        if (message.type =='note_on'):
-
-            if (message.velocity == 0):
-                self.listener.noteOffMsg(message)
-            else:
-                self.listener.noteOnMsg(message)
-
-        elif (message.type == 'note_off'):
-
-            self.listener.noteOffMsg(message)
-
-        elif (message.type == 'control_change'):
-
-            self.listener.controlChangeMsg(message)
-
-        elif (message.type == 'pitchwheel'):
-
-            self.listener.pitchwheelMsg(message)
-
-        elif (message.type == 'sysex'):
-
-            self.listener.sysexMsg(message)
-
-        elif (message.type == 'start'):
-
-            self.listener.startMsg(message)
-
-        elif (message.type == 'stop'):
-
-            self.listener.stopMsg(message)
-
-        elif (message.type == 'reset'):
-
-            self.listener.resetMsg(message)
+    @staticmethod 
+    def MIDI2notation(note:int) -> str:
+        if(not MIDIUtil.isValidMIDI(note)):
+            raise ValueError("Note must be in the range [0,127]")
         
-        else:
+        return MIDIUtil.__MIDI_LOOK_UP__[note]['name']
+    
+    @staticmethod
+    def freq2MIDI(frequency:float)->int:
+        n = 12 * math.log2(frequency/440) +49
+        note = round(n+20)
 
-            pass
+        if (MIDIUtil.isValidMIDI(note)):
+            return note
 
+        raise ValueError(f'Frequency {frequency:0.3f} is not a midi note')
+
+    @staticmethod
+    def isValidMIDI(note:int)->bool:
+        if(note <0 or note>127):
+            return False
+        return True

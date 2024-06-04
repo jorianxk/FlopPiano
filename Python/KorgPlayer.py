@@ -1,5 +1,5 @@
 from FlopPiano.FloppyDrives import *
-from FlopPiano.MIDI import MessageParser
+from FlopPiano.Players import FloppyDrivePlayer, MessageParser
 import mido
 
 
@@ -11,10 +11,10 @@ available_drives:list[FloppyDrive] = []
 
 for addr in range(8,18):
     if bow:
-        available_drives.append(FloppyDrive(address=addr,
+        available_drives.append(FloppyDrive(i2c_bus=None, address=addr,
                                             crash_mode=CrashMode.BOW))
     else:
-        available_drives.append(FloppyDrive(address=addr))
+        available_drives.append(FloppyDrive(i2c_bus=None, address=addr))
 
 player = FloppyDrivePlayer(available_drives)
 msgParser = MessageParser(player)
