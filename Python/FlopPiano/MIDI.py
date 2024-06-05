@@ -211,7 +211,7 @@ class MIDIParser():
     def __init__(self, listener:MIDIListener) -> None:
         self.listener = listener
     
-    def parseMessage(self, msg:Message):
+    def parse(self, msg:Message):
 
         # This check is to filter out messages that have a channel, and that 
         # channel is not our listener's channel. Except when the listener is 

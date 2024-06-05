@@ -1,35 +1,35 @@
-from FlopPiano.Drives import Drive, CrashMode
-from FlopPiano.Players import DrivePlayer, MessageParser
+from FlopPiano.MIDI import MIDIParser
+from FlopPiano.Conductor import Conductor
 import mido
 
 
 
-print(mido.get_input_names())
 
-bow = False
+usb_interface = None
+for input in mido.get_input_names():
+     if input.startswith("USB"):
+          usb_interface = input
+          break
 
-available_drives:list[Drive] = []
+if usb_interface is None: raise Exception("Could not find MIDI USB Interface!")
 
-for addr in range(8,18):
-    if bow:
-        available_drives.append(Drive(i2c_bus=None, address=addr,
-                                            crash_mode=CrashMode.BOW))
-    else:
-        available_drives.append(Drive(i2c_bus=None, address=addr))
-
-player = DrivePlayer(available_drives)
-msgParser = MessageParser(player)
+print("Begin Playing! [ctrl+c to exit]")
 
 
+conductor = Conductor((8, 9, 10 ,11, 12, 13, 14, 15, 16, 17))
+parser = MIDIParser(conductor)
+
+transpose = 0
 
 try:
-    with mido.open_input('USB MIDI Interface:USB MIDI Interface MIDI 1 20:0') as inport:
+    with mido.open_input(usb_interface) as inport:
             for msg in inport:
-                msgParser.parseMessage(msg)
+                parser.parse(msg)
+                conductor.conduct()
 except KeyboardInterrupt:
     print("Exiting..")
-except Exception as e:
-    print(e)
 finally:
-    player.silenceDrives()
+    conductor.silence()
+
+
 

@@ -1,9 +1,9 @@
-from FlopPiano.Drives import *
-from FlopPiano.Players import MessageParser, DrivePlayer
+from FlopPiano.MIDI import MIDIParser
+from FlopPiano.Conductor import Conductor
 import mido
 
 
-bow = False
+transpose = 0
 #test_midi_file = 'Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
 test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
@@ -52,33 +52,21 @@ test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 
 
 
-available_drives:list[Drive] = []
+
+print(f'Playing {test_midi_file} [ctrl+c to stop]')
 
 
-for addr in range(8,18):
-    if bow:
-        available_drives.append(Drive(i2c_bus=None.i2c_bus,address=addr,
-                                            crash_mode=CrashMode.BOW))
-    else:
-        available_drives.append(Drive(i2c_bus=None, address=addr))
-
-player = DrivePlayer(available_drives)
-msgParser = MessageParser(player)
-
-transpose = 0
-
-
+conductor = Conductor((8, 9, 10 ,11, 12, 13, 14, 15, 16, 17))
+parser = MIDIParser(conductor)
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():
         if (msg.type == "note_on" or msg.type =="note_off"):
             msg.note = msg.note + transpose
-        msgParser.parseMessage(msg)
+        parser.parse(msg)
+        conductor.conduct()
 except KeyboardInterrupt:
     print("Exiting..")
-except Exception as e:
-    print(e)
-    raise e
 finally:
-    player.silenceDrives()
+    conductor.silence()
    

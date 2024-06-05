@@ -1,6 +1,6 @@
 import mido
 from FlopPiano.MIDI import MIDIParser
-from FlopPiano.FloppyMaestro import Conductor
+from FlopPiano.Conductor import Conductor
 
 # in_q = Queue()
 # stop = Event()
@@ -58,16 +58,13 @@ try:
 
     with mido.open_input(usb_interface) as inport:
         for msg in inport:
-            parser.parseMessage(msg)
+            parser.parse(msg)
             conductor.conduct()
             #in_q.put([msg],block=True)
 
 except KeyboardInterrupt:
     print("Exiting..")
-except Exception as e:
-    print(e)
-    raise e
 finally:
-    pass
+    conductor.silence()
     # stop.set()
     # playerThread.join() #wait for exit
