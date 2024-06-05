@@ -1,4 +1,5 @@
 import math
+from mido import Message
 
 class MIDIUtil():
     #https://en.wikipedia.org/wiki/Piano_key_frequencies
@@ -134,14 +135,21 @@ class MIDIUtil():
         }
 
     @staticmethod
+    def freq2n(frequency:float)->int:
+        n = 12 * math.log2(frequency/440) +49
+        return n
+    
+    @staticmethod
+    def n2freq(n:float)->float:
+        #n = note - 20
+        freq = math.pow(2,(n-49)/12)*440
+        #freq = round(freq,3)
+        return freq
+
+    @staticmethod
     def MIDI2Freq(note:int) -> float:
         if(not MIDIUtil.isValidMIDI(note)):
             raise ValueError("Note must be in the range [0,127]")
-        
-        #n = note - 20
-        #freq = math.pow(2,(n-49)/12)*440
-        #freq = round(freq,3)
-        #return freq
         return MIDIUtil.__MIDI_LOOK_UP__[note]['freq']
 
     @staticmethod 
@@ -153,7 +161,7 @@ class MIDIUtil():
     
     @staticmethod
     def freq2MIDI(frequency:float)->int:
-        n = 12 * math.log2(frequency/440) +49
+        n = MIDIUtil.freq2n(frequency)
         note = round(n+20)
 
         if (MIDIUtil.isValidMIDI(note)):
@@ -166,3 +174,100 @@ class MIDIUtil():
         if(note <0 or note>127):
             return False
         return True
+
+class MIDIListener():
+
+    def __init__(self, inChannel:int =-1) -> None:
+        if (inChannel <-1 or inChannel>15):
+            raise ValueError("Channel must be [-1,15]") #-1 indicates listen to all!
+        self.inChannel = inChannel
+
+    def noteOn(self, msg:Message):
+        pass
+
+    def noteOff(self, msg:Message):
+        pass
+    
+    def controlChange(self, msg:Message):
+        pass
+    
+    def pitchwheel(self, msg:Message):
+        pass
+
+    def sysex(self, msg:Message):
+        pass
+    
+    def start(self, msg:Message):
+        pass
+
+    def stop(self, msg:Message):
+        pass
+
+    def reset(self, msg:Message):
+        pass
+
+class MIDIParser():
+    
+    def __init__(self, listener:MIDIListener) -> None:
+        self.listener = listener
+    
+    def parseMessage(self, msg:Message):
+
+        # This check is to filter out messages that have a channel, and that 
+        # channel is not our listener's channel. Except when the listener is 
+        # listening to all channels. i.e. listener channel is -1
+        if (self.listener.inChannel != -1 and MIDIParser.hasChannel(msg)):
+            if (msg.channel != self.listener.inChannel): return
+                
+        
+        msgType = msg.type        
+
+        if (msg.type =='note_on'):
+
+            if (msg.velocity == 0):
+                self.listener.noteOff(msg)
+            else:
+                self.listener.noteOn(msg)
+
+        elif (msg.type == 'note_off'):
+
+            self.listener.noteOff(msg)
+
+        elif (msg.type == 'control_change'):
+
+            self.listener.controlChange(msg)
+
+        elif (msg.type == 'pitchwheel'):
+
+            self.listener.pitchwheel(msg)
+
+        elif (msg.type == 'sysex'):
+
+            self.listener.sysex(msg)
+
+        elif (msg.type == 'start'):
+
+            self.listener.start(msg)
+
+        elif (msg.type == 'stop'):
+
+            self.listener.stop(msg)
+
+        elif (msg.type == 'reset'):
+
+            self.listener.reset(msg)
+        
+        else:
+            pass
+
+    @staticmethod
+    def hasChannel(msg:Message)->bool:    
+        try:
+            msg.channel
+            return True
+        except AttributeError as ae:
+            return False
+
+
+def map_range(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min

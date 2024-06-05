@@ -1,5 +1,9 @@
+
+import time
 from enum import Enum
 from smbus import SMBus
+from .MIDI import *
+
 
 class CrashMode (Enum):
     """
@@ -23,7 +27,7 @@ class CrashMode (Enum):
     BOW = 0b01
     FLIP = 0b10
 
-class FloppyDrive:
+class Drive:
     """
     A class the represents a floppy drive
     """
@@ -183,10 +187,10 @@ class FloppyDrive:
             int: The the resultant TOP value from the desired frequency
         """
         #if the frequency cant be sounded, dont change anything
-        if (frequency >= FloppyDrive.__min_frequency__ and 
-            frequency<= FloppyDrive.__max_frequency__):
+        if (frequency >= Drive.__min_frequency__ and 
+            frequency<= Drive.__max_frequency__):
 
-            proposed_top = round(FloppyDrive.__alpha__/frequency)
+            proposed_top = round(Drive.__alpha__/frequency)
 
             if((proposed_top < 0) or (proposed_top > 65535)):
                 raise ValueError (f'Frequency resulted in illegal TOP. '
@@ -194,7 +198,7 @@ class FloppyDrive:
                                   f'Resultant TOP: {proposed_top}')
             
             self.top = proposed_top
-            return int(FloppyDrive.__alpha__/proposed_top)
+            return int(Drive.__alpha__/proposed_top)
     
     def __repr__(self) -> str:
         """Returns a string representation of the FloppyDrive
@@ -210,3 +214,47 @@ class FloppyDrive:
                 f'Crash Prevent: {self.crash_mode} | '
                 f'TOP: {self.top}]')
 
+class PitchBendMode(Enum):
+    #Number indicates steps. 1/2 steps = 1 note
+    HALF     = 0.5 #  1 note(s) or   1/2 step(s)
+    WHOLE    =   1 #  2 note(s) or     1 step(s)
+    MINOR3RD = 1.5 #  3 note(s) or 1 1/2 step(s)
+    MAJOR3RD =   2 #  4 note(s) or     2 step(s)
+    FOURTH   = 2.5 #  5 note(s) or 2 1/2 step(s)
+    FIFTH    = 3.5 #  7 note(s) or 3 1/2 step(s)
+    OCTAVE   =   6 # 12 note(s) or     6 step(s)
+
+class Note(Drive):
+
+    def __init__(self, i2c_bus:SMBus, address:int) -> None:
+        super().__init__(i2c_bus=i2c_bus, address=address)
+        
+ 
+    def setOriginal(self, original:float)->None:
+        self._original = original
+        self.setCenter(original)
+
+    def setCenter(self, center:float):
+        self._center = center
+        self.setFrequency(center)
+
+    def bend(self, bendAmount:int, mode:PitchBendMode):
+        if bendAmount == 0:
+            self.setCenter(self._original)
+            return
+        else:
+            old_n = MIDIUtil.freq2n(self._original)
+            n_mod = map_range(bendAmount,-8192,8192,-mode.value, mode.value)
+            self.setCenter(MIDIUtil.n2freq(old_n+n_mod))
+            
+    def modulate(self, modAmount:int):
+        if modAmount ==0:
+            return
+        else:
+            #Play with 2, and 16 below for differing effects
+            omega = map_range(modAmount,1,127,2,16) * math.pi
+            self.setFrequency(self._center+math.sin(omega * time.time()))
+
+    def play(self):
+        self.enable = True
+        self.update()

@@ -27,7 +27,7 @@ class Note():
             return
         
         if (midi_note is not None):
-            self.frequency = MIDINoteHelper.MIDI2Freq(midi_note)
+            self.frequency = MIDIUtil.MIDI2Freq(midi_note)
             self.drive.setFrequency(self.frequency)
             return
                 
@@ -67,13 +67,14 @@ bus = SMBus(1) # indicates /dev/ic2-1
 
 
 drive = FloppyDrive(i2c_bus=bus, address= 8)
-note = Note(60, drive)
+note = Note(36, drive)
 
 
 
 
 def modsin(time:int):
-    return math.sin(8*math.pi*time)
+    return math.sin(2*math.pi*time)
+
 
 
 try:
@@ -81,10 +82,10 @@ try:
     startTime = time.time()
 
     while True:        
-        note.transpose(modsin(time.time() - startTime))
+        note.transpose(modsin(time.time()))
         print(note.frequency)
         note.play()
-        #time.sleep(0.005)
+        time.sleep(0.02)
 
         
 

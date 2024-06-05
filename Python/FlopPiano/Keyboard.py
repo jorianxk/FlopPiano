@@ -22,7 +22,7 @@ from smbus import SMBus
 
 
 #TODO: fix/add comments
-class FloppyKeyboard:
+class Keyboard:
 
     key_masks = (
         { # Byte 1
@@ -81,7 +81,7 @@ class FloppyKeyboard:
         self.bus = i2c_bus
         self.address = i2c_address
         self.channel = out_channel
-        self.key2MIDI = FloppyKeyboard.genKey2MIDI(midi_start_note)
+        self.key2MIDI = Keyboard.genKey2MIDI(midi_start_note)
         self.lastState: list[int] = [0, 0, 0, 0, 0, 0 ,0] 
 
     def read(self)->list[Message]:
@@ -122,13 +122,13 @@ class FloppyKeyboard:
             # print(f'Byte {byteNum+1}',"changes","{:08b}".format(changed_bits))
 
             #Now we have to compare which key was changed
-            for mask in FloppyKeyboard.key_masks[byteNum]:
+            for mask in Keyboard.key_masks[byteNum]:
                 # If the mask & the changed bits is True, that key has changed
                 # and we need to figure out if was pressed or released
                 if (mask & changed_bits):
                     #If the mask & the newState is true then the key was Pressed
                     pressed = mask & newKeyStates[byteNum]
-                    message = self.key2msg(FloppyKeyboard.key_masks[byteNum][mask], pressed)
+                    message = self.key2msg(Keyboard.key_masks[byteNum][mask], pressed)
                     messages.append(message)
  
         return messages
@@ -136,7 +136,7 @@ class FloppyKeyboard:
     def pitchStateChanged(self, newPitchState:list[int])->Message:
         # the value is the last two bytes of the message
         pitchbend_value = (newPitchState[0]<<8) | (newPitchState[1])
-
+        #todo update with Utils.map range
         # Map the [0,1023] arduino adc value to the range [-8191, 8191] for midi
         pitchbend_value  =  (pitchbend_value) * (16382) // (1023) + (-8191)
 
@@ -183,8 +183,8 @@ class FloppyKeyboard:
                             velocity = 0,
                             time = 0)
     
-    @classmethod
-    def genKey2MIDI(cls,midi_start_note:int)->dict[str,int]:
+    @staticmethod
+    def genKey2MIDI(midi_start_note:int)->dict[str,int]:
 
         if(type(midi_start_note) is not int 
            or midi_start_note<0 or midi_start_note>94):

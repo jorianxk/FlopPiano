@@ -1,22 +1,23 @@
-from FlopPiano.FloppyDrives import *
-from FlopPiano.Players import FloppyDrivePlayer, MessageParser
+from FlopPiano.Drives import Drive, CrashMode
+from FlopPiano.Players import DrivePlayer, MessageParser
 import mido
+
 
 
 print(mido.get_input_names())
 
 bow = False
 
-available_drives:list[FloppyDrive] = []
+available_drives:list[Drive] = []
 
 for addr in range(8,18):
     if bow:
-        available_drives.append(FloppyDrive(i2c_bus=None, address=addr,
+        available_drives.append(Drive(i2c_bus=None, address=addr,
                                             crash_mode=CrashMode.BOW))
     else:
-        available_drives.append(FloppyDrive(i2c_bus=None, address=addr))
+        available_drives.append(Drive(i2c_bus=None, address=addr))
 
-player = FloppyDrivePlayer(available_drives)
+player = DrivePlayer(available_drives)
 msgParser = MessageParser(player)
 
 

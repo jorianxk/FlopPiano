@@ -1,5 +1,5 @@
-from FlopPiano.FloppyDrives import *
-from FlopPiano.Players import MessageParser, FloppyDrivePlayer
+from FlopPiano.Drives import *
+from FlopPiano.Players import MessageParser, DrivePlayer
 import mido
 
 
@@ -52,19 +52,17 @@ test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 
 
 
-available_drives:list[FloppyDrive] = []
-
-
+available_drives:list[Drive] = []
 
 
 for addr in range(8,18):
     if bow:
-        available_drives.append(FloppyDrive(i2c_bus=None.i2c_bus,address=addr,
+        available_drives.append(Drive(i2c_bus=None.i2c_bus,address=addr,
                                             crash_mode=CrashMode.BOW))
     else:
-        available_drives.append(FloppyDrive(i2c_bus=None, address=addr))
+        available_drives.append(Drive(i2c_bus=None, address=addr))
 
-player = FloppyDrivePlayer(available_drives)
+player = DrivePlayer(available_drives)
 msgParser = MessageParser(player)
 
 transpose = 0
