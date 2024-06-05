@@ -35,19 +35,21 @@ from FlopPiano.Conductor import *
 # playerThread.start()
 
 
+logging.basicConfig(level=logging.INFO)
+
+conductor = Conductor(loopback=False)
+korg_or_file = False #True = Korg, False = Play a midi file
 
 
-conductor = Conductor(loopback=True, outputMode=OutputMode.ROLLOVER)
-korg_or_file = True #True = Korg, False = Play a midi file
-
-
-test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+test_midi_file = 'Testing_MIDI/Sarias_Song_piano.mid'
+#test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
+#test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
 #test_midi_file = 'Testing_MIDI/the_imperial_march.mid'
-transpose = 0
+transpose = -12
 
 
-injections:list[Message] =[Message('sysex', data = [123,0,17])] 
+#injections:list[Message] =[Message('sysex', data = [123,1,15])] 
 
 
 
@@ -66,14 +68,9 @@ def korg(conductor:Conductor)->None:
     #Handle playing
     with mido.open_input(usb_interface) as inport:
         for msg in inport:
-
-            #startTime = time.time()
             output = conductor.conduct([msg])
-            #print("Total Time", time.time()- startTime)
-
-            output = conductor.conduct([msg])
-            for out_msg in output:
-                    print(out_msg)
+            # for out_msg in output:
+            #         print("Response:",out_msg)
 
 def midi_file(conductor:Conductor, file2play:str, transpose:int = 0)->None:
     print(f'Playing {file2play}...')
@@ -81,27 +78,25 @@ def midi_file(conductor:Conductor, file2play:str, transpose:int = 0)->None:
         if (msg.type == "note_on" or msg.type =="note_off"):
             msg.note = msg.note + transpose
         
-        #startTime = time.time()
         output = conductor.conduct([msg])
-        #print("Total Time", time.time()- startTime)
 
-        for out_msg in output:
-            print(out_msg)
+        # for out_msg in output:
+        #     print("Response:", out_msg)
 
 
 
 
 
 try:
-     responses = conductor.conduct(injections)
-     for resp in responses:
-         print("Response:",resp)
+    #  responses = conductor.conduct(injections)
+    #  for resp in responses:
+    #      print("Response:",resp)
 
-     responses = conductor.conduct([])
-     for resp in responses:
-         print("Response:",resp)
+    #  responses = conductor.conduct([])
+    #  for resp in responses:
+    #      print("Response:",resp)
 
-     exit(0)     
+    #  exit(0)     
      if (korg_or_file):korg(conductor)
      else: midi_file(conductor,test_midi_file,transpose)
 except KeyboardInterrupt:
