@@ -1,6 +1,6 @@
 import mido
 from FlopPiano.MIDI import MIDIParser
-from FlopPiano.Conductor import Conductor
+from FlopPiano.Conductor import *
 
 # in_q = Queue()
 # stop = Event()
@@ -30,41 +30,89 @@ from FlopPiano.Conductor import Conductor
 
 
 # print(mido.get_input_names())
-# test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
-usb_interface = 'USB MIDI Interface:USB MIDI Interface MIDI 1 20:0'
+
 # playerThread = Thread(target=play, daemon= True, args=(in_q,))
 # playerThread.start()
 
 
-conductor = Conductor(driveAddresses=(8,9,10,11,12,13,14,15,16,17))
 
-parser = MIDIParser(conductor)
+
+conductor = Conductor(loopback=True, outputMode=OutputMode.ROLLOVER)
+korg_or_file = True #True = Korg, False = Play a midi file
+
+
+test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+#test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
+#test_midi_file = 'Testing_MIDI/the_imperial_march.mid'
+transpose = 0
+
+
+injections:list[Message] =[Message('sysex', data = [123,0,17])] 
+
+
+
+def korg(conductor:Conductor)->None:
+    #get the USB midi interface
+    usb_interface = None
+    for input in mido.get_input_names():
+        if input.startswith("USB"):
+            usb_interface = input
+            break
+    
+    #We could not find the interface - Exit
+    if usb_interface is None: raise Exception("Could not find MIDI USB Interface!")
+    print("Begin Playing! [ctrl+c to exit]")
+
+    #Handle playing
+    with mido.open_input(usb_interface) as inport:
+        for msg in inport:
+
+            #startTime = time.time()
+            output = conductor.conduct([msg])
+            #print("Total Time", time.time()- startTime)
+
+            output = conductor.conduct([msg])
+            for out_msg in output:
+                    print(out_msg)
+
+def midi_file(conductor:Conductor, file2play:str, transpose:int = 0)->None:
+    print(f'Playing {file2play}...')
+    for msg in mido.MidiFile(file2play).play():
+        if (msg.type == "note_on" or msg.type =="note_off"):
+            msg.note = msg.note + transpose
+        
+        #startTime = time.time()
+        output = conductor.conduct([msg])
+        #print("Total Time", time.time()- startTime)
+
+        for out_msg in output:
+            print(out_msg)
+
 
 
 
 
 try:
-    # for msg in mido.MidiFile(test_midi_file).play():
-    #         in_q.put([msg],block=True)
-    
-    # in_q.put([Message('note_on', note =40, velocity = 1)])
-    # time.sleep(1)
-    # in_q.put([Message('control_change', control =70, value = 2)])
-    # time.sleep(1)
- 
+     responses = conductor.conduct(injections)
+     for resp in responses:
+         print("Response:",resp)
 
-    # while True:
-    #     pass
+     responses = conductor.conduct([])
+     for resp in responses:
+         print("Response:",resp)
 
-    with mido.open_input(usb_interface) as inport:
-        for msg in inport:
-            parser.parse(msg)
-            conductor.conduct()
-            #in_q.put([msg],block=True)
-
+     exit(0)     
+     if (korg_or_file):korg(conductor)
+     else: midi_file(conductor,test_midi_file,transpose)
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
     conductor.silence()
-    # stop.set()
-    # playerThread.join() #wait for exit
+    print("Done.")
+
+
+
+
+
+
+

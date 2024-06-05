@@ -56,15 +56,15 @@ test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 print(f'Playing {test_midi_file} [ctrl+c to stop]')
 
 
-conductor = Conductor((8, 9, 10 ,11, 12, 13, 14, 15, 16, 17))
-parser = MIDIParser(conductor)
+conductor = Conductor(loopback=False)
+
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():
         if (msg.type == "note_on" or msg.type =="note_off"):
             msg.note = msg.note + transpose
-        parser.parse(msg)
-        conductor.conduct()
+        
+        conductor.conduct([msg])
 except KeyboardInterrupt:
     print("Exiting..")
 finally:

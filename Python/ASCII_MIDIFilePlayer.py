@@ -17,17 +17,16 @@ from threading import Event, Thread
 
 
 def play(stop_flag:Event, file:str):
-    conductor = Conductor((8, 9, 10 ,11, 12, 13, 14, 15, 16, 17))
-    parser = MIDIParser(conductor)
+    conductor = Conductor(loopback=False)
+
 
     for msg in mido.MidiFile(file).play():
         if stop_flag.is_set(): break
 
         if (msg.type == "note_on" or msg.type =="note_off"):
             msg.note = msg.note -12
-
-        parser.parse(msg)
-        conductor.conduct()
+ 
+        conductor.conduct([msg])
 
     conductor.silence()
     

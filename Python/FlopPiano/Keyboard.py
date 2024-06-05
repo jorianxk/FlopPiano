@@ -85,6 +85,8 @@ class Keyboard:
         self.lastState: list[int] = [0, 0, 0, 0, 0, 0 ,0] 
 
     def read(self)->list[Message]:
+        messages = []
+
         newState = self.bus.read_i2c_block_data(self.address,0,7)
 
         # The first five bytes represent the buttons/keys
@@ -93,13 +95,15 @@ class Keyboard:
         # The last two bytes are the represent the pitch wheel
         newPitchState = newState[5:]
 
-        messages = []
+        
 
         if(not self.lastState[0:5] == newKeyStates):
             messages.extend(self.keyStatesChanged(newKeyStates))
+            #pass
 
         if(not self.lastState[5:] == newPitchState):
             messages.append(self.pitchStateChanged(newPitchState))
+            #pass
 
 
 
