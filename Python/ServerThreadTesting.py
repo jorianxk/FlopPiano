@@ -1,4 +1,4 @@
-from FlopPiano.Conductor import Conductor
+from FlopPiano.Conductor import Conductor, OutputMode
 
 from threading import Thread, Event
 from queue import Queue, Empty
@@ -48,6 +48,8 @@ def doConduct(stop_flag:Event, input_q:Queue):
 
         outgoing_msgs = conductor.conduct(incoming_msgs)
 
+
+
         if (not usbOutPort.closed and len(outgoing_msgs)>0):
             for msg in outgoing_msgs:
                 usbOutPort.send(msg)
@@ -81,7 +83,8 @@ try:
     #     input_q.put([msg])
     # input_q.put([Message('control_change', control = 120)])
 
-    while True: time.sleep(1)
+    while True: 
+        time.sleep(1)
 
 except KeyboardInterrupt as ke:
     print("Exiting..")
