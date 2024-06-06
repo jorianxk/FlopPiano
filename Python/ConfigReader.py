@@ -1,8 +1,14 @@
 from configparser import ConfigParser
 from FlopPiano.Conductor import Note, OutputMode
 import logging
+
+
+
 config = ConfigParser()
-config.read('config.ini')
+
+
+with open('config.ini') as f:
+    config.read_file(f)
 
 
 # #Do Server section
@@ -60,21 +66,24 @@ try:
 
     #TODO remember to init notes correctly
     notes:list[Note] = [] 
+
     for section in config.sections():
+        
         if section.upper().startswith("DRIVE"):
             address = config[section].getint("address")
+
             if address is None:
                 raise ValueError(f'[{section}]: address not given')
             elif address<0x8 or address >0x77:
                  raise ValueError(f'[Conductor]: address not [{0x8}-{0x77}]')
+            
             #TODO handle tuning here!
             note = Note(None,address)
             notes.append(note)
+
 
 except KeyError as ke:
     print("Could not find section:" , ke)
 except ValueError as ve:
     print("Bad setting:", ve)
 
-# for section in config.sections():
-#     print(section)
