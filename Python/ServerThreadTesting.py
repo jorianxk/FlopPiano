@@ -67,7 +67,7 @@ transpose = -12
 
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 stop_flag = Event()
 input_q = Queue()
 conductThread = Thread(target=doConduct, daemon= True, args=(stop_flag, input_q))
@@ -75,11 +75,11 @@ conductThread.start()
 
 try:    
 
-    for msg in mido.MidiFile(test_midi_file).play():
-        if (msg.type == "note_on" or msg.type =="note_off"):
-            msg.note = msg.note + transpose
-        input_q.put([msg])
-    input_q.put([Message('control_change', control = 120)])
+    # for msg in mido.MidiFile(test_midi_file).play():
+    #     if (msg.type == "note_on" or msg.type =="note_off"):
+    #         msg.note = msg.note + transpose
+    #     input_q.put([msg])
+    # input_q.put([Message('control_change', control = 120)])
 
     while True: time.sleep(1)
 
