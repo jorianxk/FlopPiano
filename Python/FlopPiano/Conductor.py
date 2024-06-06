@@ -1,4 +1,3 @@
-import mido
 import copy
 from mido import Message
 from smbus import SMBus
@@ -22,7 +21,6 @@ class Note(Drive):
 
     def __init__(self, i2c_bus:SMBus, address:int) -> None:
         super().__init__(i2c_bus=i2c_bus, address=address)
-        
  
     def setOriginal(self, original:float)->None:
         self._original = original
@@ -53,14 +51,12 @@ class Note(Drive):
         self.enable = True
         self.update()
 
-
 class OutputMode(Enum):
     ROLLOVER = 'rollover'
     KEYS = 'keys'
 
-
 class Conductor(MIDIListener, MIDIParser):
-    # And ID for sysex messages
+    # An ID for sysex messages
     __sysex_id__ = 123
 
     __cc2PitchMode__ = (PitchBendMode.HALF, 
@@ -133,7 +129,10 @@ class Conductor(MIDIListener, MIDIParser):
         #Setup the outgoing message buffer
         self.outputBuffer:list[Message] = []
 
-    def conduct(self, incoming_msgs:list[Message])->list[Message]:
+        #make sure the drives are quiet
+        self.silence()
+
+    def conduct(self, incoming_msgs:list[Message]=[])->list[Message]:
         #Read the keyboard every time to maintain consistent-ish timing
         keyboard_msgs = self.getKeyboardMessages()
         #If we want to play the keyboard messages then add them to the incoming
