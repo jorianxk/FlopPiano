@@ -5,8 +5,6 @@ import logging
 
 
 config = ConfigParser()
-
-
 with open('config.ini') as f:
     config.read_file(f)
 
@@ -80,7 +78,6 @@ try:
             #TODO handle tuning here!
             note = Note(None,address)
             notes.append(note)
-
 
 except KeyError as ke:
     print("Could not find section:" , ke)

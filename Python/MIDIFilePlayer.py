@@ -1,7 +1,8 @@
 from FlopPiano.MIDI import MIDIParser
 from FlopPiano.Conductor import Conductor
 import mido
-
+import logging
+import time
 
 transpose = 0
 #test_midi_file = 'Testing_MIDI/80_Synth_track.mid'
@@ -53,11 +54,14 @@ test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 
 
 
-print(f'Playing {test_midi_file} [ctrl+c to stop]')
+logging.basicConfig(level=logging.DEBUG)
 
 
-conductor = Conductor(loopback=False)
+conductor = Conductor(loopback=False, doKeyboard=False)
 
+print(f'Playing {test_midi_file} in 3 second [ctrl+c to stop]')
+
+time.sleep(3)
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():

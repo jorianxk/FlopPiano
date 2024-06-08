@@ -4,7 +4,6 @@ from threading import Thread, Event
 from queue import Queue, Empty
 
 
-from mido.sockets import PortServer, SocketPort, connect
 from mido.ports import BaseInput, BaseOutput
 from mido import Message
 import logging

@@ -1,5 +1,3 @@
-
-import time
 from enum import Enum
 from smbus import SMBus
 from .MIDI import *
