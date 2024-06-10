@@ -4,10 +4,10 @@ import mido
 import logging
 import time
 
-transpose = 0
+transpose = -12
 #test_midi_file = 'Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
-test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+#test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'Testing_MIDI/bloody.mid'
 #test_midi_file = 'Testing_MIDI/brahms-symphony3-3-theme-piano-solo.mid'
 #test_midi_file = 'Testing_MIDI/castle_deep.mid'
@@ -21,7 +21,7 @@ test_midi_file =  'Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'Testing_MIDI/Happy_Birthday_MIDI.mid'
 #test_midi_file = 'Testing_MIDI/Happy_Birthday.mid'
 #test_midi_file = 'Testing_MIDI/HappyBirthday.mid'
-#test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
+test_midi_file = 'Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
 #test_midi_file = 'Testing_MIDI/imperial.mid'
 #test_midi_file = 'Testing_MIDI/knight_rider.mid'
 #test_midi_file = 'Testing_MIDI/level1.mid'

@@ -1,0 +1,3 @@
+[UP]     -> Next Page                 [RIGHT]  -> Next Button
+[DOWN]   -> Previous Page             [LEFT]   -> Previous Button
+[INSERT] -> Click/ Press buttons      [ctrl+C] -> Exit             KEY LEGEND IN DEMO ONLY
