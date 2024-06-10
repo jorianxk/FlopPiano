@@ -7,9 +7,6 @@ from asciimatics.exceptions import NextScene
 from asciimatics.constants import ASCII_LINE, SINGLE_LINE
 from enum import Enum
 
-
-
-
 DEFAULT_FONT = "3x5"
 DEFAULT_BACKGROUND_COLOR = Screen.COLOUR_BLACK
 DEFAULT_FOREGROUND_COLOR = Screen.COLOUR_DEFAULT
@@ -417,6 +414,3 @@ class Page(Effect):
     #Below are forced inherited from Effect, but we don't need them
     def reset(self):pass
     def stop_frame(self):return 0
-
-if __name__ == "__main__":
-    print("Run FlopPiano_Mock.py for the demo.\nThis is just the API")
