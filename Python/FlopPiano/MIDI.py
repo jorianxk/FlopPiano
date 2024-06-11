@@ -177,18 +177,18 @@ class MIDIUtil():
 
 class MIDIListener():
 
-    def __init__(self, inChannel:int =-1) -> None:
-        if (inChannel <-1 or inChannel>15):
+    def __init__(self, input_channel:int =-1) -> None:
+        if (input_channel <-1 or input_channel>15):
             raise ValueError("Channel must be [-1,15]") #-1 indicates listen to all!
-        self.inChannel = inChannel
-
-    def noteOn(self, msg:Message):
+        self.input_channel = input_channel
+    
+    def note_on(self, msg:Message):
         pass
 
-    def noteOff(self, msg:Message):
+    def note_off(self, msg:Message):
         pass
     
-    def controlChange(self, msg:Message):
+    def control_change(self, msg:Message):
         pass
     
     def pitchwheel(self, msg:Message):
@@ -216,8 +216,8 @@ class MIDIParser():
         # This check is to filter out messages that have a channel, and that 
         # channel is not our listener's channel. Except when the listener is 
         # listening to all channels. i.e. listener channel is -1
-        if (self.listener.inChannel != -1 and MIDIParser.hasChannel(msg)):
-            if (msg.channel != self.listener.inChannel): return
+        if (self.listener.input_channel != -1 and MIDIParser.has_channel(msg)):
+            if (msg.channel != self.listener.input_channel): return
                 
         
         msgType = msg.type        
@@ -225,17 +225,17 @@ class MIDIParser():
         if (msg.type =='note_on'):
 
             if (msg.velocity == 0):
-                self.listener.noteOff(msg)
+                self.listener.note_off(msg)
             else:
-                self.listener.noteOn(msg)
+                self.listener.note_on(msg)
 
         elif (msg.type == 'note_off'):
 
-            self.listener.noteOff(msg)
+            self.listener.note_off(msg)
 
         elif (msg.type == 'control_change'):
 
-            self.listener.controlChange(msg)
+            self.listener.control_change(msg)
 
         elif (msg.type == 'pitchwheel'):
 
@@ -261,7 +261,7 @@ class MIDIParser():
             pass
 
     @staticmethod
-    def hasChannel(msg:Message)->bool:    
+    def has_channel(msg:Message)->bool:    
         try:
             msg.channel
             return True

@@ -18,11 +18,12 @@ class PitchBendMode(Enum):
 
 
 #TODO: We need to add provisions for tuning a drive/note
+#TODO: Fix camel case and refactor
 class Note(Drive):
     #A Note IS a drive
     def __init__(self, i2c_bus:SMBus, address:int) -> None:
         super().__init__(i2c_bus=i2c_bus, address=address)
-    
+
     
     def setOriginal(self, original:float)->None:
         self._original = original
@@ -41,12 +42,12 @@ class Note(Drive):
             n_mod = map_range(bendAmount,-8192,8192,-mode.value, mode.value)
             self.setCenter(MIDIUtil.n2freq(old_n+n_mod))
             
-    def modulate(self, modAmount:int):
-        if modAmount ==0:
+    def modulate(self, mod_amount:int):
+        if mod_amount ==0:
             return
         else:
             #Play with 2, and 16 below for differing effects
-            omega = map_range(modAmount,1,127,2,16) * math.pi
+            omega = map_range(mod_amount,1,127,2,16) * math.pi
             self.frequency(self._center+math.sin(omega * time.time()))
 
     def play(self):
@@ -66,18 +67,18 @@ class OutputMode(Enum):
 class Conductor(MIDIListener, MIDIParser):
     #An ID for sysex messages - this is so we know that a sysex message is
     # intended for a Conductor
-    __sysex_id__ = 123
+    SYSEX_ID = 123
 
     #Index used for mapping sysex command (2) to OutputMode
-    __sysex2OutputMode__ = (OutputMode.ROLLOVER, 
+    SYSEX_TO_OUTPUT_MODE = (OutputMode.ROLLOVER, 
                             OutputMode.KEYS, 
                             OutputMode.OFF)
 
     #Index used for mapping incoming control change (70) to CrashMode
-    __cc2CrashMode__ = (CrashMode.OFF, CrashMode.BOW, CrashMode.FLIP)
+    CC_TO_CRASH_MODE = (CrashMode.OFF, CrashMode.BOW, CrashMode.FLIP)
 
     #Index used for mapping incoming control change (71) to PitchBendMode
-    __cc2PitchMode__ = (PitchBendMode.HALF, 
+    CC_TO_PITCH_MODE = (PitchBendMode.HALF, 
                         PitchBendMode.WHOLE, 
                         PitchBendMode.MINOR3RD, 
                         PitchBendMode.MAJOR3RD, 
@@ -87,13 +88,13 @@ class Conductor(MIDIListener, MIDIParser):
  
 
     def __init__(self,*,
-                 driveAddresses:set[int]= (8, 9, 10 ,11, 12, 13, 14, 15, 16, 17),
-                 doKeyboard:bool = True,
-                 keyboardAddress:int = 0x77,
+                 drive_addresses:set[int]= (8, 9, 10 ,11, 12, 13, 14, 15, 16, 17),
+                 do_keyboard:bool = True,
+                 keyboard_address:int = 0x77,
                  loopback:bool = True,
-                 inChannel:int = 0,
-                 outChannel:int = 0,
-                 outputMode:int = 0) -> None:
+                 input_channel:int = 0,
+                 output_channel:int = 0,
+                 output_mode:int = 0) -> None:
         
         self.logger:logging.Logger = logging.getLogger(__name__)
         ##Init parent classes
@@ -102,38 +103,38 @@ class Conductor(MIDIListener, MIDIParser):
         MIDIParser.__init__(self, self)
 
         #Setup the I2C bus
-        self.i2c_bus:SMBus =  SMBus(1) # indicates /dev/ic2-1
+        self._i2c_bus:SMBus =  SMBus(1) # indicates /dev/ic2-1
 
         #Setup the drives(notes)
         # a tuple to hold the unmolested notes/drives
-        self.notes:tuple[Note] = [Note(self.i2c_bus,i) for i in driveAddresses] 
+        self._notes:tuple[Note] = [Note(self._i2c_bus,i) for i in drive_addresses] 
 
         #Setup the keyboard. 
-        self.keyboard = Keyboard(i2c_bus=self.i2c_bus,
-                                 i2c_address=keyboardAddress)
+        self._keyboard = Keyboard(i2c_bus=self._i2c_bus,
+                                 i2c_address=keyboard_address)
 
-        self.doKeyboard = doKeyboard
+        self._do_keyboard = do_keyboard
         
         #Setup loopback      
         self.__setLoopback(loopback)
 
         #Setup input channel
-        if (inChannel <0 or inChannel>16):
+        if (input_channel <0 or input_channel>16):
             raise ValueError("inChannel must be [0-16]")
-        self.__setInputChannel(inChannel)
+        self.__setInputChannel(input_channel)
 
         #Setup output channel
-        if (outChannel<0 or outChannel>15):
+        if (output_channel<0 or output_channel>15):
             raise ValueError("outChannel must be [0-15]")                 
-        self.__setOutputChannel(outChannel)
+        self.__setOutputChannel(output_channel)
 
         #Setup output mode
-        if (outputMode<0 or outputMode>2):
+        if (output_mode<0 or output_mode>2):
             raise ValueError("outputMode must be [0-2]")          
-        self.__setOutputMode(outputMode)
+        self.__setOutputMode(output_mode)
 
         #Setup note pools
-        self.available_notes:list[Note] = list(self.notes)
+        self.available_notes:list[Note] = list(self._notes)
         self.active_notes:dict[int,Note] = {} 
 
         #Setup sound modification states
@@ -153,7 +154,7 @@ class Conductor(MIDIListener, MIDIParser):
     def conduct(self, incoming_msgs:list[Message]=[])->list[Message]:
 
         keyboard_msgs:list[Message] = []
-        if self.doKeyboard:
+        if self._do_keyboard:
             #Read the keyboard every time to maintain consistent-ish timing
             keyboard_msgs = self.__getKeyboardMessages()
             #If we want to play the keyboard messages then add them to the incoming
@@ -170,7 +171,7 @@ class Conductor(MIDIListener, MIDIParser):
         return self.__flushOutputBuffer(keyboard_msgs)
     
     def silence(self)->None:
-        for note in self.notes:
+        for note in self._notes:
             note.silence()
         
         #Remove all active notes and put them in the available pool
@@ -186,7 +187,7 @@ class Conductor(MIDIListener, MIDIParser):
     def __getKeyboardMessages(self)->list[Message]:        
         keyboard_msgs:list[Message] = []
         try:
-            keyboard_msgs = self.keyboard.read()
+            keyboard_msgs = self._keyboard.read()
         except OSError as oe:
             #This is normal just log it
             self.logger.debug("Error reading keyboard state - skipping")
@@ -228,15 +229,15 @@ class Conductor(MIDIListener, MIDIParser):
         return outgoing_msgs
 
     def __add2OutputBuffer(self, msg:Message)->None:
-        if MIDIParser.hasChannel(msg):
+        if MIDIParser.has_channel(msg):
             #Redirect the output channel to our output channel
-            msg.channel = self.outChannel
+            msg.channel = self.output_channel
         
         self.outputBuffer.append(msg)
     
     def __setCrashMode(self, value:int)->None:
-        if value < len(Conductor.__cc2CrashMode__):
-            mode = Conductor.__cc2CrashMode__[value]
+        if value < len(Conductor.CC_TO_CRASH_MODE__cc2CrashMode__):
+            mode = Conductor.CC_TO_CRASH_MODE__cc2CrashMode__[value]
             for note in self.active_notes.values():
                 note.crash_mode =  mode
             for note in self.available_notes:
@@ -246,8 +247,8 @@ class Conductor(MIDIListener, MIDIParser):
         self.logger.warn(f"Crash Mode not set: {value} not [0-2]")
     
     def __setPitchBendMode(self, value:int)->None:
-        if value < len(Conductor.__cc2PitchMode__):
-            mode = Conductor.__cc2PitchMode__[value]
+        if value < len(Conductor.CC_TO_PITCH_MODE):
+            mode = Conductor.CC_TO_PITCH_MODE[value]
             self.pitchBendMode = mode
             self.logger.info(f'Pitch Bend Mode set: {self.pitchBendMode}')
             return 
@@ -261,33 +262,33 @@ class Conductor(MIDIListener, MIDIParser):
         self.modulate = value
         self.logger.debug(f'Modulate set: {self.modulate}')
 
-    def __setInputChannel(self, inputChannel:int)->None:
+    def __setInputChannel(self, input_channel:int)->None:
         #check that value is in in channel range
-        if (inputChannel>=0 and inputChannel <= 16):
+        if (input_channel>=0 and input_channel <= 16):
             #Value maps as below:
             # 0 = all channels, 1 = channel 0, 2 = channel 1 ...
-            self.inChannel = (inputChannel -1)
+            self.input_channel = (input_channel -1)
             # change the keyboard to send to the new input channel
-            if (self.inChannel > -1):
-                self.keyboard.channel = self.inChannel
+            if (self.input_channel > -1):
+                self._keyboard.channel = self.input_channel
 
-            self.logger.info(f'Input channel set: {self.inChannel} [change on conduct()]')
+            self.logger.info(f'Input channel set: {self.input_channel} [change on conduct()]')
             return
 
-        self.logger.warn(f"Input channel not set: {inputChannel} not [0-16]")
+        self.logger.warn(f"Input channel not set: {input_channel} not [0-16]")
     
-    def __setOutputChannel(self, outputChannel:int)->None:
-        if (outputChannel <=15):
-            self.outChannel = outputChannel
-            self.logger.info(f'Output channel set: {self.outChannel}')
+    def __setOutputChannel(self, output_channel:int)->None:
+        if (output_channel <=15):
+            self.output_channel = output_channel
+            self.logger.info(f'Output channel set: {self.output_channel}')
             return
-        self.logger.warn(f"Input channel NOT set: {outputChannel} not [0-15]")
+        self.logger.warn(f"Input channel NOT set: {output_channel} not [0-15]")
 
     def __setOutputMode(self, value:int)->None:
         #check that value valid output mode, if not ignore 
-        if (value < len(Conductor.__sysex2OutputMode__)):
+        if (value < len(Conductor.SYSEX_TO_OUTPUT_MODE)):
             #convert the value to a OutputMode, and set the mode
-            mode = Conductor.__sysex2OutputMode__[value]
+            mode = Conductor.SYSEX_TO_OUTPUT_MODE[value]
             self.outputMode = mode
             self.logger.info(f'Output mode set: {self.outputMode}')
             return
@@ -302,7 +303,7 @@ class Conductor(MIDIListener, MIDIParser):
     #---------------------------MIDI HANDLING----------------------------------#
     # Inherited from MIDIListener used to handle incoming mido.Messages
 
-    def noteOn(self, msg:Message)->None:
+    def note_on(self, msg:Message)->None:
         try:
             #get an available Note and remove it from the pool
             nextNote:Note = self.available_notes.pop()
@@ -320,7 +321,7 @@ class Conductor(MIDIListener, MIDIParser):
             #We can't play it so pass it along
             self.__add2OutputBuffer(msg)
 
-    def noteOff(self, msg:Message)->None:
+    def note_off(self, msg:Message)->None:
         try:
             #get the active note
             playedNote:Note = self.active_notes.pop(msg.note)
@@ -337,7 +338,7 @@ class Conductor(MIDIListener, MIDIParser):
             #if we're not playing that note pass it along
             self.__add2OutputBuffer(msg)
     
-    def controlChange(self, msg:Message)->None:  
+    def control_change(self, msg:Message)->None:  
         #1 -> modulation value is 0 = off else value 
         if msg.control == 1: # this is a modulation cc
             self.__setModulate(msg.value)
@@ -371,7 +372,7 @@ class Conductor(MIDIListener, MIDIParser):
             value = msg.data[2]
 
             #check that the first byte matches our id ignore it otherwise
-            if(id == Conductor.__sysex_id__):                
+            if(id == Conductor.SYSEX_ID):                
                 #check what the command is
                 if (command == 0): # Input channel change command
                     self.__setInputChannel(value)

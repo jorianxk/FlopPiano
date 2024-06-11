@@ -17,7 +17,7 @@ if usb_interface is None: raise Exception("Could not find MIDI USB Interface!")
 
 logging.basicConfig(level=logging.DEBUG)
 
-conductor = Conductor(loopback=False, doKeyboard=False)
+conductor = Conductor(loopback=False, do_keyboard=False)
 
 transpose = 0
 

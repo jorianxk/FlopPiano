@@ -57,7 +57,7 @@ test_midi_file = 'assets/Testing_MIDI/bloody.mid'
 logging.basicConfig(level=logging.DEBUG)
 
 
-conductor = Conductor(loopback=False, doKeyboard=False)
+conductor = Conductor(loopback=False, do_keyboard=False)
 
 print(f'Playing {test_midi_file} in 3 second [ctrl+c to stop]')
 
