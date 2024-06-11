@@ -1,5 +1,5 @@
 from threading import Thread, Event
-from queue import Queue
+from queue import Queue, Empty
 
 
 from configparser import ConfigParser
@@ -12,15 +12,6 @@ import mido
 import logging
 import time
 
-"""
-Application
-
-1) read .ini using with open()
-2) pass to Configuration() -> Service()
-3) Service.start()
-4) Do display stuff, push messages to service
-
-"""
 
 class Configuration():
 
@@ -170,10 +161,6 @@ class Configuration():
         return drive_configs
 
 
-
-
-
-
 class Service(Thread):
 
     def __init__(
@@ -185,30 +172,27 @@ class Service(Thread):
         log_file:str = None, 
         log_level:int = logging.INFO):
 
-        """_summary_
-
-        Raises:
-            ValueError: _description_
-            NotImplementedError: _description_
-        """
-        
+         
         # Setup Conductor
         self._conductor = conductor
         if self._conductor is None:
-            self._conductor = Conductor()
+            #TODO: remember to do loopback by default
+            self._conductor = Conductor(loopback=False)
+            #self._conductor = Conductor()
 
         # Get the service type
         if service_type != 'physical' and service_type!='virtual':
             raise ValueError("Service type must be 'physical' or 'virtual'")
         #TODO: add virtual support
-        if service_type == 'virtual': raise NotImplementedError('virtual service not implemented')
+        if service_type == 'virtual': 
+            raise NotImplementedError('virtual service not implemented')
 
         # Set up ports
-        self._input:BaseInput = mido.open_input(
+        self._midi_input:BaseInput = mido.open_input(
             Service._find_port(input_hint, mido.get_input_names())
         )
 
-        self._output:BaseOutput = mido.open_output(
+        self._midi_output:BaseOutput = mido.open_output(
             Service._find_port(output_hint, mido.get_output_names())
         )
 
@@ -219,21 +203,77 @@ class Service(Thread):
         self._logger = logging.getLogger(__name__)
 
         self._stop_event = Event()
-        self._incoming = Queue()
-        self._outgoing = Queue()
+
+        #TODO max sizes for queues is arbitrary and only really needed for the
+        #outgoing queue. We don't know if the user will consume outgoing 
+        #messages but incoming messages we consume incoming messages as 
+        #soon as possible.        
+        self._incoming_q = Queue(100)
+        self._outgoing_q = Queue(100)
 
         #All above went well, so we're good to start
         Thread.__init__(self)
 
     def run(self):
+        self._logger.info("Started.")
         while True:
-            if self._stop_event.is_set(): break
+            if (self._stop_event.is_set()): break
 
-            print("Service:", "loop")
-            time.sleep(0.5)
+            incoming_msgs:list[Message] = []
+            outgoing_msgs:list[Message] = []
+
+            #get any incoming messages from the application
+            try: incoming_msgs.extend(self._incoming_q.get_nowait())
+            except Empty: pass
+
+            #Get the messages from the input
+            if(not self._midi_input.closed):
+                input_msg = self._midi_input.receive(block=False)
+                if input_msg is not None:
+                    incoming_msgs.append(input_msg)
+
+            outgoing_msgs = self._conductor.conduct(incoming_msgs)
+   
+            #try to write the outgoing messages to the output
+            if (not self._midi_output.closed and len(outgoing_msgs)>0):
+                for msg in outgoing_msgs:
+                    self._midi_output.send(msg)
+
+        #Clean up before stopping
+        #When quitting make sure the conductor shuts up
+        self._logger.info("Cleaning up...")
+        self._conductor.silence()
+        self._logger.info("Exited.")
         
     def quit(self):
+        """_summary_
+            Stop the Service Thread
+        """
         self._stop_event.set()
+
+    def get(self, **kwargs)->list[Message]:
+        """_summary_
+            Get the output from the Conductor
+            **kwargs are passed to Queue.get() see:
+            https://docs.python.org/3/library/queue.html
+        Returns:
+            list[Message]: The output from the conductor
+        """
+        self._logger.debug(f'Returning messages from the outgoing queue')
+        return self._outgoing_q.get(**kwargs)
+
+    def put(self, messages:list[Message] ,**kwargs):
+        """_summary_
+            Send Midi messages to the Conductor
+            **kwargs are passed to Queue.put() see:
+            https://docs.python.org/3/library/queue.html
+
+        Args:
+            messages (list[Message]): A list of messages to send to the 
+                Conductor
+        """
+        self._logger.debug(f'Put {len(messages)} messages into incoming queue')
+        self._incoming_q.put(messages,**kwargs)
 
     @staticmethod
     def _find_port(hint:str, options:list[str])->str:
