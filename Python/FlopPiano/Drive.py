@@ -20,6 +20,7 @@ class CrashMode (Enum):
     *     
     *     FLIP mode: THe drive will flip direction after every step/pulse
     """
+    __order__ = 'OFF BOW FLIP'
     OFF = 0b00
     BOW = 0b01
     FLIP = 0b10

@@ -7,6 +7,7 @@ import logging
 import time
 
 class PitchBendMode(Enum):
+    __order__ = 'HALF WHOLE MINOR3RD MAJOR3RD FOURTH FIFTH OCTAVE'
     #Number indicates steps. 1/2 steps = 1 note
     HALF     = 0.5 #  1 note(s) or   1/2 step(s)
     WHOLE    =   1 #  2 note(s) or     1 step(s)
@@ -39,7 +40,7 @@ class Note(Drive):
             return
         else:
             old_n = MIDIUtil.freq2n(self._original)
-            n_mod = map_range(bendAmount,-8192,8192,-mode.value, mode.value)
+            n_mod = map_range(bendAmount,-8192,8191,-mode.value, mode.value)
             self.setCenter(MIDIUtil.n2freq(old_n+n_mod))
             
     def modulate(self, mod_amount:int):
@@ -55,6 +56,7 @@ class Note(Drive):
         self.update()
 
 class OutputMode(Enum):
+    __order__ = 'ROLLOVER KEYS OFF'
     ROLLOVER = 'rollover'
     KEYS = 'keys'
     OFF = 'off'
@@ -64,6 +66,7 @@ class OutputMode(Enum):
 #-Update all doc strings
 #-Add sysex command for shifting keyboard up and down in range - command (4)?
 #-switch __init__ to **kwargs?
+#- fix enum mapping
 class Conductor(MIDIListener, MIDIParser):
     #An ID for sysex messages - this is so we know that a sysex message is
     # intended for a Conductor
@@ -236,8 +239,8 @@ class Conductor(MIDIListener, MIDIParser):
         self.outputBuffer.append(msg)
     
     def __setCrashMode(self, value:int)->None:
-        if value < len(Conductor.CC_TO_CRASH_MODE__cc2CrashMode__):
-            mode = Conductor.CC_TO_CRASH_MODE__cc2CrashMode__[value]
+        if value < len(Conductor.CC_TO_CRASH_MODE):
+            mode = Conductor.CC_TO_CRASH_MODE[value]
             for note in self.active_notes.values():
                 note.crash_mode =  mode
             for note in self.available_notes:
@@ -282,7 +285,7 @@ class Conductor(MIDIListener, MIDIParser):
             self.output_channel = output_channel
             self.logger.info(f'Output channel set: {self.output_channel}')
             return
-        self.logger.warn(f"Input channel NOT set: {output_channel} not [0-15]")
+        self.logger.warn(f"Output channel NOT set: {output_channel} not [0-15]")
 
     def __setOutputMode(self, value:int)->None:
         #check that value valid output mode, if not ignore 
