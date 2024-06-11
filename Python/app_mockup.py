@@ -35,7 +35,7 @@ from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError
 from asciimatics.effects import Print, Mirage, Matrix, Wipe
 from asciimatics.renderers import Fire
-from FlopPiano.ascii import *
+from floppiano.ascii import *
    
 
 class KeyboardPage(Page):

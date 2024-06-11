@@ -68,7 +68,6 @@ class OutputMode(Enum):
 #TODO:
 #-Update all doc strings
 #-Add sysex command for shifting keyboard up and down in range - command (4)?
-#-switch __init__ to **kwargs?
 #- fix enum mapping
 class Conductor(MIDIListener, MIDIParser):
     #An ID for sysex messages - this is so we know that a sysex message is

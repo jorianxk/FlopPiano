@@ -1,4 +1,4 @@
-from FlopPiano.conductor import Conductor
+from floppiano.conductor import Conductor
 import mido
 import logging
 import time
