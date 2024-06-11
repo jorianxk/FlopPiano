@@ -19,17 +19,18 @@ class PitchBendMode(Enum):
 
 #TODO: We need to add provisions for tuning a drive/note
 class Note(Drive):
-
+    #A Note IS a drive
     def __init__(self, i2c_bus:SMBus, address:int) -> None:
         super().__init__(i2c_bus=i2c_bus, address=address)
- 
+    
+    
     def setOriginal(self, original:float)->None:
         self._original = original
         self.setCenter(original)
 
     def setCenter(self, center:float):
         self._center = center
-        self.setFrequency(center)
+        self.frequency(center)
 
     def bend(self, bendAmount:int, mode:PitchBendMode):
         if bendAmount == 0:
@@ -46,7 +47,7 @@ class Note(Drive):
         else:
             #Play with 2, and 16 below for differing effects
             omega = map_range(modAmount,1,127,2,16) * math.pi
-            self.setFrequency(self._center+math.sin(omega * time.time()))
+            self.frequency(self._center+math.sin(omega * time.time()))
 
     def play(self):
         self.enable = True

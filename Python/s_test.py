@@ -8,7 +8,7 @@ import time
 #     config.write(configfile)
 
 #read a config
-# Configuration.read("config.ini")
+#Configuration.read("config.ini")
 
 
 # class Test():
@@ -22,6 +22,11 @@ import time
 
 
 # Test(**myargs)
+
+
+
+
+
 
 logging.basicConfig(level=logging.DEBUG)
 

@@ -16,18 +16,19 @@ class Configuration():
 
     @staticmethod
     def default() -> ConfigParser:
+        # '#' entries are just comments in the configuration file.
         config = ConfigParser()
         config['Service'] = {
-            '#type'     : "['physical', 'virtual']",
-            'type'      : 'physical',    # ['physical', 'virtual']
-            '#input'    : 'If physical -> USB interface name hints, if virtual -> port #',
-            'input'     : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-            '#output'   : '# If physical -> USB interface name hints, if virtual -> port #',
-            'output'    : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-            '#log_file' : 'Any file path',
-            'log_file'  : 'some path',   # Any file path
-            '#log_level': "['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']",
-            'log_level' : 'INFO'         # ['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
+            '#service_type': "['physical', 'virtual']",
+            'service_type' : 'physical',    # ['physical', 'virtual']
+            '#input_hint'  : 'If physical -> USB interface name hints, if virtual -> port #',
+            'input_hint'   : 'some string', # If physical -> USB interface name hints, if virtual -> port #
+            '#output_hint' : '# If physical -> USB interface name hints, if virtual -> port #',
+            'output_hint'  : 'some string', # If physical -> USB interface name hints, if virtual -> port #
+            '#log_file'    : 'Any file path',
+            'log_file'     : 'some path',   # Any file path
+            '#log_level'   : "['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']",
+            'log_level'    : 'INFO'         # ['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
         }
 
         config['Conductor'] = {
@@ -43,7 +44,6 @@ class Configuration():
             'output_mode'      : 'rollover' # ['rollover', 'keys', 'off']
         }
 
-
         for drive_num in range(1,11):
             config[f'Drive {drive_num}']={
                 '#address':'[0x8-0x77]',
@@ -56,7 +56,7 @@ class Configuration():
 
     @staticmethod
     def read(config_file_path:str):
-        
+        #TODO, what do we do with the config
         config = ConfigParser()
         with open(config_file_path, 'r') as config_file:
             config.read(config_file_path)
@@ -90,14 +90,14 @@ class Configuration():
             raise ValueError("[Service]: type not ['physical', 'virtual']")
 
         #TODO: We need to validate this!
-        input = config['Service'].get('input')
-        if input is None:
-            raise ValueError('[Service]: usb_input not given')
+        input_hint = config['Service'].get('input_hint')
+        if input_hint is None:
+            raise ValueError('[Service]: input_hint not given')
 
         #TODO: We need to validate this!
-        output = config['Service'].get('output')
-        if output is None:
-            raise ValueError('[Service]: usb_output not given')
+        output_hint = config['Service'].get('output_hint')
+        if output_hint is None:
+            raise ValueError('[Service]: output_hint not given')
 
         #TODO: dont' do logging if logfile is none!
         log_file = config['Service'].get('log_file')
@@ -108,7 +108,7 @@ class Configuration():
                             f'{list(logging.getLevelNamesMapping().keys())}')
         log_level = logging.getLevelNamesMapping()[log_level]
 
-        return (service_type, input, output, log_file, log_level)
+        return (service_type, input_hint, output_hint, log_file, log_level)
         
     @staticmethod
     def _conductor_configs(config:ConfigParser):
@@ -158,7 +158,6 @@ class Configuration():
                 drive_configs[address] = tuning
 
         return drive_configs
-
 
 class Service(Thread):
 

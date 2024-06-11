@@ -2,7 +2,6 @@ from enum import Enum
 from smbus import SMBus
 from .MIDI import *
 
-
 class CrashMode (Enum):
     """
     A Enum to hold Floppy drive crash modes
@@ -27,22 +26,22 @@ class CrashMode (Enum):
 
 class Drive:
     """
-    A class the represents a floppy drive
+    A class that represents a floppy drive
     """
     #clock speed of the attiny1604
-    __clk_freq__ = 20000000 
-    #prescaler setting on attin1604
-    __prescaler__ = 4
+    CLK_FREQ = 20000000 
+    #prescaler setting on attiny1604
+    PRESCALAR = 4
     #TOP = alpha/f
     #alpha = C_f/(2*N)
     #the alpha constant for frequency calculation
-    __alpha__ = __clk_freq__ / (2 * __prescaler__)
+    ALPHA = CLK_FREQ / (2 * PRESCALAR)
     
     #minimum frequency that can be sounded
-    __min_frequency__ = 38.891
+    MIN_FREQUENCY = 38.891
 
     #maximum frequency that can be sounded
-    __max_frequency__ = 12543.854
+    MAX_FREQUENCY = 12543.854
 
     #init with default values of the firmware
     def __init__(self, *,
@@ -71,7 +70,7 @@ class Drive:
         """
         self.i2c_bus = i2c_bus
         self.address = address
-        self.top = top #Top value of the drive 
+        self._top = top #Top value of the drive 
         self.enable = enable #Drive enable state
         self.spin = spin #Drive spin state
         self.crash_mode = crash_mode #Crash prevention mode
@@ -92,7 +91,7 @@ class Drive:
                 if false, CTRL plus the TOP value is sent to the address
 
         raises: 
-            Idk some error: If the I2C bus cant sent the message for whatever
+            OSError: If the I2C bus cant sent the message for whatever
             reason          
         """
 
@@ -140,7 +139,7 @@ class Drive:
         #|  The third byte is the least significant byte of the TOP value |
         #|----------------------------------------------------------------|
 
-        TOP = self.top.to_bytes(2,'little')
+        TOP = self._top.to_bytes(2,'little')
 
         
         ########################################################################
@@ -160,8 +159,10 @@ class Drive:
         self.enable = False
         self.update()
 
-    def setFrequency(self, frequency:float) -> int:
-        """A function to set the frequency of the drive by setting the drive TOP
+    def frequency(self, frequency:float) -> int:
+        """_summary_
+            A function to set the frequency of the drive by setting the drive 
+            TOP
 
             A valid frequency results in TOP value that is a unsigned 16 bit 
             integer [0-65535].
@@ -184,30 +185,31 @@ class Drive:
         Returns:
             int: The the resultant TOP value from the desired frequency
         """
+        #TODO: DO we really need the max/min freq check?
         #if the frequency cant be sounded, dont change anything
-        if (frequency >= Drive.__min_frequency__ and 
-            frequency<= Drive.__max_frequency__):
+        if (frequency >= Drive.MIN_FREQUENCY and 
+            frequency<= Drive.MAX_FREQUENCY):
 
-            proposed_top = round(Drive.__alpha__/frequency)
+            proposed_top = round(Drive.ALPHA/frequency)
 
             if((proposed_top < 0) or (proposed_top > 65535)):
                 raise ValueError (f'Frequency resulted in illegal TOP. '
                                   f'Given frequency: {frequency}, '
                                   f'Resultant TOP: {proposed_top}')
             
-            self.top = proposed_top
-            return int(Drive.__alpha__/proposed_top)
+            self._top = proposed_top
+            return int(Drive.ALPHA/proposed_top)
     
     def __repr__(self) -> str:
-        """Returns a string representation of the FloppyDrive
-
+        """_summary_
+            Returns a string representation of the Drive
         Returns:
-            str: _description_
+            str: A string representation of the Drive
         """
                 
-        return ('FloppyDrive: '
+        return ('Drive: '
                 f'[Address: {self.address} | '
                 f'Enable: {self.enable} | '
                 f'Spin: {self.spin} | '
                 f'Crash Prevent: {self.crash_mode} | '
-                f'TOP: {self.top}]')
+                f'TOP: {self._top}]')

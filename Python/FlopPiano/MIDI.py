@@ -3,7 +3,7 @@ from mido import Message
 
 class MIDIUtil():
     #https://en.wikipedia.org/wiki/Piano_key_frequencies
-    __MIDI_LOOK_UP__ = {
+    MIDI_LOOK_UP = {
         0:{"freq":8.176,"name":""},
         1:{"freq":8.662,"name":""},
         2:{"freq":9.177,"name":""},
@@ -150,14 +150,14 @@ class MIDIUtil():
     def MIDI2Freq(note:int) -> float:
         if(not MIDIUtil.isValidMIDI(note)):
             raise ValueError("Note must be in the range [0,127]")
-        return MIDIUtil.__MIDI_LOOK_UP__[note]['freq']
+        return MIDIUtil.MIDI_LOOK_UP[note]['freq']
 
     @staticmethod 
     def MIDI2notation(note:int) -> str:
         if(not MIDIUtil.isValidMIDI(note)):
             raise ValueError("Note must be in the range [0,127]")
         
-        return MIDIUtil.__MIDI_LOOK_UP__[note]['name']
+        return MIDIUtil.MIDI_LOOK_UP[note]['name']
     
     @staticmethod
     def freq2MIDI(frequency:float)->int:
