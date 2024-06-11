@@ -88,13 +88,14 @@ def modulate(c:Conductor, l:logging)->bool:
     return True
 
 def crash_modes(c:Conductor, l:logging)->bool:
-    l.info("modulate----------------------------------------------------------")
+    l.info("crash_modes----------------------------------------------------------")
     c.conduct([Message('note_on', note=69, velocity = 1)])
 
     for index, mode in enumerate(CrashMode):
         c.conduct([Message('control_change', control =70, value = index)])
         sleep(2)
 
+    c.conduct([Message('control_change', control =70, value = 2)])
     c.conduct([Message('note_off', note=69, velocity = 1)])
     l.info("crash_modes:--------------------------------------------------------PASS")
     c.silence()

@@ -1,8 +1,8 @@
-from enum import Enum
+from enum import IntFlag
 from . import bus
 from mido import Message
 
-class CrashMode (Enum):
+class CrashMode (IntFlag):
     """
     A Enum to hold Floppy drive crash modes
 
@@ -124,7 +124,7 @@ class Drive:
         #  is pulled HIGH and the drive is de-selected/disabled.
 
         #Prepare the CTRL Register 
-        CTRL = (self.crash_mode.value << 2)     
+        CTRL = (self.crash_mode << 2)     
         CTRL = CTRL | (self.spin << 1)
         CTRL = CTRL | (self.enable)
 
