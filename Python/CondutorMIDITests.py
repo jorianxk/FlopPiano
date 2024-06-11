@@ -1,4 +1,4 @@
-from FlopPiano.Conductor import Conductor, PitchBendMode, OutputMode
+from FlopPiano.conductor import Conductor, PitchBendMode, OutputMode
 from FlopPiano.devices import CrashMode
 from mido import Message
 from time import sleep, time

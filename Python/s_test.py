@@ -1,4 +1,4 @@
-from FlopPiano.Service import Configuration, Service
+from FlopPiano.services import Configuration, Service
 import logging
 import time
 #write a config

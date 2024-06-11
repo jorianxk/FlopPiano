@@ -3,7 +3,7 @@ from queue import Queue, Empty
 
 
 from configparser import ConfigParser
-from .Conductor import Conductor, Note, OutputMode
+from .conductor import Conductor, Note, OutputMode
 
 from mido.ports import BaseInput, BaseOutput, BasePort
 from mido import Message
