@@ -10,7 +10,7 @@ from asciimatics.exceptions import ResizeScreenError, StopApplication
 import sys
 import os
 
-from FlopPiano.MIDI import MIDIParser
+
 from FlopPiano.Conductor import Conductor
 import mido
 from threading import Event, Thread

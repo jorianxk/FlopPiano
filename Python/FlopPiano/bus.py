@@ -42,7 +42,8 @@ class SMBusWrapper(Bus):
     
     def write(self, address: int, register: int, data: list) -> None:
         try:
-            self._bus.write_i2c_block_data(address, register, data)
+            self._bus.write_block_data(address, register, data) #<- this does though
+            #self._bus.write_i2c_block_data(address, register, data) <- does not work right
         except OSError as oe:
             raise BusException("Error writing to the I2C SMbus") from oe
 

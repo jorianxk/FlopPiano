@@ -1,10 +1,13 @@
 from mido import Message
-from smbus import SMBus
-from .MIDI import *
-from .Drive import *
-from .Keyboard import *
 import logging
 import time
+from enum import Enum
+import math
+
+from . import bus
+from .midi import MIDIListener, MIDIParser, MIDIUtil, map_range
+from .devices import CrashMode, Drive, Keyboard
+
 
 class PitchBendMode(Enum):
     __order__ = 'HALF WHOLE MINOR3RD MAJOR3RD FOURTH FIFTH OCTAVE'
@@ -22,8 +25,8 @@ class PitchBendMode(Enum):
 #TODO: Fix camel case and refactor
 class Note(Drive):
     #A Note IS a drive
-    def __init__(self, i2c_bus:SMBus, address:int) -> None:
-        super().__init__(i2c_bus=i2c_bus, address=address)
+    def __init__(self, address:int) -> None:
+        super().__init__(address=address)
 
     
     def setOriginal(self, original:float)->None:
@@ -104,16 +107,12 @@ class Conductor(MIDIListener, MIDIParser):
         MIDIListener.__init__(self) 
         MIDIParser.__init__(self, self)
 
-        #Setup the I2C bus
-        self._i2c_bus:SMBus =  SMBus(1) # indicates /dev/ic2-1
-
         #Setup the drives(notes)
         # a tuple to hold the unmolested notes/drives
-        self._notes:tuple[Note] = [Note(self._i2c_bus,i) for i in drive_addresses] 
+        self._notes:tuple[Note] = [Note(i) for i in drive_addresses] 
 
         #Setup the keyboard. 
-        self._keyboard = Keyboard(i2c_bus=self._i2c_bus,
-                                 i2c_address=keyboard_address)
+        self._keyboard = Keyboard(address=keyboard_address)
 
         self._do_keyboard = do_keyboard
         

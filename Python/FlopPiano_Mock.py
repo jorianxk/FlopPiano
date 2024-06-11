@@ -35,7 +35,7 @@ from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError
 from asciimatics.effects import Print, Mirage, Matrix, Wipe
 from asciimatics.renderers import Fire
-from FlopPiano.ASCII import *
+from FlopPiano.ascii import *
    
 
 class KeyboardPage(Page):
@@ -297,7 +297,6 @@ def demo(screen:Screen, lastScene:Scene):
 
 
 if __name__ == "__main__":
-    exit(0)
     lastScene = None
     while True:
         try:

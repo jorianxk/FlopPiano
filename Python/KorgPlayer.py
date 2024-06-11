@@ -1,5 +1,4 @@
-from FlopPiano.MIDI import MIDIParser
-from FlopPiano.Conductor import *
+from FlopPiano.Conductor import Conductor
 import mido
 import logging
 
