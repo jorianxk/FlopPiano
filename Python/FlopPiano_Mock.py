@@ -297,6 +297,7 @@ def demo(screen:Screen, lastScene:Scene):
 
 
 if __name__ == "__main__":
+    exit(0)
     lastScene = None
     while True:
         try:

@@ -151,9 +151,11 @@ class Drive:
 
         # #are we just sending the CTRL register?
         if(justCTRL):
-            self.i2c_bus.write_block_data(self.address, CTRL, [])
+            #self.i2c_bus.write_block_data(self.address, CTRL, [])
+            self.i2c_bus.write_i2c_block_data(self.address, CTRL, [])
         else:
-            self.i2c_bus.write_block_data(self.address, CTRL, [TOP[1], TOP[0]])
+            #self.i2c_bus.write_block_data(self.address, CTRL, [TOP[1], TOP[0]])
+            self.i2c_bus.write_i2c_block_data(self.address, CTRL, [TOP[1], TOP[0]])
 
     #TODO: update docstring
     def silence(self)->None:
