@@ -11,7 +11,7 @@ import logging
 
 def notes_polyphony(c:Conductor, l:logging.Logger)->bool:
     #Test Note on/off and polyphony
-    l.info("Note on/off and polyphony-----------------------------------------")
+    l.info("notes_polyphony---------------------------------------------------")
 
     note_off_velocity = Message('note_off', note=69, velocity = 0)
 
