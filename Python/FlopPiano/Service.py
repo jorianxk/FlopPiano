@@ -10,7 +10,6 @@ from mido import Message
 import mido
 
 import logging
-import time
 
 
 class Configuration():

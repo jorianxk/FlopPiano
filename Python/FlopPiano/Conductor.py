@@ -1,7 +1,7 @@
 from mido import Message
 from smbus import SMBus
 from .MIDI import *
-from .Drives import *
+from .Drive import *
 from .Keyboard import *
 import logging
 import time

@@ -1,4 +1,4 @@
-from FlopPiano.Services import Configuration, Service
+from FlopPiano.Service import Configuration, Service
 import logging
 import time
 #write a config
@@ -23,8 +23,7 @@ import time
 
 # Test(**myargs)
 
-
-
+logging.basicConfig(level=logging.DEBUG)
 
 
 cs = Service()
