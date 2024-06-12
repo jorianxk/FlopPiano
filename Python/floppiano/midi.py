@@ -1,6 +1,7 @@
 import math
 from mido import Message
 
+#TODO: Make listener and Parser abstract?
 class MIDIUtil():
     #https://en.wikipedia.org/wiki/Piano_key_frequencies
     MIDI_LOOK_UP = {

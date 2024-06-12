@@ -15,12 +15,22 @@ class Bus():
 
     def read(self, address:int, register:int, length:int)->list[int]:
         #i2c_bus.read_i2c_block_data(address, register, length)
-        pass
+        raise Exception(
+                'The default I2C implementation was not found. Please install '
+                'smbus or set\nthe I2C manually by calling: '
+                'floppiano.bus.default_bus()'
+                )
+
 
 
     def write(self, address:int, register:int, data:list)->None:
         #i2c_bus.write_i2c_block_data(address, register, data)
-        pass
+        raise Exception(
+        'The default I2C implementation was not found. Please install '
+        'smbus or set\nthe I2C manually by calling: '
+        'floppiano.bus.default_bus()'
+        )
+
 
 
 
@@ -62,11 +72,7 @@ def default_bus(bus_object:Bus = None):
         try:
             bus = SMBusWrapper(bus_number=1) # 1 indicates /dev/ic2-1 for RPi's
         except NameError as ne:
-            raise Exception(
-                'The default I2C implementation was not found. Please install '
-                'smbus or set\nthe I2C manually by calling: '
-                'floppiano.bus.default_bus()'
-                ) from ne
+            bus = Bus()
     
     for attr_name in dir(bus):
         #"write_i2c_block_data"

@@ -35,7 +35,7 @@ class Note(Drive):
 
     def setCenter(self, center:float):
         self._center = center
-        self.frequency(center)
+        self.top = center
 
     def bend(self, bendAmount:int, mode:PitchBendMode):
         if bendAmount == 0:
@@ -52,7 +52,7 @@ class Note(Drive):
         else:
             #Play with 2, and 16 below for differing effects
             omega = map_range(mod_amount,1,127,2,16) * math.pi
-            self.frequency(self._center+math.sin(omega * time.time()))
+            self.top = (self._center+math.sin(omega * time.time()))
 
     def play(self):
         self.enable = True

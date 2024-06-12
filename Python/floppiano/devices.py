@@ -157,7 +157,12 @@ class Drive:
         self.enable = False
         self.update()
 
-    def frequency(self, frequency:float) -> int:
+    @property
+    def top(self)->int:
+        return self._top
+    
+    @top.setter
+    def top(self, frequency:float):# -> int:
         """_summary_
             A function to set the frequency of the drive by setting the drive 
             TOP
@@ -196,7 +201,7 @@ class Drive:
                                   f'Resultant TOP: {proposed_top}')
             
             self._top = proposed_top
-            return int(Drive.ALPHA/proposed_top)
+            #return int(Drive.ALPHA/proposed_top)
     
     def __repr__(self) -> str:
         """_summary_

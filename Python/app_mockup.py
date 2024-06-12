@@ -11,7 +11,7 @@ where FIGlet text come into play. It generates larger ASCII based renditions of 
 I built a simple/sloppy python module that mimics behavior of an event based UI with two
 simple "Widgets". 
 
-A Widget is really just a wrapper around Figlet text, but they offer a little more 
+A Widget is really just a wrapper around FIGlet text, but they offer a little more 
 functionality and are UI fields. There are two types of Widgets; Labels and Buttons. 
 -- A label is a simple non-user-editable text field that can not be given focus. A label 
 is used to display information.
