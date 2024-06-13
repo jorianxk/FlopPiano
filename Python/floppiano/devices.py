@@ -152,11 +152,6 @@ class Drive:
         else:
             bus.write(self.address, CTRL, [TOP[1], TOP[0]])
 
-    #TODO: update docstring
-    def silence(self)->None:
-        self.enable = False
-        self.update()
-
     @property
     def top(self)->int:
         return self._top

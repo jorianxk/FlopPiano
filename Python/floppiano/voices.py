@@ -2,7 +2,6 @@ from enum import Enum, IntEnum
 from mido import Message
 
 from .devices import Drive
-
 from .midi import MIDIUtil
 import math
 import time
@@ -28,7 +27,7 @@ class ModulationWave(IntEnum):
     SAW = 2
 
 
-class Instrument():
+class Voice():
     """
     An instrument is:
     -Monophonic (sounds one note at a time)
@@ -52,27 +51,30 @@ class Instrument():
     
     @note.setter
     def note(self, note:int) -> None:
-        if (note <Instrument._MIN_NOTE or note >Instrument._MAX_NOTE):
+        if (note <Voice._MIN_NOTE or note >Voice._MAX_NOTE):
             raise ValueError(f'{note} is not a valid MIDI note')
         self._note = note
 
     def pitch_bend(self, amount:int, pitch_bend_range:PitchBendRange) -> None:
-        if amount<Instrument._MIN_PITCH_BEND or Instrument._MAX_PITCH_BEND:
+        if amount<Voice._MIN_PITCH_BEND or Voice._MAX_PITCH_BEND:
             raise ValueError(f'{amount} is not a valid MIDI pitch')
 
     def modulate(self, amount:int, modulation_wave:ModulationWave) -> None:
-        if amount<Instrument._MIN_MODULATION or Instrument._MAX_MODULATION:
+        if amount<Voice._MIN_MODULATION or Voice._MAX_MODULATION:
             raise ValueError(f'{amount} is not a valid MIDI modulation value')
 
     def play(self) -> None:
         pass
 
-class DriveInstrument(Drive, Instrument):
+    def silence(self) -> None:
+        pass
+
+class DriveVoice(Drive, Voice):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
   
-    @Instrument.note.setter
+    @Voice.note.setter
     def note(self, note:int) -> None:
         print("note setter called")
         self._note = note
@@ -98,8 +100,8 @@ class DriveInstrument(Drive, Instrument):
             old_n = MIDIUtil.freq2n(MIDIUtil.MIDI2Freq(self.note))
             n_mod = map_range(
                 amount,
-                Instrument._MIN_PITCH_BEND,
-                Instrument._MAX_PITCH_BEND,
+                Voice._MIN_PITCH_BEND,
+                Voice._MAX_PITCH_BEND,
                 -pitch_bend_range.value, 
                 pitch_bend_range.value)
             
@@ -115,8 +117,8 @@ class DriveInstrument(Drive, Instrument):
             #Play with 2, and 16 below for differing effects
             omega = map_range(
                 amount,
-                Instrument._MIN_MODULATE,
-                Instrument._MAX_MODULATE,
+                Voice._MIN_MODULATE,
+                Voice._MAX_MODULATE,
                 2,
                 16) * math.pi
             
@@ -124,4 +126,8 @@ class DriveInstrument(Drive, Instrument):
 
     def play(self) -> None:
         self.enable = True
+        self.update()
+    
+    def silence(self) -> None:
+        self.enable = False
         self.update()
