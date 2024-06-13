@@ -82,5 +82,3 @@ def default_bus(bus_object:Bus = None):
 
 
 default_bus()
-
-
