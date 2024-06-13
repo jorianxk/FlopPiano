@@ -7,7 +7,7 @@ import math
 
 from .bus import BusException
 from .midi import MIDIListener, MIDIParser, MIDIUtil
-from .devices import CrashMode, Keyboard
+from .devices import Keyboard
 from .voices import PitchBendRange, ModulationWave, Voice, DriveVoice
 
 
@@ -22,25 +22,27 @@ class Synth(MIDIParser, MIDIListener):
 
     #warning: type checking: no explicit errors!
     def __init__(self, voices:tuple[Voice]) -> None:
+        #logger goes before super, because super calls self.input_channel which ahs been 
+        # overridden
+        self.logger = logging.getLogger(__name__) 
         MIDIListener.__init__(self)
         MIDIParser.__init__(self, self)
-
-        self.logger = logging.getLogger(__name__)
  
         self._voices = voices
 
-        self.pitch = 0
-        self.pitch_bend_range = PitchBendRange.OCTAVE
+        #input channel set by super
 
-        self.modulation = 0
-        self.modulation_wave = ModulationWave.SINE
-
-        self.input_chanel = 0
         self.output_channel = 0
         self.output_mode = OutputModes.ROLLOVER
 
+        #TODO: fix the pitch bend range setter
+        self.pitch_bend_range = 6
+        self.pitch_bend = 0
+
+        self.modulation_wave = ModulationWave.SINE
+        self.modulation = 0
     
-    def play(self, messages:list[Message])->list[Message]:
+    def update(self, messages:list[Message])->list[Message]:
         pass
 
     def silence(self):
@@ -56,64 +58,6 @@ class Synth(MIDIParser, MIDIListener):
     # @voices.setter
     # def voices(self, voices:tuple[Voice]) -> None:
     #     self._voices = voices
-
-    @property
-    def pitch_bend(self) -> int:
-        return self._pitch
-    
-    @pitch_bend.setter
-    def pitch_bend(self, pitch_bend:int) -> None:
-        if (pitch_bend < Voice._MIN_PITCH_BEND or 
-            pitch_bend > Voice._MAX_PITCH_BEND):
-            self.logger.debug(f'Pitch bend NOT set: {pitch_bend} not valid')
-            return
-        self._pitch_bend = pitch_bend
-        self.logger.debug(f'Pitch bend set: {self.pitch}')
-    
-    @property
-    def pitch_bend_range (self) -> PitchBendRange:
-        return self._pitch_bend_range
-    
-    @pitch_bend_range.setter
-    def pitch_bend_range(self, pitch_bend_range:int):
-        if pitch_bend_range<0 or pitch_bend_range>len(PitchBendRange):
-            self.logger.warning(
-                f"Pitch Bend Mode NOT set: {pitch_bend_range} not valid")
-            return
-
-        self._pitch_bend_range = list(
-            PitchBendRange.__members__.values())[pitch_bend_range]
-
-        self.logger.info(f'Pitch Bend Range set: {self.pitch_bend_range}')
- 
-    @property
-    def modulation(self) ->int:
-        return self._modulation
-    
-    @modulation.setter
-    def modulation(self, modulation:int) -> None:
-        if (modulation < Voice._MIN_MODULATE or 
-            modulation > Voice._MAX_MODULATE):
-            self.logger.debug(
-                f"Modulation NOT set: {modulation} not valid")
-            return
-
-        self._modulation = modulation
-        self.logger.debug(f"Modulation set: {modulation}")
-
-    @property
-    def modulation_wave(self) -> ModulationWave:
-        return self._modulation_wave
-
-    @modulation_wave.setter
-    def modulation_wave(self, modulation_wave:int) -> None:
-        if modulation_wave not in ModulationWave.__members__.values():
-            self.logger.warning(
-                f"Modulation Wave NOT set: {modulation_wave} is not valid")
-            return
-        self._modulation_wave = modulation_wave
-        self.logger.info(f'Modulation Wave set: {self.modulation_wave}')
-
 
     #@property for input channel in super class MidiListener
 
@@ -156,6 +100,63 @@ class Synth(MIDIParser, MIDIListener):
         self._output_mode = output_mode
         self.logger.info(f'Output mode set: {self.output_mode}')
 
+    @property
+    def pitch_bend_range (self) -> PitchBendRange:
+        return self._pitch_bend_range
+    
+    @pitch_bend_range.setter
+    def pitch_bend_range(self, pitch_bend_range:int):
+        if pitch_bend_range<0 or pitch_bend_range>len(PitchBendRange):
+            self.logger.warning(
+                f"Pitch Bend Mode NOT set: {pitch_bend_range} not valid")
+            return
+
+        self._pitch_bend_range = list(
+            PitchBendRange.__members__.values())[pitch_bend_range]
+
+        self.logger.info(f'Pitch Bend Range set: {self.pitch_bend_range}')
+
+    @property
+    def pitch_bend(self) -> int:
+        return self._pitch_bend
+    
+    @pitch_bend.setter
+    def pitch_bend(self, pitch_bend:int) -> None:
+        if (pitch_bend < Voice._MIN_PITCH_BEND or 
+            pitch_bend > Voice._MAX_PITCH_BEND):
+            self.logger.debug(f'Pitch bend NOT set: {pitch_bend} not valid')
+            return
+        self._pitch_bend = pitch_bend
+        self.logger.debug(f'Pitch bend set: {self.pitch_bend}')
+    
+    @property
+    def modulation_wave(self) -> ModulationWave:
+        return self._modulation_wave
+
+    @modulation_wave.setter
+    def modulation_wave(self, modulation_wave:int) -> None:
+        if modulation_wave not in ModulationWave.__members__.values():
+            self.logger.warning(
+                f"Modulation Wave NOT set: {modulation_wave} is not valid")
+            return
+        self._modulation_wave = modulation_wave
+        self.logger.info(f'Modulation Wave set: {self.modulation_wave}')
+ 
+    @property
+    def modulation(self) ->int:
+        return self._modulation
+    
+    @modulation.setter
+    def modulation(self, modulation:int) -> None:
+        if (modulation < Voice._MIN_MODULATION or 
+            modulation > Voice._MAX_MODULATION):
+            self.logger.debug(
+                f"Modulation NOT set: {modulation} not valid")
+            return
+
+        self._modulation = modulation
+        self.logger.debug(f"Modulation set: {modulation}")
+
 
 class KeyboardSynth(Synth):
 
@@ -167,18 +168,15 @@ class KeyboardSynth(Synth):
         self.keyboard = keyboard
 
     def keyboard_messages(self) ->list[Message]:
+        messages = []
         if self.do_keyboard:
             try:  
-                messages = self.keyboard.read()
+                messages = self.keyboard.update()
             except BusException as be:
                 #This is normal just log it
                 self.logger.debug("Error reading keyboard state - skipping")
-                #clear the messages
-                messages = []
-            finally:
-                return messages
 
-        return []
+        return messages
 
     @property
     def do_keyboard(self) -> bool:
@@ -213,7 +211,7 @@ class DriveSynth(KeyboardSynth):
     def __init__(self, voices: tuple[DriveVoice], keyboard: Keyboard = None) -> None:
         super().__init__(voices, keyboard)
 
-        self.crash_mode = CrashMode.FLIP
+        self.crash_mode = DriveVoice.CrashMode.FLIP
 
         self._available_drives:list[DriveSynth] = list(voices)
         self._active_drives:list[DriveSynth] = []
@@ -221,14 +219,13 @@ class DriveSynth(KeyboardSynth):
         self._output:list[Message] = []
 
 
-    def play(self, messages: list[Message]) -> list[Message]:
-
-        #get keyboard messages if any.
+    def update(self, messages: list[Message]) -> list[Message]:
+        #get keyboard messages if any, then parse them
         key_msgs = self.keyboard_messages()
-        messages.extend(key_msgs)
+        for msg in key_msgs: self.parse(msg, source='keyboard')
         
-        #parse all the messages
-        for msg in messages: self.parse(msg)
+        #Now process all the messages from the message parameter
+        for msg in messages: self.parse(msg,source='play_param')
 
         #Makes sounds
         self._sound_drives()
@@ -247,7 +244,7 @@ class DriveSynth(KeyboardSynth):
         
         #clear the the output
         self._output = []
-
+        #Return the output
         return output_buffer
 
     def _sound_drives(self):
@@ -259,19 +256,13 @@ class DriveSynth(KeyboardSynth):
         #TODO: clear active, and restore available stacks
         return 
 
-    def _add_to_output(self, message:Message) -> list[Message]:
-        if MIDIParser.has_channel(message):
-            message.channel = self.output_channel
-        self._output.append(message)    
-
-
     @property
-    def crash_mode(self)->CrashMode:
+    def crash_mode(self)->DriveVoice.CrashMode:
         return self._crash_mode
     
     @crash_mode.setter
     def crash_mode(self, crash_mode:int) -> None:
-        if crash_mode not in CrashMode.__members__.values():
+        if crash_mode not in DriveVoice.CrashMode.__members__.values():
             self.logger.warning(
                 f"Crash mode NOT set: {crash_mode} is not a valid mode")
             return
@@ -280,15 +271,24 @@ class DriveSynth(KeyboardSynth):
     
     ##----------------Overrides from MIDIListener------------------------------#
     #TODO: Below
-    def note_on(self, msg: Message):
+    def note_on(self, msg: Message, source):
+        if source is not None:
+            if source == "keyboard":
+                print("got a keyboard note on!")
+            elif source == "play_param":
+                print("got a play param note on!")
+   
+    def note_off(self, msg: Message, source):
+        if source is not None:
+            if source == "keyboard":
+                print("got a keyboard note off!")
+            elif source == "play_param":
+                print("got a play param note off!")
+
+    def control_change(self, msg: Message, source):
         return
-    def note_off(self, msg: Message):
+    def pitchwheel(self, msg: Message, source):
         return
-    def control_change(self, msg: Message):
+    def sysex(self, msg: Message, source):
         return
-    def pitchwheel(self, msg: Message):
-        return
-    def sysex(self, msg: Message):
-        return
-    
         

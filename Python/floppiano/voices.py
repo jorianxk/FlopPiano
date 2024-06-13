@@ -71,8 +71,8 @@ class Voice():
 
 class DriveVoice(Drive, Voice):
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, address: int, **kwargs) -> None:
+        super().__init__(address,**kwargs)
   
     @Voice.note.setter
     def note(self, note:int) -> None:
