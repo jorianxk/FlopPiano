@@ -3,7 +3,7 @@ from queue import Queue, Empty
 
 
 from configparser import ConfigParser
-from .conductor import Conductor, Note, OutputMode
+from .conductor import Conductor, Note, OutputModes
 
 from mido.ports import BaseInput, BaseOutput, BasePort
 from mido import Message
@@ -128,11 +128,11 @@ class Configuration():
             raise ValueError(f'[Conductor]: output_channel not [0-15]')
         
         output_mode = config['Conductor'].get('output_mode', 'rollover').upper()
-        if output_mode not in OutputMode._member_names_:
+        if output_mode not in OutputModes._member_names_:
             raise ValueError('[Conductor]: output_mode not '
-                            f'{OutputMode._member_names_}')
+                            f'{OutputModes._member_names_}')
         
-        output_mode = OutputMode._member_map_[output_mode]
+        output_mode = OutputModes._member_map_[output_mode]
 
         return (keyboard_address, loopback, output_channel, input_channel, output_mode)
 

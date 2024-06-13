@@ -1,4 +1,4 @@
-from floppiano.conductor import Conductor, PitchBendMode, OutputMode
+from floppiano.conductor import Conductor, PitchBendMode, OutputModes
 from floppiano.devices import CrashMode
 from mido import Message
 from time import sleep, time
@@ -184,7 +184,7 @@ def output_channel(c:Conductor, l:logging)->bool:
 def output_mode(c:Conductor, l:logging)->bool:
     l.info("output_mode-------------------------------------------------------")
 
-    for index, mode in enumerate(OutputMode):
+    for index, mode in enumerate(OutputModes):
         output_mode_msg = Message('sysex', data=[123,2,index])
         out = c.conduct([output_mode_msg])
     

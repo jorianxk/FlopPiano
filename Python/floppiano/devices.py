@@ -45,8 +45,8 @@ class Drive:
     MAX_FREQUENCY = 12543.854
 
     #init with default values of the firmware
-    def __init__(self, *, 
-                 address:int = 8,
+    def __init__(self,
+                 address:int,
                  enable:bool = False, 
                  spin:bool = False,
                  top: int = 19111,

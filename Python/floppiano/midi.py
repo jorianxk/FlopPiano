@@ -178,11 +178,19 @@ class MIDIUtil():
 
 class MIDIListener():
 
-    def __init__(self, input_channel:int =-1) -> None:
-        if (input_channel <-1 or input_channel>15):
-            raise ValueError("Channel must be [-1,15]") #-1 indicates listen to all!
-        self.input_channel = input_channel
+    def __init__(self, input_channel:int =0) -> None:
+        self.input_chanel = input_channel
     
+    @property
+    def input_chanel(self) -> int:
+        return self._input_channel
+    
+    @input_chanel.setter
+    def input_channel(self, channel:int):
+        if (channel <0 or channel>15):
+            raise ValueError("Channel must be [0-15]") 
+        self._input_channel = channel
+
     def note_on(self, msg:Message):
         pass
 
@@ -215,51 +223,33 @@ class MIDIParser():
     def parse(self, msg:Message):
 
         # This check is to filter out messages that have a channel, and that 
-        # channel is not our listener's channel. Except when the listener is 
-        # listening to all channels. i.e. listener channel is -1
-        if (self.listener.input_channel != -1 and MIDIParser.has_channel(msg)):
+        # channel is not our listener's channel.
+        if (MIDIParser.has_channel(msg)):
             if (msg.channel != self.listener.input_channel): return
                 
-        
-        msgType = msg.type        
-
-        if (msg.type =='note_on'):
-
-            if (msg.velocity == 0):
+        match msg.type:
+            case 'note_on':
+                #A 'note on' with velocity 0 is commonly a 'note off'
+                if (msg.velocity == 0):
+                    self.listener.note_off(msg)
+                else:
+                    self.listener.note_on(msg)
+            case 'note_off':
                 self.listener.note_off(msg)
-            else:
-                self.listener.note_on(msg)
-
-        elif (msg.type == 'note_off'):
-
-            self.listener.note_off(msg)
-
-        elif (msg.type == 'control_change'):
-
-            self.listener.control_change(msg)
-
-        elif (msg.type == 'pitchwheel'):
-
-            self.listener.pitchwheel(msg)
-
-        elif (msg.type == 'sysex'):
-
-            self.listener.sysex(msg)
-
-        elif (msg.type == 'start'):
-
-            self.listener.start(msg)
-
-        elif (msg.type == 'stop'):
-
-            self.listener.stop(msg)
-
-        elif (msg.type == 'reset'):
-
-            self.listener.reset(msg)
-        
-        else:
-            pass
+            case 'control_change':
+                self.listener.control_change(msg)
+            case 'pitchwheel':
+                self.listener.pitchwheel(msg)
+            case 'sysex':
+                self.listener.sysex(msg)
+            case 'start':
+                self.listener.start(msg)
+            case 'stop':
+                self.listener.stop(msg)
+            case 'reset':
+                self.listener.reset(msg)
+            case _:
+                pass
 
     @staticmethod
     def has_channel(msg:Message)->bool:    
@@ -268,7 +258,3 @@ class MIDIParser():
             return True
         except AttributeError as ae:
             return False
-
-
-def map_range(x, in_min, in_max, out_min, out_max):
-    return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
