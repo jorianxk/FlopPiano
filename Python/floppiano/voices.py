@@ -56,11 +56,11 @@ class Voice():
         self._note = note
 
     def pitch_bend(self, amount:int, pitch_bend_range:PitchBendRange) -> None:
-        if amount<Voice._MIN_PITCH_BEND or Voice._MAX_PITCH_BEND:
+        if amount<Voice._MIN_PITCH_BEND or amount>Voice._MAX_PITCH_BEND:
             raise ValueError(f'{amount} is not a valid MIDI pitch')
 
     def modulate(self, amount:int, modulation_wave:ModulationWave) -> None:
-        if amount<Voice._MIN_MODULATION or Voice._MAX_MODULATION:
+        if amount<Voice._MIN_MODULATION or amount>Voice._MAX_MODULATION:
             raise ValueError(f'{amount} is not a valid MIDI modulation value')
 
     def update(self, make_noise:bool) -> None:
@@ -113,8 +113,8 @@ class DriveVoice(Drive, Voice):
             #Play with 2, and 16 below for differing effects
             omega = map_range(
                 amount,
-                Voice._MIN_MODULATE,
-                Voice._MAX_MODULATE,
+                Voice._MIN_MODULATION,
+                Voice._MAX_MODULATION,
                 2,
                 16) * math.pi
             
@@ -122,4 +122,4 @@ class DriveVoice(Drive, Voice):
 
     def update(self, make_noise:bool) -> None:
         self.enable = make_noise
-        self.write()
+        Drive.update(self, just_CTRL=False)

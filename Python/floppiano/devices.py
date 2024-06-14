@@ -1,11 +1,11 @@
-from enum import IntFlag
+from enum import IntEnum
 from . import bus
 from mido import Message
 
 
 
 class Drive:
-    class CrashMode (IntFlag):
+    class CrashMode (IntEnum):
         """
         A Enum to hold Floppy drive crash modes
 
@@ -24,9 +24,9 @@ class Drive:
         *     FLIP mode: THe drive will flip direction after every step/pulse
         """
         __order__ = 'OFF BOW FLIP'
-        OFF = 0b00
-        BOW = 0b01
-        FLIP = 0b10
+        OFF = 0#0b00
+        BOW = 1#0b01
+        FLIP = 2#0b10
 
     """
     A class that represents a floppy drive
@@ -76,7 +76,7 @@ class Drive:
         self.crash_mode = crash_mode #Crash prevention mode
 
     #TODO: update docstring
-    def write(self, just_CTRL:bool=False)->None:
+    def update(self, just_CTRL:bool=False)->None:
         """
         A function to send all set CTRL Register values and TOP values a slave 
         drive, or to broadcast to the bus

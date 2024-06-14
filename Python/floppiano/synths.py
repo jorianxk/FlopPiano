@@ -6,7 +6,7 @@ import math
 
 
 from .bus import BusException
-from .midi import MIDIListener, MIDIParser, MIDIUtil
+from .midi import MIDIListener, MIDIParser
 from .devices import Keyboard
 from .voices import PitchBendRange, ModulationWave, Voice, DriveVoice
 
@@ -321,7 +321,12 @@ class DriveSynth(KeyboardSynth):
         for msg in messages: self.parse(msg,source='incoming')
 
         #Makes sounds
-        self._sound_drives()
+        all_active_voices = list(self._active_incoming_voices.values())
+        all_active_voices.extend(list(self._active_keyboard_voices.values()))
+        for voice in all_active_voices:
+            voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
+            voice.modulate(self.modulation, self.modulation_wave)
+            voice.update((not self._muted))
 
         #Ready the output
         output_buffer:list[Message] = []        
@@ -340,15 +345,24 @@ class DriveSynth(KeyboardSynth):
         #Return the output
         return output_buffer
 
-    def _sound_drives(self):
-        #TODO this
-        #TODO handle mute behavior
-        pass
 
     def silence(self) -> None:
+        #silence all voices using super().silence()
         super().silence()
-        #TODO: clear active, and restore available stacks
-        return 
+        
+        #Add the active incoming DriveVoices back to the available voices stack
+        self._available_voices.extend(
+            list(self._active_incoming_voices.values()))
+        #Clear the active incoming DriveVoices Stack
+
+        self._active_incoming_voices = {}
+        #Add the active keyboard DriveVoices back to the available voices stack
+        self._available_voices.extend(
+            list(self._active_keyboard_voices.values()))
+        
+        #Clear the active keyboard DriveVoices Stack
+        self._active_keyboard_voices = {}
+        
     
     def _map_attr(self, attr_name:str, value=None):
         attr = self.__getattribute__(attr_name)
@@ -375,12 +389,12 @@ class DriveSynth(KeyboardSynth):
             active_stack[msg.note] = nextVoice
 
             self.logger.debug(
-                f"Added note: {msg.note} to '{source}' stack "
+                f"added note: {msg.note} to '{source}' stack "
                 f'[address:{nextVoice.address}]')
 
         except IndexError as ie: #There are no available voices. 
             self.logger.debug(
-                f"Could not add note: {msg.note} to '{source}' stack, "
+                f"could not add note: {msg.note} to '{source}' stack, "
                 'no available voices - rolled')
             #We can't play it so pass it along
             self._output.append(msg)
@@ -397,7 +411,7 @@ class DriveSynth(KeyboardSynth):
             #stop the note playing
             playedVoice.update(make_noise=False) #TODO what if this throws an error?
             self.logger.debug(
-                f"Removed note: {msg.note} from '{source}' stack "
+                f"removed note: {msg.note} from '{source}' stack "
                 f'[address:{playedVoice.address}]')          
 
             #add the drive back to the available voice pool
@@ -405,7 +419,7 @@ class DriveSynth(KeyboardSynth):
 
         except KeyError as ke:
             self.logger.debug(
-                f"Could not remove note: {msg.note} from '{source}' stack, "
+                f"could not remove note: {msg.note} from '{source}' stack, "
                 f"it's not playing [rolled?]") 
             #if we're not playing that note pass it along
             self._output.append(msg)

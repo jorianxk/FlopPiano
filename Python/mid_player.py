@@ -1,13 +1,14 @@
-from floppiano.conductor import Conductor
+from floppiano.voices import DriveVoice
+from floppiano.synths import DriveSynth
 import mido
 import logging
 import time
 
-transpose = -12
+transpose = 0
 #test_midi_file = 'assets/Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'assets/Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
-#test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
-test_midi_file = 'assets/Testing_MIDI/bloody.mid'
+test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+#test_midi_file = 'assets/Testing_MIDI/bloody.mid'
 #test_midi_file = 'assets/Testing_MIDI/brahms-symphony3-3-theme-piano-solo.mid'
 #test_midi_file = 'assets/Testing_MIDI/castle_deep.mid'
 #test_midi_file = 'assets/Testing_MIDI/CrazyTrain.mid'
@@ -56,7 +57,10 @@ test_midi_file = 'assets/Testing_MIDI/bloody.mid'
 logging.basicConfig(level=logging.DEBUG)
 
 
-conductor = Conductor(loopback=False, do_keyboard=False)
+voices = [DriveVoice(i) for i in range(8,18)]
+
+
+synth = DriveSynth(voices,None)
 
 print(f'Playing {test_midi_file} in 3 second [ctrl+c to stop]')
 
@@ -67,9 +71,9 @@ try:
         if (msg.type == "note_on" or msg.type =="note_off"):
             msg.note = msg.note + transpose
         
-        conductor.conduct([msg])
+        synth.update([msg])
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
-    conductor.silence()
+    synth.silence()
    

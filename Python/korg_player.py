@@ -1,4 +1,5 @@
-from floppiano.conductor import Conductor
+from floppiano.voices import DriveVoice
+from floppiano.synths import DriveSynth
 import mido
 import logging
 
@@ -16,20 +17,23 @@ if usb_interface is None: raise Exception("Could not find MIDI USB Interface!")
 
 logging.basicConfig(level=logging.DEBUG)
 
-conductor = Conductor(loopback=False, do_keyboard=False)
 
-transpose = 0
+voices = [DriveVoice(i) for i in range(8,18)]
+
+
+synth = DriveSynth(voices,None)
+
 
 print("Begin Playing! [ctrl+c to exit]")
 
 try:
     with mido.open_input(usb_interface) as inport:
             for msg in inport:
-                conductor.conduct([msg])
+                synth.update([msg])
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
-    conductor.silence()
+    synth.silence()
 
 
 
