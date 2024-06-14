@@ -295,6 +295,7 @@ class DriveSynth(KeyboardSynth):
         control_change_map:dict[int, str] = DEFAULT_CONTROL_CHANGE_MAP,
         sysex_map:dict[int, str] = DEFAULT_SYSEX_MAP,
         **kwargs) -> None:
+
         super().__init__(voices, keyboard, **kwargs)
 
         self.sysex_id = sysex_id
@@ -304,8 +305,9 @@ class DriveSynth(KeyboardSynth):
         self.sysex_map = sysex_map
 
 
-        self._available_drives:list[DriveSynth] = list(voices)
-        self._active_drives:list[DriveSynth] = []
+        self._available_voices:list[DriveVoice] = list(voices)
+        self._active_incoming_voices:dict[int, DriveVoice] = {}
+        self._active_keyboard_voices:dict[int, DriveVoice] = {}
 
         self._output:list[Message] = []
 
@@ -316,7 +318,7 @@ class DriveSynth(KeyboardSynth):
         for msg in key_msgs: self.parse(msg, source='keyboard')
         
         #Now process all the messages from the message parameter
-        for msg in messages: self.parse(msg,source='play_param')
+        for msg in messages: self.parse(msg,source='incoming')
 
         #Makes sounds
         self._sound_drives()
@@ -357,28 +359,71 @@ class DriveSynth(KeyboardSynth):
 
 
     ##----------------Overrides from MIDIListener------------------------------#
-    #TODO: Below
     def note_on(self, msg: Message, source):
-        if source is not None:
-            if source == "keyboard":
-                print("got a keyboard note on!")
-            elif source == "play_param":
-                print("got a play param note on!")
+        active_stack = self._active_incoming_voices
+
+        if source == 'keyboard': active_stack = self._active_keyboard_voices
+
+        try:
+            #get an available voice and remove it from the pool
+            nextVoice:DriveVoice = self._available_voices.pop()
+
+            #Modify the note to match the incoming message
+            nextVoice.note = msg.note
+
+            #add the note to the active voice, so that it will be played
+            active_stack[msg.note] = nextVoice
+
+            self.logger.debug(
+                f"Added note: {msg.note} to '{source}' stack "
+                f'[address:{nextVoice.address}]')
+
+        except IndexError as ie: #There are no available voices. 
+            self.logger.debug(
+                f"Could not add note: {msg.note} to '{source}' stack, "
+                'no available voices - rolled')
+            #We can't play it so pass it along
+            self._output.append(msg)
    
     def note_off(self, msg: Message, source):
-        if source is not None:
-            if source == "keyboard":
-                print("got a keyboard note off!")
-            elif source == "play_param":
-                print("got a play param note off!")
+        active_stack = self._active_incoming_voices
+
+        if source == 'keyboard': active_stack = self._active_keyboard_voices
+
+        try:
+            #get the active Voice
+            playedVoice:DriveVoice = active_stack.pop(msg.note)
+
+            #stop the note playing
+            playedVoice.update(make_noise=False) #TODO what if this throws an error?
+            self.logger.debug(
+                f"Removed note: {msg.note} from '{source}' stack "
+                f'[address:{playedVoice.address}]')          
+
+            #add the drive back to the available voice pool
+            self._available_voices.append(playedVoice)
+
+        except KeyError as ke:
+            self.logger.debug(
+                f"Could not remove note: {msg.note} from '{source}' stack, "
+                f"it's not playing [rolled?]") 
+            #if we're not playing that note pass it along
+            self._output.append(msg)
+        
 
     def control_change(self, msg: Message, source):
         if msg.control in self.control_change_map.keys():
             attr_name = self.control_change_map[msg.control]
-            self._map_attr(attr_name,msg.value)       
+            self._map_attr(attr_name,msg.value)
+        #pass along all control change messages
+        self._output.append(msg) 
     
     def pitchwheel(self, msg: Message, source):
-        return
+        #set the pitch bend value
+        self.pitch_bend = msg.pitch
+        #pass along all pitchwheel messages
+        self._output.append(msg)
+
     def sysex(self, msg: Message, source):
         #ignore any system messages that don't have 3 data bytes
         if (not (len(msg.data)<3 or len(msg.data)>3)):
@@ -391,7 +436,8 @@ class DriveSynth(KeyboardSynth):
                 if command in self.sysex_map.keys():
                     attr_name = self.sysex_map[command]
                     self._map_attr(attr_name, value)
-        
+        #pass along all sysex messages
+        self._output.append(msg)
     #------------------Getters/Setters-----------------------------------------#
 
     @property

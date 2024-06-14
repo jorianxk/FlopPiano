@@ -74,7 +74,6 @@ class DriveVoice(Drive, Voice):
   
     @Voice.note.setter
     def note(self, note:int) -> None:
-        print("note setter called")
         self._note = note
         self.frequency = MIDIUtil.MIDI2Freq(note)
 
@@ -84,7 +83,6 @@ class DriveVoice(Drive, Voice):
     
     @frequency.setter
     def frequency(self, frequency:float) -> None:
-        print("frequency setter called")
         self._frequency = frequency
         self.top = frequency
 
