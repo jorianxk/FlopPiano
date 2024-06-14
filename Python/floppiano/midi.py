@@ -179,13 +179,13 @@ class MIDIUtil():
 class MIDIListener():
 
     def __init__(self, input_channel:int =0) -> None:
-        self.input_chanel = input_channel
+        self.input_channel = input_channel
     
     @property
-    def input_chanel(self) -> int:
+    def input_channel(self) -> int:
         return self._input_channel
     
-    @input_chanel.setter
+    @input_channel.setter
     def input_channel(self, channel:int):
         if (channel <0 or channel>15):
             raise ValueError("Channel must be [0-15]") 

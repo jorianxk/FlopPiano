@@ -63,11 +63,9 @@ class Voice():
         if amount<Voice._MIN_MODULATION or Voice._MAX_MODULATION:
             raise ValueError(f'{amount} is not a valid MIDI modulation value')
 
-    def play(self) -> None:
+    def update(self, make_noise:bool) -> None:
         pass
 
-    def silence(self) -> None:
-        pass
 
 class DriveVoice(Drive, Voice):
 
@@ -124,10 +122,6 @@ class DriveVoice(Drive, Voice):
             
             self.top = (self.frequency+math.sin(omega * time.time()))
 
-    def play(self) -> None:
-        self.enable = True
-        self.update()
-    
-    def silence(self) -> None:
-        self.enable = False
-        self.update()
+    def update(self, make_noise:bool) -> None:
+        self.enable = make_noise
+        self.write()

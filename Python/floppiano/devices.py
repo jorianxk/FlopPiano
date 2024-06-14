@@ -76,7 +76,7 @@ class Drive:
         self.crash_mode = crash_mode #Crash prevention mode
 
     #TODO: update docstring
-    def update(self, just_CTRL:bool=False)->None:
+    def write(self, just_CTRL:bool=False)->None:
         """
         A function to send all set CTRL Register values and TOP values a slave 
         drive, or to broadcast to the bus
@@ -230,7 +230,7 @@ class Keyboard():
             raise ValueError("Channel must be [0-15]") 
         self._output_channel = channel
 
-    def update(self) -> list[Message]:
+    def read(self) -> list[Message]:
         return [
             Message(
                 'note_on',
