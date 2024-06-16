@@ -176,6 +176,16 @@ class MIDIUtil():
             return False
         return True
 
+    @staticmethod
+    def isValidMIDIChannel(channel:int)-> bool:
+        if (channel<0 or channel >15):
+            return False
+        return True
+    
+    @staticmethod
+    def integer_map_range(x, in_min, in_max, out_min, out_max) -> int:
+        return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
+
 class MIDIListener():
 
     def __init__(self, input_channel:int =0) -> None:
@@ -187,7 +197,7 @@ class MIDIListener():
     
     @input_channel.setter
     def input_channel(self, channel:int):
-        if (channel <0 or channel>15):
+        if MIDIUtil.isValidMIDIChannel(channel):
             raise ValueError("Channel must be [0-15]") 
         self._input_channel = channel
 

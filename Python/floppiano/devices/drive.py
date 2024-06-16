@@ -1,10 +1,8 @@
 from enum import IntEnum
-from . import bus
-from mido import Message
+from .. import bus
+from .device import Device
 
-
-
-class Drive:
+class Drive (Device):
     class CrashMode (IntEnum):
         """
         A Enum to hold Floppy drive crash modes
@@ -53,6 +51,7 @@ class Drive:
                  spin:bool = False,
                  top: int = 19111,
                  crash_mode:CrashMode = CrashMode.FLIP) -> None:
+        Device.__init__(self)
         """Constructor for a FloppyDrive
 
             Default arguments represent the defaults state of the drive's 
@@ -77,6 +76,7 @@ class Drive:
 
     #TODO: update docstring
     def update(self, just_CTRL:bool=False)->None:
+        Device.update(self)
         """
         A function to send all set CTRL Register values and TOP values a slave 
         drive, or to broadcast to the bus
@@ -213,28 +213,3 @@ class Drive:
                 f'Spin: {self.spin} | '
                 f'Crash Prevent: {self.crash_mode} | '
                 f'TOP: {self._top}]')
-
-
-class Keyboard():
-
-    def __init__(self, address = 0x77, start_key_note = 35, output_channel=0) -> None:        
-        self.output_channel = output_channel
-    
-    @property
-    def output_channel(self) -> int:
-        return self._output_channel
-    
-    @output_channel.setter
-    def output_channel(self, channel:int) -> None:
-        if (channel <0 or channel>15):
-            raise ValueError("Channel must be [0-15]") 
-        self._output_channel = channel
-
-    def read(self) -> list[Message]:
-        return [
-            Message(
-                'note_on',
-                note = 69,
-                channel=self.output_channel)
-        ]
-    

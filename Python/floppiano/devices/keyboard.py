@@ -1,17 +1,7 @@
-from enum import IntEnum, Enum
-from mido import Message
-import floppiano.bus as bus
-from floppiano.midi import MIDIUtil
+from enum import IntEnum
+from .. import bus
 
-
-
-# Led states
-# mute, Octave up, octave down, Octave #,
-
-
-
-class Keyboard():
-    class Keys(IntEnum):
+class Keys(IntEnum):
         KEY_1       = 0
         KEY_2       = 1
         KEY_3       = 2
@@ -50,6 +40,21 @@ class Keyboard():
         OCTAVE_DOWN = 35
         UNUSED      = 36
 
+class KeyboardListener():
+
+    def __init__(self) -> None:
+        pass
+    
+    def key_changed(self, key:Keys, pressed:bool) -> None:
+        pass
+
+    def pitch_changed(self, pitch:int) -> None:
+        pass
+
+    def modulation_changed(self, modulation:int) -> None:
+        pass
+
+class Keyboard():
     KEY_BYTE_MAP = (
         (
             Keys.KEY_1, 
@@ -103,42 +108,41 @@ class Keyboard():
         )
     )
 
+    #The intended starting MIDI note (KEY_1) of the keyboard
+    START_NOTE = 11
 
-#TODO: fix byte masks
     def __init__(
             self,
+            listener:KeyboardListener,
             address:int = 0x77,
-            output_channel:int=0,
-            start_note:int = 35, #MIDI note 35 -> B1
-            octave:int = 0) -> None:        
+            mute_led:bool = False,
+            octave_up_led:bool = False,
+            octave_down_led:bool = False,
+            octave:int = 2) -> None:        
         
+        self.listener = listener
         self.address = address
-        self.output_channel = output_channel
-        self.start_note = start_note
+        self.mute_led = mute_led
+        self.octave_up_led = octave_up_led
+        self.octave_down_led = octave_down_led
+        
         self.octave = octave
 
-        
-        #octave up led
-        #octave down led
-        #mute led
-
-
-
         self._last_state:list[int] = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self._ctrl:int = 0
 
+    def update(self) -> None:
+        # Update the ctrl register 
+        ctrl = (self.mute_led << 5)
+        ctrl = ctrl | (self.octave_up_led << 4)
+        ctrl = ctrl | (self.octave_down_led << 3)
+        ctrl = ctrl | self.octave
 
+        # Update the ctrl register and read the states from the nano
+        new_state = bus.read(self.address, ctrl, 9)
 
-    def update(self) -> list[Message]:
-        #TODO: where does ctrl update happen? led states in ctrl 
-        messages = []
-        
-        # Get the states from the nano
-        new_state = bus.read(self.address, self._ctrl, 9)
-        print("Bytes")
         for b in new_state:    
             print("{:08b}".format(b))
-        
+
         new_key_states   = new_state[0:5]
         new_pitch_states = new_state[5:7]
         new_mod_states   = new_state[7:]
@@ -149,20 +153,16 @@ class Keyboard():
         
         #Has the pitch wheel changed?
         if (self._last_state[5:7] != new_pitch_states):
-            pass #print("pitch changed!")
+            self._pitch_changed(new_pitch_states)
 
         #Has the mod wheel changed?
         if (self._last_state[7:] != new_mod_states):
-            pass #print("mod changed!")
+            self._mod_changed(new_mod_states)
         
         #update the last state
         self._last_state = new_state
 
-        #TODO return messages
-        return []
-
-    def _key_states_changed(self, new_key_states:list[int])-> list[Message]:
-        messages = []
+    def _key_states_changed(self, new_key_states:list[int]) -> None:
         #loop through each byte in the new key states(item in list)
         for byte_index, bite in enumerate(new_key_states):
             #XORing with the old state gives us only the bits which have
@@ -170,67 +170,38 @@ class Keyboard():
             changed_bits = bite ^ self._last_state[byte_index]
 
             #Using the key byte map we can figure out which key was changed
-            #and generate a mido message for that change
+            #then update the listener to that change
             for key_index, key in enumerate(Keyboard.KEY_BYTE_MAP[byte_index]):
                 #A key's position in the key byte map determines its mask 
                 key_mask = 2 ** abs(7 - key_index)
-
                 #The key at key_index was changed
                 if (key_mask & changed_bits):
                     #Was the key pressed or released? 
                     # pressed = True if the change was a press,
-                    #  False if the change was a  release
+                    # pressed = False if the change was a release
                     pressed = bool(key_mask & bite) 
                     #Now generate the message
-                    messages.append(self._key_to_message(key,pressed))
+                    if (self.listener is not None):
+                        self.listener.key_changed(key, pressed)
                 
-                #print(key_index,"{:08b}".format(key_mask), key_mask)
+    def _pitch_changed(self, new_pitch_states:list[int]) -> None:
+        # combine the pitch Upper and lower bytes
+        pitch = (new_pitch_states[0] << 8 ) | new_pitch_states[1]
+        self.listener.pitch_changed(pitch)
+
+    def _mod_changed(self, new_mod_states:list[int]) -> None:
+        # combine the modulation upper and lower bytes
+        mod = (new_mod_states[0] << 8) | new_mod_states[1]
+        self.listener.modulation_changed(mod)
     
-
-    def _key_to_message(self, key:int, pressed)->Message:
-        match key:
-            case Keyboard.Keys.MUTE:
-                print("Mute", pressed) #gen mute message
-            case Keyboard.Keys.OCTAVE_UP:
-                print("Octave up", pressed) #gen octave up
-            case Keyboard.Keys.OCTAVE_DOWN:
-                print("Octave down", pressed)  #gen octave down
-            case Keyboard.Keys.UNUSED:
-                print("UNUSED", pressed)  #pass #do nothing
-            case _:
-                #this is a normal key press do the note, on off
-                print(Keyboard.Keys._member_names_[key], pressed)
-
-    
-    @property
-    def output_channel(self) -> int:
-        return self._output_channel
-    
-    @output_channel.setter
-    def output_channel(self, channel:int) -> None:
-        if (channel <0 or channel>15):
-            raise ValueError("Channel must be [0-15]") 
-        self._output_channel = channel
-
-    @property
-    def start_note(self) -> int:
-        return self._start_note
-
-    @start_note.setter
-    def start_note(self, note:int) -> None:
-        #TODO What happens to octave when we change start note?
-        if (MIDIUtil.isValidMIDINote(note)):
-            self._start_note = note
-            return
-        raise ValueError(f'{note} is not a valid MIDI note')
-
-    @property
-    def octave(self) -> int:
+    @property 
+    def octave(self):
         return self._octave
     
     @octave.setter
-    def octave(self, octave_number:int) -> None:
-        if (octave_number<0 or octave_number>8):
-            raise ValueError(f'{octave_number} is not a valid octave number')
-        #TODO update key midi mapping
-        self._octave = octave_number
+    def octave(self, octave:int):
+        if (octave<0 or octave>7):
+            raise ValueError(f'{octave} is not a valid octave')
+        self._octave = octave
+
+
