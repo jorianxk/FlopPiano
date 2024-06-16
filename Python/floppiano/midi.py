@@ -149,13 +149,13 @@ class MIDIUtil():
 
     @staticmethod
     def MIDI2Freq(note:int) -> float:
-        if(not MIDIUtil.isValidMIDI(note)):
+        if(not MIDIUtil.isValidMIDINote(note)):
             raise ValueError("Note must be in the range [0,127]")
         return MIDIUtil.MIDI_LOOK_UP[note]['freq']
 
     @staticmethod 
     def MIDI2notation(note:int) -> str:
-        if(not MIDIUtil.isValidMIDI(note)):
+        if(not MIDIUtil.isValidMIDINote(note)):
             raise ValueError("Note must be in the range [0,127]")
         
         return MIDIUtil.MIDI_LOOK_UP[note]['name']
@@ -165,13 +165,13 @@ class MIDIUtil():
         n = MIDIUtil.freq2n(frequency)
         note = round(n+20)
 
-        if (MIDIUtil.isValidMIDI(note)):
+        if (MIDIUtil.isValidMIDINote(note)):
             return note
 
         raise ValueError(f'Frequency {frequency:0.3f} is not a midi note')
 
     @staticmethod
-    def isValidMIDI(note:int)->bool:
+    def isValidMIDINote(note:int)->bool:
         if(note <0 or note>127):
             return False
         return True

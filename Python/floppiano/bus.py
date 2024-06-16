@@ -49,6 +49,11 @@ class SMBusWrapper(Bus):
             return self._bus.read_i2c_block_data(address, register, length)
         except OSError as oe:
             raise BusException("Error reading from the I2C SMbus") from oe
+    # def read(self, address: int, register: int, length: int) -> list[int]:
+    #     try:
+    #         return self._bus.read_byte_data(address, register)
+    #     except OSError as oe:
+    #         raise BusException("Error reading from the I2C SMbus") from oe 
     
     def write(self, address: int, register: int, data: list) -> None:
         try:
