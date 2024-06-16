@@ -250,14 +250,14 @@ void testPattern(){
       input_states[2] = 0b10101010;
       input_states[3] = 0b01010101;
       
-      input_states[4] = 0b11001100;
+      input_states[4] = 0b11000011;
+      
       input_states[5] = 0b00110011;
+      input_states[6] = 0b11001100;
       
-      input_states[6] = 0b11100011;
-      input_states[6] = 0b00011100;
-      
-      input_states[7] = 0b10000001;
-      input_states[8] = 0b01111110;
+      input_states[7] = 0b01111110;      
+      input_states[8] = 0b10000001;
+
     }
     else{
       input_states[0] = 0b00001111;
@@ -266,14 +266,13 @@ void testPattern(){
       input_states[2] = 0b01010101;
       input_states[3] = 0b10101010;
       
-      input_states[4] = 0b00110011;
-      input_states[5] = 0b11001100;
+      input_states[4] = 0b00111100;
       
-      input_states[6] = 0b00011100;
-      input_states[6] = 0b11100011;
+      input_states[5] = 0b11001100;      
+      input_states[6] = 0b00110011;
       
-      input_states[7] = 0b01111110;
-      input_states[8] = 0b10000001;
+      input_states[7] = 0b10000001;
+      input_states[8] = 0b01111110;
     }
     toggle_pattern = !toggle_pattern;
 }
