@@ -1,7 +1,7 @@
-import floppiano.bus as bus
-from floppiano.voices import Voice
-from floppiano.synths import Synth, KeyboardSynth
-from floppiano.devices import Keyboard
+import jidi.bus as bus
+from jidi.voices import Voice
+from jidi.synths import Synth, KeyboardSynth
+from jidi.devices import Keyboard
 import logging
 from mido import Message
 

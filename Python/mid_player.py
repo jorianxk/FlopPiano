@@ -1,5 +1,5 @@
-from floppiano.voices import DriveVoice
-from floppiano.synths import Synth
+from jidi.voices import DriveVoice
+from jidi.synths import Synth
 import mido
 import logging
 import time

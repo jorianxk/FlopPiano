@@ -1,7 +1,7 @@
-import floppiano.bus as bus
-from floppiano.voices import Voice, DriveVoice
-from floppiano.devices import Keyboard
-from floppiano.synths import KeyboardSynth
+import jidi.bus as bus
+from jidi.voices import Voice, DriveVoice
+from jidi.devices import Keyboard
+from jidi.synths import KeyboardSynth
 import logging
 from time import sleep
 

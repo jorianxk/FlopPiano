@@ -1,6 +1,6 @@
-from floppiano.voices import DriveVoice
-from floppiano.synths import Synth
-from floppiano.devices import Keyboard
+from jidi.voices import DriveVoice
+from jidi.synths import Synth
+from jidi.devices import Keyboard
 import mido
 import logging
 
