@@ -1,5 +1,6 @@
 from enum import IntEnum
 from .. import bus
+from ..midi import MIDIUtil
 
 class Keys(IntEnum):
         KEY_1       = 0
@@ -45,13 +46,13 @@ class KeyboardListener():
     def __init__(self) -> None:
         pass
     
-    def key_changed(self, key:Keys, pressed:bool) -> None:
+    def _key_changed(self, key:Keys, pressed:bool) -> None:
         pass
 
-    def pitch_changed(self, pitch:int) -> None:
+    def _pitch_changed(self, pitch:int) -> None:
         pass
 
-    def modulation_changed(self, modulation:int) -> None:
+    def _modulation_changed(self, modulation:int) -> None:
         pass
 
 class Keyboard():
@@ -113,7 +114,7 @@ class Keyboard():
 
     def __init__(
             self,
-            listener:KeyboardListener,
+            listener:KeyboardListener=None,
             address:int = 0x77,
             mute_led:bool = False,
             octave_up_led:bool = False,
@@ -149,20 +150,20 @@ class Keyboard():
 
         #Have the key states changed?
         if (self._last_state[0:5] != new_key_states):
-            self._key_states_changed(new_key_states)
+            self._key(new_key_states)
         
         #Has the pitch wheel changed?
         if (self._last_state[5:7] != new_pitch_states):
-            self._pitch_changed(new_pitch_states)
+            self._pitch(new_pitch_states)
 
         #Has the mod wheel changed?
         if (self._last_state[7:] != new_mod_states):
-            self._mod_changed(new_mod_states)
+            self._mod(new_mod_states)
         
         #update the last state
         self._last_state = new_state
 
-    def _key_states_changed(self, new_key_states:list[int]) -> None:
+    def _key(self, new_key_states:list[int]) -> None:
         #loop through each byte in the new key states(item in list)
         for byte_index, bite in enumerate(new_key_states):
             #XORing with the old state gives us only the bits which have
@@ -182,17 +183,42 @@ class Keyboard():
                     pressed = bool(key_mask & bite) 
                     #Now generate the message
                     if (self.listener is not None):
-                        self.listener.key_changed(key, pressed)
+                        self.listener._key_changed(key, pressed)
                 
-    def _pitch_changed(self, new_pitch_states:list[int]) -> None:
+    def _pitch(self, new_pitch_states:list[int]) -> None:
         # combine the pitch Upper and lower bytes
         pitch = (new_pitch_states[0] << 8 ) | new_pitch_states[1]
-        self.listener.pitch_changed(pitch)
-
-    def _mod_changed(self, new_mod_states:list[int]) -> None:
+        
+        #map the pitch to a valid midi pitch range
+        # from arduino analog read (10 bit) range
+        pitch = MIDIUtil.integer_map_range(
+            pitch,
+            0,
+            1023,
+            -8192,
+            8191
+        )  
+        
+        #update the listener
+        if self.listener is not None:
+            self.listener._pitch_changed(pitch)
+        
+    def _mod(self, new_mod_states:list[int]) -> None:
         # combine the modulation upper and lower bytes
         mod = (new_mod_states[0] << 8) | new_mod_states[1]
-        self.listener.modulation_changed(mod)
+
+        #map the mod to a valid control change value range 
+        # from arduino analog read (10 bit) range
+        mod = MIDIUtil.integer_map_range(
+            mod,
+            0,
+            1023,
+            0,
+            127
+        )
+
+        if self.listener is not None:
+            self.listener._modulation_changed(mod)
     
     @property 
     def octave(self):

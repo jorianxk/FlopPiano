@@ -201,36 +201,29 @@ class MIDIListener():
             raise ValueError("Channel must be [0-15]") 
         self._input_channel = channel
 
-    def note_on(self, msg:Message, source):
+    def _note_on(self, msg:Message, source):
         pass
 
-    def note_off(self, msg:Message, source):
+    def _note_off(self, msg:Message, source):
         pass
     
-    def control_change(self, msg:Message, source):
+    def _control_change(self, msg:Message, source):
         pass
     
-    def pitchwheel(self, msg:Message, source):
+    def _pitchwheel(self, msg:Message, source):
         pass
 
-    def sysex(self, msg:Message, source):
+    def _sysex(self, msg:Message, source):
         pass
-    
-    def start(self, msg:Message, source):
-        pass
+  
 
-    def stop(self, msg:Message, source):
-        pass
-
-    def reset(self, msg:Message, source):
-        pass
 
 class MIDIParser():
     
     def __init__(self, listener:MIDIListener) -> None:
         self.listener = listener
     
-    def parse(self, msg:Message, source = None):
+    def _parse(self, msg:Message, source = None):
 
         # This check is to filter out messages that have a channel, and that 
         # channel is not our listener's channel.
@@ -241,23 +234,17 @@ class MIDIParser():
             case 'note_on':
                 #A 'note on' with velocity 0 is commonly a 'note off'
                 if (msg.velocity == 0):
-                    self.listener.note_off(msg, source)
+                    self.listener._note_off(msg, source)
                 else:
-                    self.listener.note_on(msg, source)
+                    self.listener._note_on(msg, source)
             case 'note_off':
-                self.listener.note_off(msg, source)
+                self.listener._note_off(msg, source)
             case 'control_change':
-                self.listener.control_change(msg, source)
+                self.listener._control_change(msg, source)
             case 'pitchwheel':
-                self.listener.pitchwheel(msg, source)
+                self.listener._pitchwheel(msg, source)
             case 'sysex':
-                self.listener.sysex(msg, source)
-            case 'start':
-                self.listener.start(msg, source)
-            case 'stop':
-                self.listener.stop(msg, source)
-            case 'reset':
-                self.listener.reset(msg, source)
+                self.listener._sysex(msg, source)
             case _:
                 pass
 

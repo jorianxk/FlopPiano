@@ -1,3 +1,3 @@
-from .synth import Synth, OutputModes
+from .synth import Synth
 from .keyboard_synth import KeyboardSynth
-from .drive_synth import DriveSynth
+#from .drive_synth import DriveSynth

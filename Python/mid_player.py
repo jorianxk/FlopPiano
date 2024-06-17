@@ -1,5 +1,5 @@
 from floppiano.voices import DriveVoice
-from floppiano.synths import DriveSynth
+from floppiano.synths import Synth
 import mido
 import logging
 import time
@@ -60,7 +60,7 @@ logging.basicConfig(level=logging.DEBUG)
 voices = [DriveVoice(i) for i in range(8,18)]
 
 
-synth = DriveSynth(voices,None)
+synth = Synth(voices)
 
 print(f'Playing {test_midi_file} in 3 second [ctrl+c to stop]')
 
@@ -75,5 +75,5 @@ try:
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
-    synth.silence()
+    synth.reset()
    
