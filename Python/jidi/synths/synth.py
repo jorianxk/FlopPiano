@@ -124,7 +124,7 @@ class Synth(MIDIParser, MIDIListener):
 
         #logger goes before super, because super calls self.input_channel which
         # has been overridden
-        self.logger = logging.getLogger(__name__) 
+        self.logger = logging.getLogger("Synth") 
         MIDIListener.__init__(self, input_channel)
         MIDIParser.__init__(self, self)
  
@@ -174,6 +174,7 @@ class Synth(MIDIParser, MIDIListener):
         return self._flush_output()
 
     def reset(self) -> None:
+        print("called")
         try:        
             for voice in self.voices:
                 voice.update(make_noise=False)
@@ -181,7 +182,7 @@ class Synth(MIDIParser, MIDIListener):
             self.logger.info("voices silenced") 
 
         except BusException as be:
-            self.logger.warn("voices failed to silence")         
+            self.logger.warning("voices failed to silence")         
                     
         self._available_voices.extend(
             list(self._active_voices.values()))        
@@ -196,7 +197,7 @@ class Synth(MIDIParser, MIDIListener):
                 voice.modulate(self.modulation, self.modulation_wave)
                 voice.update((not self._muted))
         except BusException as be:
-            self.logger.warn("voices failed to update") 
+            self.logger.warning("voices failed to update") 
 
     def _flush_output(self)->list[Message]:
         #Ready the output
@@ -271,7 +272,7 @@ class Synth(MIDIParser, MIDIListener):
             #if we're not playing that note pass it along
             self._output.append(msg)
         except BusException as be:
-            self.logger.warn(
+            self.logger.warning(
                 f'could not remove note: {msg.note} from {source} stack, '
                 'there was was a problem silencing the voice') 
     

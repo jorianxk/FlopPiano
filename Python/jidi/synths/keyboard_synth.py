@@ -16,7 +16,9 @@ class KeyboardSynth(Synth, KeyboardListener):
         keyboard_octave = 2,
         **kwargs) -> None:
 
-        super().__init__(voices, **kwargs)
+        Synth.__init__(self, voices, **kwargs)
+
+        self.logger.name = "KeyboardSynth"
 
         #add support for key output mode if we don't already have it
         if 'keys' not in self.output_modes:
@@ -62,10 +64,10 @@ class KeyboardSynth(Synth, KeyboardListener):
         #sound keyboard voices
         self._sound_keyboard_voices()
 
-        return super().update(messages)   
+        return Synth.update(self, messages)   
     
     def reset(self) -> None:
-        super().reset()
+        Synth.reset(self)
         self.reset_keyboard_voices()   
 
     def reset_keyboard_voices(self) -> None:
@@ -77,7 +79,7 @@ class KeyboardSynth(Synth, KeyboardListener):
             self.logger.info("keyboard voices silenced") 
 
         except BusException as be:
-            self.logger.warn(
+            self.logger.warning(
                 "keyboard voices failed to silence")         
 
         #clear the active stack
@@ -93,8 +95,8 @@ class KeyboardSynth(Synth, KeyboardListener):
                 voice.modulate(self.modulation, self.modulation_wave)
                 voice.update((not self._muted))
         except BusException as be:
-            self.logger.warn(
-                "voices failed to update")
+            self.logger.warning(
+                "keyboard voices failed to update")
 
     def _flush_output(self) -> list[Message]:
         #overridden to add support for keys output type
@@ -131,12 +133,67 @@ class KeyboardSynth(Synth, KeyboardListener):
             Synth._note_off(self, msg, source)
 
     #------------------Overrides from KeyboardListener-------------------------#
-    def _key_changed(self, key:Keys, pressed:bool) -> None:
-        if self.loopback:
-            key_msg = self._key2message(key,pressed)
-            if key_msg is not None: self._keyboard_messages.append(key_msg)
+    def _mute_key(self, pressed:bool) -> None:
+        if pressed:
+            self._keyboard_messages.append(
+                Message(
+                    'control_change',
+                    control = self.control_change_map.code('muted'),
+                    channel = self.input_channel,
+                    value = (not self.muted) #toggle mute                
+                )
+            )
 
-    def _pitch_changed(self, pitch: int) -> None:
+    def _octave_up_key(self, pressed:bool) -> None:
+        if pressed:
+            new_octave = self.keyboard_octave + 1
+             #TODO more elegant way to check octave?
+            if new_octave>=0 and new_octave<=127:
+                self._keyboard_messages.append(
+                    Message(
+                        'sysex',
+                        data = [
+                            self.sysex_id, 
+                            self.sysex_map.code('keyboard_octave'), 
+                            new_octave]
+                    )
+                )
+
+    def _octave_down_key(self, pressed:bool) -> None:
+        if pressed:
+            new_octave = self.keyboard_octave - 1
+             #TODO more elegant way to check octave?
+            if new_octave>=0 and new_octave<=127:
+                self._keyboard_messages.append(
+                    Message(
+                        'sysex',
+                        data = [
+                            self.sysex_id, 
+                            self.sysex_map.code('keyboard_octave'), 
+                            new_octave]
+                    )
+                )
+
+    def _piano_key(self, key:Keys, pressed:bool) -> None:
+        if self.loopback:
+            msg = None
+            note = (12 * self.keyboard_octave + Keyboard.START_NOTE) + key
+            if pressed:# Key was pressed -> Note on
+                msg =  Message(
+                    'note_on',
+                    note = note,
+                    velocity = 1,
+                    channel = self.input_channel
+                )
+            else: # Key was released -> note off
+                msg = Message(
+                    'note_off',
+                    note = note,
+                    channel = self.input_channel                  
+                )        
+            self._keyboard_messages.append(msg)
+
+    def _pitch_spin(self, pitch:int) -> None:
         if self.loopback:
             self._keyboard_messages.append(
                 Message(
@@ -145,7 +202,7 @@ class KeyboardSynth(Synth, KeyboardListener):
                     channel = self.input_channel)
             )
 
-    def _modulation_changed(self, modulation: int) -> None:
+    def _modulation_spin(self, modulation:int) -> None:
         if self.loopback:
             self._keyboard_messages.append(
                 Message(
@@ -155,63 +212,6 @@ class KeyboardSynth(Synth, KeyboardListener):
                     channel = self.input_channel)
             )
     
-
-    #TODO how to clean this up??
-    def _key2message(self, key:int, pressed) -> Message:
-        match key:
-            case Keys.MUTE:
-                if pressed:
-                    return Message(
-                        'control_change',
-                        control = self.control_change_map.code('muted'),
-                        channel = self.input_channel,
-                        value = (not self.muted) #toggle mute                
-                    )
-            case Keys.OCTAVE_UP:
-                if pressed:
-                    new_octave = self.keyboard_octave + 1
-                    if new_octave>=0 and new_octave<=127: #TODO more elegant way to check octave
-                        return Message(
-                            'sysex',
-                            data = [
-                                self.sysex_id, 
-                                self.sysex_map.code('keyboard_octave'), 
-                                new_octave
-                            ]
-                        )
-                return None
-            case Keys.OCTAVE_DOWN:
-                if pressed:
-                    new_octave = self.keyboard_octave - 1
-                    if new_octave>=0 and new_octave<=127:
-                        return Message(
-                            'sysex',
-                            data = [
-                                self.sysex_id, 
-                                self.sysex_map.code('keyboard_octave'), 
-                                new_octave
-                            ]
-                        )
-                return None         
-            case Keys.UNUSED:
-                return None
-            case _:
-                # key was pressed -> Note on
-                note = (12 * self.keyboard_octave + Keyboard.START_NOTE) + key
-                #print("key note",note)
-                if pressed:
-                    return Message(
-                        'note_on',
-                        note = note,
-                        velocity = 1,
-                        channel = self.input_channel
-                    )
-                #Key was released -> note off
-                return Message(
-                    'note_off',
-                    note = note,
-                    channel = self.input_channel                  
-                )
 
     #------------------------------Properties----------------------------------#
     @property

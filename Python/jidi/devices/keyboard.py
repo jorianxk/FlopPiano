@@ -47,12 +47,34 @@ class KeyboardListener():
         pass
     
     def _key_changed(self, key:Keys, pressed:bool) -> None:
+        match key:
+            case Keys.MUTE:
+               self._mute_key(pressed)
+            case Keys.OCTAVE_UP:
+                self._octave_up_key(pressed)
+            case Keys.OCTAVE_DOWN:
+                self._octave_down_key(pressed)
+            case Keys.UNUSED:
+                pass
+            case _:
+                self._piano_key(key, pressed)        
+    
+    def _mute_key(self, pressed:bool) -> None:
         pass
 
-    def _pitch_changed(self, pitch:int) -> None:
+    def _octave_up_key(self, pressed:bool) -> None:
         pass
 
-    def _modulation_changed(self, modulation:int) -> None:
+    def _octave_down_key(self, pressed:bool) -> None:
+        pass
+
+    def _piano_key(self, key:Keys, pressed:bool) -> None:
+        pass
+
+    def _pitch_spin(self, pitch:int) -> None:
+        pass
+
+    def _modulation_spin(self, modulation:int) -> None:
         pass
 
 class Keyboard():
@@ -163,8 +185,6 @@ class Keyboard():
         #update the last state
         self._last_state = new_state
 
-        
-
     def _key(self, new_key_states:list[int]) -> None:
         #loop through each byte in the new key states(item in list)
         for byte_index, bite in enumerate(new_key_states):
@@ -202,8 +222,7 @@ class Keyboard():
 
         #update the listener
         if self.listener is not None:
-            self.listener._pitch_changed(pitch)
-
+            self.listener._pitch_spin(pitch)
         
     def _mod(self, new_mod_states:list[int]) -> None:
         # combine the modulation upper and lower bytes
@@ -220,7 +239,7 @@ class Keyboard():
         )
 
         if self.listener is not None:
-            self.listener._modulation_changed(mod)
+            self.listener._modulation_spin(mod)
     
     @property 
     def octave(self):
