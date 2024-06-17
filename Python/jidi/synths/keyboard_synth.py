@@ -1,3 +1,4 @@
+import traceback
 from mido import Message
 
 from .synth import Synth
@@ -7,9 +8,6 @@ from ..devices.keyboard import Keys, Keyboard, KeyboardListener
 
 class KeyboardSynth(Synth, KeyboardListener):
 
-    SYSEX_LOOPBACK = 3
-    SYSEX_KEYBOARD_OCTAVE = 4
-
     def __init__(
         self, 
         voices: tuple[Voice],
@@ -18,15 +16,18 @@ class KeyboardSynth(Synth, KeyboardListener):
         keyboard_octave = 2,
         **kwargs) -> None:
 
-        #add support for key output mode
-        self.OUTPUT_MODES.append('keys')
+        super().__init__(voices, **kwargs)
+
+        #add support for key output mode if we don't already have it
+        if 'keys' not in self.output_modes:
+            self.output_modes.append('keys')
         
         #add support setting loopback mode and keyboard octave via sysex msg
-        self.DEFAULT_SYSEX_MAP[KeyboardSynth.SYSEX_LOOPBACK] = 'loopback'
-        self.DEFAULT_SYSEX_MAP[KeyboardSynth.SYSEX_KEYBOARD_OCTAVE] = \
-            'keyboard_octave'
-
-        super().__init__(voices, **kwargs)
+        # if not already added
+        if 'loopback' not in self.sysex_map:
+            self.sysex_map['loopback'] = 3
+        if 'keyboard_octave' not in self.sysex_map:
+            self.sysex_map['keyboard_octave'] = 4   
 
         self._keyboard_messages:list[Message] = []
         self._active_keyboard_voices:dict[int, Voice] = {}
@@ -36,6 +37,7 @@ class KeyboardSynth(Synth, KeyboardListener):
         self.keyboard = keyboard
 
     #-----------------------------Overrides from Synth-------------------------#
+
     def update(self, messages: list[Message]) -> list[Message]:
         #overridden to process keyboard input
         try: 
@@ -48,7 +50,12 @@ class KeyboardSynth(Synth, KeyboardListener):
             self.keyboard.update()
         except BusException as be:
             #This is normal just log it
-            self.logger.debug("Error reading keyboard states - skipping")
+            self.logger.debug(
+                "BusException while updating keyboard states - skipping")
+        except Exception as e:
+            self.logger.debug(
+                f'Exception while updating keyboard states - skipping'
+                f'\n{traceback.format_exc()}')
 
         for msg in self._keyboard_messages: self._parse(msg, source='keyboard')
         
@@ -57,21 +64,38 @@ class KeyboardSynth(Synth, KeyboardListener):
 
         return super().update(messages)   
     
-    def reset(self):
+    def reset(self) -> None:
         super().reset()
         self.reset_keyboard_voices()   
 
-    def reset_keyboard_voices(self):
-        #quite any active sounding voices
-        for voice in self._active_keyboard_voices.values():
-            voice.update(make_noise=False)
+    def reset_keyboard_voices(self) -> None:
+        try:        
+            #quite any active sounding voices
+            for voice in self._active_keyboard_voices.values():
+                voice.update(make_noise=False)
+
+            self.logger.info("keyboard voices silenced") 
+
+        except BusException as be:
+            self.logger.warn(
+                "keyboard voices failed to silence")         
 
         #clear the active stack
         self._available_voices.extend(
             list(self._active_keyboard_voices.values()))        
         self._active_keyboard_voices = {}
-
+        self.logger.info("keyboard stack cleared")
     
+    def _sound_keyboard_voices(self) -> None:
+        try:
+            for voice in self._active_keyboard_voices.values():
+                voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
+                voice.modulate(self.modulation, self.modulation_wave)
+                voice.update((not self._muted))
+        except BusException as be:
+            self.logger.warn(
+                "voices failed to update")
+
     def _flush_output(self) -> list[Message]:
         #overridden to add support for keys output type
         #Ready the output
@@ -93,27 +117,21 @@ class KeyboardSynth(Synth, KeyboardListener):
         #clear the the output
         self._output = []       
         return output_buffer
-    
-    def _sound_keyboard_voices(self):
-        for voice in self._active_keyboard_voices.values():
-            voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
-            voice.modulate(self.modulation, self.modulation_wave)
-            voice.update((not self._muted))           
 
-    def _note_on(self, msg: Message, source):
+    def _note_on(self, msg: Message, source) -> None:
         if source == 'keyboard':
             self._voice_on(msg, source, self._active_keyboard_voices)
         else:
             Synth._note_on(self, msg, source)
     
-    def _note_off(self, msg: Message, source):
+    def _note_off(self, msg: Message, source) -> None:
         if source == 'keyboard':
             self._voice_off(msg, source, self._active_keyboard_voices)
         else:
             Synth._note_off(self, msg, source)
 
     #------------------Overrides from KeyboardListener-------------------------#
-    def _key_changed(self, key: Keys, pressed: bool) -> None:
+    def _key_changed(self, key:Keys, pressed:bool) -> None:
         if self.loopback:
             key_msg = self._key2message(key,pressed)
             if key_msg is not None: self._keyboard_messages.append(key_msg)
@@ -139,13 +157,13 @@ class KeyboardSynth(Synth, KeyboardListener):
     
 
     #TODO how to clean this up??
-    def _key2message(self, key:int, pressed)->Message:
+    def _key2message(self, key:int, pressed) -> Message:
         match key:
             case Keys.MUTE:
                 if pressed:
                     return Message(
                         'control_change',
-                        control = 123, #TODO how do we know this remove hard code
+                        control = self.control_change_map.code('muted'),
                         channel = self.input_channel,
                         value = (not self.muted) #toggle mute                
                     )
@@ -157,7 +175,7 @@ class KeyboardSynth(Synth, KeyboardListener):
                             'sysex',
                             data = [
                                 self.sysex_id, 
-                                KeyboardSynth.SYSEX_KEYBOARD_OCTAVE, 
+                                self.sysex_map.code('keyboard_octave'), 
                                 new_octave
                             ]
                         )
@@ -170,7 +188,7 @@ class KeyboardSynth(Synth, KeyboardListener):
                             'sysex',
                             data = [
                                 self.sysex_id, 
-                                KeyboardSynth.SYSEX_KEYBOARD_OCTAVE, 
+                                self.sysex_map.code('keyboard_octave'), 
                                 new_octave
                             ]
                         )
@@ -204,17 +222,6 @@ class KeyboardSynth(Synth, KeyboardListener):
     def loopback(self, loopback:int) -> None:
         self._loopback = bool(loopback)
         self.logger.info(f'loopback set: {self.loopback}')
-    
-    @property
-    def keyboard(self) -> Keyboard:
-        return self._keyboard
-    
-    @keyboard.setter
-    def keyboard(self, keyboard:Keyboard) -> None:
-        self._keyboard = keyboard
-        #set up the keyboard to match self
-        self.keyboard.listener = self
-        self.keyboard.octave = self.keyboard_octave
 
     @property
     def keyboard_octave(self) -> int:
@@ -225,10 +232,21 @@ class KeyboardSynth(Synth, KeyboardListener):
         if (octave<0 or octave>7):
             self.logger.info(
                 'keyboard_octave NOT set: '
-                f'{self.keyboard_octave} is not valid'
+                f'{octave} is not valid'
             )
             return
         
-        self.reset_keyboard_voices() #TODO: what if this bus errors?
+        self.reset_keyboard_voices()
         self._keyboard_octave = octave        
         self.logger.info(f'keyboard_octave set: {self.keyboard_octave}')
+
+    @property
+    def keyboard(self) -> Keyboard:
+        return self._keyboard
+    
+    @keyboard.setter
+    def keyboard(self, keyboard:Keyboard) -> None:
+        self._keyboard = keyboard
+        #set up the keyboard to match self
+        self.keyboard.listener = self
+        self.keyboard.octave = self.keyboard_octave

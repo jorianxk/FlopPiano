@@ -6,16 +6,17 @@ import logging
 from time import sleep
 
 
-class KeyboardDebugBus(bus.SMBusWrapper):
+class KeyboardDebugBus(bus.Bus):
     def __init__(self) -> None:
-        super().__init__(1)
+        super().__init__()
         self.key = 1
         self.bit_num = 7
         self.mod = 0
         self.pitch = 0
 
     def write(self, address: int, register: int, data: list) -> None:
-        return super().write(address, register, data)
+        pass
+        #return super().write(address, register, data)
     
     def read(self, address: int, register: int, length: int) -> list[int]:
 
@@ -71,9 +72,9 @@ while True:
     try:
 
         synth.update([])
-        l.info("-------------------------------------------------------------")
-        sleep(0.1)
-        #p = input("----------------------------------------------------------")
+        #l.info("-------------------------------------------------------------")
+        #sleep(0.1)
+        p = input("----------------------------------------------------------")
 
     except KeyboardInterrupt:
         print("Exiting....")
@@ -83,25 +84,6 @@ while True:
 print("Done")
 
 
-# # while True:
-# #     try:
-        
-# #         print("--------------------------------")
-# #         ctrl = 0b01010101
-# #         response = bus.read(0x77, ctrl, 9)
-
-# #         for b in response:    
-# #             print("{:08b}".format(b))
-        
-# #         sleep(0.3)
-        
-# #     except bus.BusException:
-# #         pass
-# #     except KeyboardInterrupt:
-# #         print("Exiting....")
-# #         break
-
-# # print("Done")
 
 
 

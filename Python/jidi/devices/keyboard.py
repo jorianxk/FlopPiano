@@ -183,7 +183,7 @@ class Keyboard():
                     # pressed = True if the change was a press,
                     # pressed = False if the change was a release
                     pressed = bool(key_mask & bite) 
-                    #Now generate the message
+                    #Now tell the listener what happened
                     if (self.listener is not None):
                         self.listener._key_changed(key, pressed)
                 

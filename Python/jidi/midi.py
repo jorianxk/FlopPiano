@@ -1,7 +1,6 @@
 import math
 from mido import Message
 
-#TODO: Make listener and Parser abstract?
 class MIDIUtil():
     #https://en.wikipedia.org/wiki/Piano_key_frequencies
     MIDI_LOOK_UP = {
@@ -196,34 +195,32 @@ class MIDIListener():
         return self._input_channel
     
     @input_channel.setter
-    def input_channel(self, channel:int):
+    def input_channel(self, channel:int) -> None:
         if MIDIUtil.isValidMIDIChannel(channel):
             raise ValueError("Channel must be [0-15]") 
         self._input_channel = channel
 
-    def _note_on(self, msg:Message, source):
+    def _note_on(self, msg:Message, source) -> None:
         pass
 
-    def _note_off(self, msg:Message, source):
+    def _note_off(self, msg:Message, source) -> None:
         pass
     
-    def _control_change(self, msg:Message, source):
+    def _control_change(self, msg:Message, source) -> None:
         pass
     
-    def _pitchwheel(self, msg:Message, source):
+    def _pitchwheel(self, msg:Message, source) -> None:
         pass
 
-    def _sysex(self, msg:Message, source):
+    def _sysex(self, msg:Message, source) -> None:
         pass
-  
-
 
 class MIDIParser():
     
     def __init__(self, listener:MIDIListener) -> None:
         self.listener = listener
     
-    def _parse(self, msg:Message, source = None):
+    def _parse(self, msg:Message, source = None) -> None:
 
         # This check is to filter out messages that have a channel, and that 
         # channel is not our listener's channel.
