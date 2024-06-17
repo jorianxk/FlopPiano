@@ -141,8 +141,8 @@ class Keyboard():
         # Update the ctrl register and read the states from the nano
         new_state = bus.read(self.address, ctrl, 9)
 
-        for b in new_state:    
-            print("{:08b}".format(b))
+        # for b in new_state:    
+        #     print("{:08b}".format(b))
 
         new_key_states   = new_state[0:5]
         new_pitch_states = new_state[5:7]
@@ -162,6 +162,8 @@ class Keyboard():
         
         #update the last state
         self._last_state = new_state
+
+        
 
     def _key(self, new_key_states:list[int]) -> None:
         #loop through each byte in the new key states(item in list)
@@ -188,7 +190,6 @@ class Keyboard():
     def _pitch(self, new_pitch_states:list[int]) -> None:
         # combine the pitch Upper and lower bytes
         pitch = (new_pitch_states[0] << 8 ) | new_pitch_states[1]
-        
         #map the pitch to a valid midi pitch range
         # from arduino analog read (10 bit) range
         pitch = MIDIUtil.integer_map_range(
@@ -198,15 +199,16 @@ class Keyboard():
             -8192,
             8191
         )  
-        
+
         #update the listener
         if self.listener is not None:
             self.listener._pitch_changed(pitch)
+
         
     def _mod(self, new_mod_states:list[int]) -> None:
         # combine the modulation upper and lower bytes
         mod = (new_mod_states[0] << 8) | new_mod_states[1]
-
+        
         #map the mod to a valid control change value range 
         # from arduino analog read (10 bit) range
         mod = MIDIUtil.integer_map_range(

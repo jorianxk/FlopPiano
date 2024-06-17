@@ -51,7 +51,7 @@ def test_sysex(synth:Synth):
 
 voices = tuple(Voice() for i in range(8,18))
 
-synth = KeyboardSynth(voices, Keyboard())
+synth = Synth(voices)
 
 #print(len(PitchBendRange))
 #test_control_change(synth)

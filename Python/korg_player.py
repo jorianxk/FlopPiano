@@ -1,5 +1,6 @@
 from floppiano.voices import DriveVoice
-from floppiano.synths import DriveSynth
+from floppiano.synths import Synth
+from floppiano.devices import Keyboard
 import mido
 import logging
 
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.DEBUG)
 voices = [DriveVoice(i) for i in range(8,18)]
 
 
-synth = DriveSynth(voices,None)
+synth = Synth(voices)
 
 
 print("Begin Playing! [ctrl+c to exit]")
@@ -33,7 +34,7 @@ try:
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
-    synth.silence()
+    synth.reset()
 
 
 

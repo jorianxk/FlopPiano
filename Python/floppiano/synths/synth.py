@@ -87,6 +87,12 @@ class Synth(MIDIParser, MIDIListener):
     def reset(self):
         for voice in self.voices:
             voice.update(make_noise=False)
+        
+        self._available_voices.extend(
+            list(self._active_voices.values()))
+        
+        self._active_voices = {}
+
     
     def _flush_output(self)->list[Message]:
         #Ready the output
@@ -120,7 +126,7 @@ class Synth(MIDIParser, MIDIListener):
             self.__setattr__(attr_name, value)
 
     
-    def _voice_on(self, msg:Message, active_stack:dict[int, Voice]):
+    def _voice_on(self, msg:Message, source:str, active_stack:dict[int, Voice]):
         try:
             #get an available voice and remove it from the pool
             nextVoice:Voice = self._available_voices.pop()
@@ -132,17 +138,17 @@ class Synth(MIDIParser, MIDIListener):
             active_stack[msg.note] = nextVoice
 
             self.logger.debug(
-                f'added note: {msg.note} to active stack '
-                f'[address:{nextVoice.address}]')
+                f'added note: {msg.note} to {source} stack ')
 
         except IndexError as ie: #There are no available voices. 
             self.logger.debug(
-                f'could not add note: {msg.note} to active stack, '
+                f'could not add note: {msg.note} to {source} stack, '
                 'no available voices - rolled')
             #We can't play it so pass it along
             self._output.append(msg)
     
-    def _voice_off(self, msg:Message, active_stack:dict[int, Voice]):
+    def _voice_off(self, msg:Message, source:str, 
+                   active_stack:dict[int, Voice]):
         try:
             #get the active Voice
             playedVoice:Voice = active_stack.pop(msg.note)
@@ -150,31 +156,30 @@ class Synth(MIDIParser, MIDIListener):
             #stop the note playing
             playedVoice.update(make_noise=False)
             self.logger.debug(
-                f'removed note: {msg.note} from active stack '
-                f'[address:{playedVoice.address}]')          
+                f'removed note: {msg.note} from {source} stack ')          
 
             #add the drive back to the available voice pool
             self._available_voices.append(playedVoice)
 
         except KeyError as ke:
             self.logger.debug(
-                f'could not remove note: {msg.note} from active stack, '
+                f'could not remove note: {msg.note} from {source} stack, '
                 f"it's not playing [rolled?]") 
             #if we're not playing that note pass it along
             self._output.append(msg)
         except BusException as be:
             self.logger.warn(
-                f'could not remove note: {msg.note} from active stack, '
+                f'could not remove note: {msg.note} from {source} stack, '
                 'there was was a problem stopping the note from sounding') 
     
 
     #-------------------Overridden from MIDIListener---------------------------#
     def _note_on(self, msg: Message, source):
-        self._voice_on(msg, self._active_voices)
+        self._voice_on(msg, source, self._active_voices)
 
    
     def _note_off(self, msg: Message, source):
-        self._voice_off(msg, self._active_voices)
+        self._voice_off(msg, source, self._active_voices)
 
 
     def _control_change(self, msg: Message, source):
