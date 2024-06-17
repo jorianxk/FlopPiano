@@ -17,7 +17,7 @@
 
 //#define SERIAL_DEBUG // if defined, debug information will be printed to serial
 //#define HANG_DEBUG   // if defined, loop() will hang after one loop() cycle - for debug 
-#define TEST_PATTERN   // if defined key_states will not read, rather a test pattern will be ouput
+//#define TEST_PATTERN   // if defined key_states will not read, rather a test pattern will be ouput
 
 
 #define I2C_ADDR 0x77 //The I2C for this device, RPi expects to get keyboard data on 
