@@ -15,6 +15,7 @@ class DriveSynth(Synth):
         **kwargs) -> None:
 
         super().__init__(voices, **kwargs)
+        
         self.logger.name = "DriveSynth"
         # Add support for crash mode and spin
         if 'crash_mode' not in self.control_change_map:
@@ -27,22 +28,19 @@ class DriveSynth(Synth):
         self.spin = spin
 
 
+    #-------------------------Overrides from Synth-----------------------------#
 
     # overridden to update drive spin and crash modes
     def _sound(self) -> None:
-        try:
-            for voice in self._active_voices.values():
-                voice.crash_mode = self.crash_mode
-                voice.spin = self.spin
-                voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
-                voice.modulate(self.modulation, self.modulation_wave)
-                voice.update((not self._muted))
-        except BusException as be:
-            self.logger.warning("voices failed to update")        
+        for voice in self._active_voices.values():
+            voice.crash_mode = self.crash_mode
+            voice.spin = self.spin
+            voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
+            voice.modulate(self.modulation, self.modulation_wave)
+            voice.update((not self._muted))
 
 
-
-    #------------------Getters/Setters-----------------------------------------#
+    #------------------------------Properties----------------------------------#
 
     @property
     def crash_mode(self)->DriveVoice.CrashMode:
@@ -51,13 +49,9 @@ class DriveSynth(Synth):
     @crash_mode.setter
     def crash_mode(self, crash_mode:int) -> None:
         if crash_mode not in DriveVoice.CrashMode.__members__.values():
-            self.logger.warning(
-                f"crash_mode NOT set: {crash_mode} is not a valid mode")
-            return
+            raise ValueError('Not a valid CrashMode')
         self._crash_mode = crash_mode    
-        self.logger.info(
-            'crash_mode set: '
-            f'{DriveVoice.CrashMode._member_names_[crash_mode]}')
+
 
     @property
     def spin(self):
@@ -66,6 +60,5 @@ class DriveSynth(Synth):
     @spin.setter
     def spin(self, spin:bool):
         self._spin = bool(spin)
-        self.logger.info(f'spin set: {self.spin}')
 
   

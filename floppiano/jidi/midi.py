@@ -196,7 +196,7 @@ class MIDIListener():
     
     @input_channel.setter
     def input_channel(self, channel:int) -> None:
-        if MIDIUtil.isValidMIDIChannel(channel):
+        if not MIDIUtil.isValidMIDIChannel(channel):
             raise ValueError("Channel must be [0-15]") 
         self._input_channel = channel
 

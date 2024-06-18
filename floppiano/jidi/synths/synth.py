@@ -111,7 +111,7 @@ class Synth(MIDIParser, MIDIListener):
         voices:tuple[Voice],
         input_channel:int = 0,
         output_channel:int = 0,
-        output_modes = ['off', 'rollover'],
+        output_modes:list[str] = ['off', 'rollover'],
         output_mode:str = 'rollover',
         sysex_id:int = 123,
         pitch_bend_range:PitchBendRange = PitchBendRange.OCTAVE,
@@ -122,22 +122,22 @@ class Synth(MIDIParser, MIDIListener):
         control_change_map:CommandMap = None,
         sysex_map:CommandMap = None) -> None:
 
-        #logger goes before super, because super calls self.input_channel which
-        # has been overridden
-        self.logger = logging.getLogger("Synth") 
         MIDIListener.__init__(self, input_channel)
         MIDIParser.__init__(self, self)
+
+        self.logger = logging.getLogger("Synth") 
  
         self._voices = voices
-        #self.input_chanel = input_channel see above comment
+
+        #self.input_chanel = input_channel inherited from MidiListener
         self.output_channel = output_channel
 
-        self.output_modes = output_modes        
+        #Not a property
+        self.output_modes = output_modes
         if output_mode not in self.output_modes:
             raise ValueError("output mode not valid")
-        
+   
         self.output_mode = output_mode
-
         self.sysex_id = sysex_id        
         self.pitch_bend_range = pitch_bend_range
         self.pitch_bend = pitch_bend
@@ -165,51 +165,59 @@ class Synth(MIDIParser, MIDIListener):
 
         self._output:list[Message] = []
     
+    #------------------------------Methods-------------------------------------#
+
     def update(self, messages:list[Message])->list[Message]:
+
         #process all the messages from the message parameter
-        for msg in messages: self._parse(msg,source='update')        
+        try:
+            for msg in messages: self._parse(msg,source='update')        
+        except Exception as e:
+            self.logger.error(f'on update() could not parse messages - {e}')
+
         #make all the sounds
-        self._sound()
+        try:
+            self._sound()
+        except Exception as e:
+            self.logger.error(f'on update() could not sound voices - {e}')
+    
         #flush and return the output
         return self._flush_output()
 
     def reset(self) -> None:
-        try:        
-            for voice in self.voices:
-                voice.update(make_noise=False)
-
-            self.logger.info("voices silenced") 
-
-        except BusException as be:
-            self.logger.warning("voices failed to silence")         
-                    
         self._available_voices.extend(
             list(self._active_voices.values()))        
         self._active_voices = {}
+        
+        self.logger.info("active stack cleared")
+  
+        for voice in self.voices:
+            #This could raise a BusException
+            voice.update(make_noise=False)
 
-        self.logger.info("stack cleared")
+        self.logger.info("voices silenced") 
     
     def _sound(self) -> None:
-        try:
-            for voice in self._active_voices.values():
-                voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
-                voice.modulate(self.modulation, self.modulation_wave)
-                voice.update((not self._muted))
-        except BusException as be:
-            self.logger.warning("voices failed to update") 
+        for voice in self._active_voices.values():
+            voice.pitch_bend(self.pitch_bend, self.pitch_bend_range)
+            voice.modulate(self.modulation, self.modulation_wave)
+            #This could raise a BusException
+            voice.update((not self._muted))
 
     def _flush_output(self)->list[Message]:
-        #Ready the output
-        output_buffer:list[Message] = []        
+        #Ready the outputs
+        output_buffer:list[Message] = [] 
+    
         match self.output_mode:
-            case 0: #output mode off
-                #output buffer is already empty
+            case 0: #self.output_modes.index('off') -> off 
+                #output buffer is already empty, nothing to do
                 pass
-            case 1: #rollover mode
+            case 1: #self.output_modes.index('rollover') -> rollover 
                 output_buffer = self._output
             case _:
-                #should never happen output mode setter prevents this
-                raise ValueError("Can not ready output - invalid output mode")
+                #a new output mode has probably been added - we don't know
+                # what to do with it so don't do anything
+                pass
             
         #clear the the output
         self._output = []       
@@ -217,10 +225,26 @@ class Synth(MIDIParser, MIDIListener):
 
     def _map_attr(self, attr_name:str, value=None) -> None:
         attr = self.__getattribute__(attr_name)
-        if callable(attr):
-            attr()
-        else:
-            self.__setattr__(attr_name, value)
+        try:
+            #Are we setting a property or calling a function?
+            if callable(attr):
+                attr() # Call the function
+            else:
+                #set the property
+                self.__setattr__(attr_name, value)
+                #pitch bend and modulation happen frequently so they need to 
+                #be logged at the debug and not info level
+                level = logging.INFO
+                if attr_name =='pitch_bend' or attr_name =='modulation':
+                    level = logging.DEBUG
+                
+                self.logger.log(level,f'{attr_name} set to: {value}')
+        except ValueError as ve:
+            self.logger.warning(f'{attr_name} NOT set: {ve}')
+        except BusException as be:
+            self.logger.warning(f'BusException during {attr_name} - skipping')
+        except Exception as e:
+            self.logger.error(f'Error during {attr_name} - skipping')
     
     def _voice_on(
             self, 
@@ -259,7 +283,7 @@ class Synth(MIDIParser, MIDIListener):
             #stop the note playing
             playedVoice.update(make_noise=False)
             self.logger.debug(
-                f'removed note: {msg.note} from {source} stack ')          
+                f'removed note: {msg.note} from {source} active stack ')          
 
             #add the drive back to the available voice pool
             self._available_voices.append(playedVoice)
@@ -272,9 +296,10 @@ class Synth(MIDIParser, MIDIListener):
             self._output.append(msg)
         except BusException as be:
             self.logger.warning(
-                f'could not remove note: {msg.note} from {source} stack, '
-                'there was was a problem silencing the voice') 
+                f'could not remove note: {msg.note} from {source} active stack,'
+                ' there was was a problem silencing the voice') 
     
+
     #-------------------Overridden from MIDIListener---------------------------#
 
     def _note_on(self, msg: Message, source) -> None:
@@ -311,6 +336,7 @@ class Synth(MIDIParser, MIDIListener):
         #pass along all sysex messages
         self._output.append(msg)
 
+
     #--------------------Properties--------------------------------------------#
 
     @property
@@ -322,20 +348,6 @@ class Synth(MIDIParser, MIDIListener):
     # def voices(self, voices:tuple[Voice]) -> None:
     #     self._voices = voices
 
-    #@property for input channel in parent class MidiListener
-
-    @MIDIListener.input_channel.setter
-    def input_channel(self, channel:int) -> None:
-        #Overridden super() setter because we don't want exceptions for bad
-        #channel parameters
-        if not MIDIUtil.isValidMIDIChannel(channel):
-            self.logger.warning(
-                f"input_channel NOT set: {channel} is not a valid channel")
-            return
-        self._input_channel = channel
-        self.logger.info(
-            f'input_channel set: {self.input_channel}')
-
     @property
     def output_channel(self) -> int:
         return self._output_channel
@@ -343,12 +355,8 @@ class Synth(MIDIParser, MIDIListener):
     @output_channel.setter
     def output_channel(self, channel:int) -> None:
         if not MIDIUtil.isValidMIDIChannel(channel):
-            self.logger.warning(
-                f"output_channel NOT set: {channel} is not a valid channel")
-            return
+            raise ValueError("Channel must be [0-15]")
         self._output_channel = channel
-        self.logger.info(
-            f'output_channel set: {self.output_channel}')
     
     @property
     def output_mode(self) -> str:
@@ -356,20 +364,15 @@ class Synth(MIDIParser, MIDIListener):
     
     @output_mode.setter
     def output_mode(self, output_mode) -> None:
-
         if isinstance(output_mode, str):
             #this will throw an exception if output mode is not in keys()
             #which is ok because strs can only be used programmatically.
             output_mode = self.output_modes.index(output_mode)
 
         if output_mode <0 or output_mode > len(self.output_modes)-1:
-            self.logger.warning(
-                f"output_mode NOT set: {output_mode} is not a valid mode")
-            return
-        
+            raise ValueError('Not a valid mode')
+   
         self._output_mode = output_mode
-        self.logger.info(
-            f'output_mode set: {self.output_modes[self.output_mode]}')
 
     @property
     def sysex_id(self) -> int:
@@ -378,10 +381,8 @@ class Synth(MIDIParser, MIDIListener):
     @sysex_id.setter
     def sysex_id(self, id:int) -> None:
         if id<0 or id>127:
-            self.logger.info(f'sysex_id not set: {id} is not valid')
-            return
+            raise ValueError('sysex_id must be [0-127]')
         self._sysex_id = id
-        self.logger.info(f'sysex_id set: {self.sysex_id}')
 
     @property
     def pitch_bend_range (self) -> PitchBendRange:
@@ -393,16 +394,10 @@ class Synth(MIDIParser, MIDIListener):
             pitch_bend_range = list(PitchBendRange).index(pitch_bend_range)
 
         if pitch_bend_range<0 or pitch_bend_range>len(PitchBendRange)-1:
-            self.logger.warning(
-                f"pitch_bend_range NOT set: {pitch_bend_range} not valid")
-            return
+            raise ValueError('Not a not valid PitchBendRange')
 
         self._pitch_bend_range = list(
             PitchBendRange.__members__.values())[pitch_bend_range]
-
-        self.logger.info(
-            'pitch_bend_range set: '
-            f'{PitchBendRange._member_names_[pitch_bend_range]}')
 
     @property
     def pitch_bend(self) -> int:
@@ -412,10 +407,9 @@ class Synth(MIDIParser, MIDIListener):
     def pitch_bend(self, pitch_bend:int) -> None:
         if (pitch_bend < Voice._MIN_PITCH_BEND or 
             pitch_bend > Voice._MAX_PITCH_BEND):
-            self.logger.debug(f'pitch_bend NOT set: {pitch_bend} not valid')
-            return
+            raise ValueError('Not a valid pitch bend')
+           
         self._pitch_bend = pitch_bend
-        self.logger.debug(f'pitch_bend set: {self.pitch_bend}')
     
     @property
     def modulation_wave(self) -> ModulationWave:
@@ -424,13 +418,9 @@ class Synth(MIDIParser, MIDIListener):
     @modulation_wave.setter
     def modulation_wave(self, modulation_wave:int) -> None:
         if modulation_wave not in ModulationWave.__members__.values():
-            self.logger.warning(
-                f"modulation_wave NOT set: {modulation_wave} is not valid")
-            return
+            raise ValueError('Not a valid ModulationWave')
+        
         self._modulation_wave = modulation_wave
-        self.logger.info(
-            'modulation_wave set: '
-            f'{ModulationWave._member_names_[modulation_wave]}')
  
     @property
     def modulation(self) -> int:
@@ -440,12 +430,9 @@ class Synth(MIDIParser, MIDIListener):
     def modulation(self, modulation:int) -> None:
         if (modulation < Voice._MIN_MODULATION or 
             modulation > Voice._MAX_MODULATION):
-            self.logger.debug(
-                f"modulation NOT set: {modulation} not valid")
-            return
-
+            raise ValueError('Not a not valid modulation')
+         
         self._modulation = modulation
-        self.logger.debug(f"modulation set: {modulation}")
 
     @property
     def muted(self) -> bool:
@@ -454,4 +441,3 @@ class Synth(MIDIParser, MIDIListener):
     @muted.setter
     def muted(self, muted:bool) -> None:
         self._muted = bool(muted)
-        self.logger.info(f'muted set: {self.muted}')
