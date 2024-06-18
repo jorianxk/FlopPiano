@@ -3,12 +3,15 @@ from queue import Queue, Empty
 
 
 from configparser import ConfigParser
-from .conductor import Conductor, Note, OutputModes
+
+
 
 from mido.ports import BaseInput, BaseOutput, BasePort
 from mido import Message
-import mido
 
+from jidi.synths import Synth
+
+import mido
 import logging
 
 
@@ -79,91 +82,91 @@ class Configuration():
             raise ValueError(f'Bad value: {ve}') from ve
 
            
-    @staticmethod
-    def _service_configs(config:ConfigParser):
+    # @staticmethod
+    # def _service_configs(config:ConfigParser):
 
-        service_type = config['Service'].get('type')
-        if service_type is None:
-            raise ValueError('[Service]: type not given')
-        if service_type != 'physical' and service_type != 'virtual':
-            print(service_type)
-            raise ValueError("[Service]: type not ['physical', 'virtual']")
+    #     service_type = config['Service'].get('type')
+    #     if service_type is None:
+    #         raise ValueError('[Service]: type not given')
+    #     if service_type != 'physical' and service_type != 'virtual':
+    #         print(service_type)
+    #         raise ValueError("[Service]: type not ['physical', 'virtual']")
 
-        #TODO: We need to validate this!
-        input_hint = config['Service'].get('input_hint')
-        if input_hint is None:
-            raise ValueError('[Service]: input_hint not given')
+    #     #TODO: We need to validate this!
+    #     input_hint = config['Service'].get('input_hint')
+    #     if input_hint is None:
+    #         raise ValueError('[Service]: input_hint not given')
 
-        #TODO: We need to validate this!
-        output_hint = config['Service'].get('output_hint')
-        if output_hint is None:
-            raise ValueError('[Service]: output_hint not given')
+    #     #TODO: We need to validate this!
+    #     output_hint = config['Service'].get('output_hint')
+    #     if output_hint is None:
+    #         raise ValueError('[Service]: output_hint not given')
 
-        #TODO: dont' do logging if logfile is none!
-        log_file = config['Service'].get('log_file')
+    #     #TODO: dont' do logging if logfile is none!
+    #     log_file = config['Service'].get('log_file')
 
-        log_level = config['Service'].get('log_level',"INFO").upper()
-        if (log_level not in logging.getLevelNamesMapping().keys()):
-            raise ValueError('[Service]: log_level not '
-                            f'{list(logging.getLevelNamesMapping().keys())}')
-        log_level = logging.getLevelNamesMapping()[log_level]
+    #     log_level = config['Service'].get('log_level',"INFO").upper()
+    #     if (log_level not in logging.getLevelNamesMapping().keys()):
+    #         raise ValueError('[Service]: log_level not '
+    #                         f'{list(logging.getLevelNamesMapping().keys())}')
+    #     log_level = logging.getLevelNamesMapping()[log_level]
 
-        return (service_type, input_hint, output_hint, log_file, log_level)
+    #     return (service_type, input_hint, output_hint, log_file, log_level)
         
-    @staticmethod
-    def _conductor_configs(config:ConfigParser):
+    # @staticmethod
+    # def _conductor_configs(config:ConfigParser):
         
-        keyboard_address = config['Conductor'].getint('keyboard_address', 0x77)
-        if keyboard_address < 0x8 or keyboard_address > 0x77:
-            raise ValueError(f'[Conductor]: keyboard_address not [{0x8}-{0x77}]')
+    #     keyboard_address = config['Conductor'].getint('keyboard_address', 0x77)
+    #     if keyboard_address < 0x8 or keyboard_address > 0x77:
+    #         raise ValueError(f'[Conductor]: keyboard_address not [{0x8}-{0x77}]')
         
-        loopback = config['Conductor'].getboolean('loopback', True)
+    #     loopback = config['Conductor'].getboolean('loopback', True)
         
-        input_channel = config['Conductor'].getint('input_channel', 0)
-        if input_channel < -1 or input_channel > 16:
-            raise ValueError(f'[Conductor]: input_channel not [0-16]')
+    #     input_channel = config['Conductor'].getint('input_channel', 0)
+    #     if input_channel < -1 or input_channel > 16:
+    #         raise ValueError(f'[Conductor]: input_channel not [0-16]')
 
-        output_channel = config['Conductor'].getint('output_channel', 0)
-        if output_channel < 0 or output_channel > 15:
-            raise ValueError(f'[Conductor]: output_channel not [0-15]')
+    #     output_channel = config['Conductor'].getint('output_channel', 0)
+    #     if output_channel < 0 or output_channel > 15:
+    #         raise ValueError(f'[Conductor]: output_channel not [0-15]')
         
-        output_mode = config['Conductor'].get('output_mode', 'rollover').upper()
-        if output_mode not in OutputModes._member_names_:
-            raise ValueError('[Conductor]: output_mode not '
-                            f'{OutputModes._member_names_}')
+    #     output_mode = config['Conductor'].get('output_mode', 'rollover').upper()
+    #     if output_mode not in OutputModes._member_names_:
+    #         raise ValueError('[Conductor]: output_mode not '
+    #                         f'{OutputModes._member_names_}')
         
-        output_mode = OutputModes._member_map_[output_mode]
+    #     output_mode = OutputModes._member_map_[output_mode]
 
-        return (keyboard_address, loopback, output_channel, input_channel, output_mode)
+    #     return (keyboard_address, loopback, output_channel, input_channel, output_mode)
 
-    @staticmethod
-    def _note_configs(config:ConfigParser):
-        #TODO remember to init notes correctly
-        drive_configs:dict[int, str] = {}
-        for section in config.sections():
+    # @staticmethod
+    # def _note_configs(config:ConfigParser):
+    #     #TODO remember to init notes correctly
+    #     drive_configs:dict[int, str] = {}
+    #     for section in config.sections():
             
-            if section.upper().startswith("DRIVE"):
-                address = config[section].getint("address")
+    #         if section.upper().startswith("DRIVE"):
+    #             address = config[section].getint("address")
 
-                if address is None:
-                    raise ValueError(f'[{section}]: address not given')
-                elif address<0x8 or address >0x77:
-                    raise ValueError(f'[Drive]: address not [{0x8}-{0x77}]')
+    #             if address is None:
+    #                 raise ValueError(f'[{section}]: address not given')
+    #             elif address<0x8 or address >0x77:
+    #                 raise ValueError(f'[Drive]: address not [{0x8}-{0x77}]')
                 
-                #TODO handle tuning here!
-                tuning = config[section].get("tuning")
-                if tuning is None:
-                    pass #raise ValueError(f'[Drive]: tuning not VALUES HERE')
+    #             #TODO handle tuning here!
+    #             tuning = config[section].get("tuning")
+    #             if tuning is None:
+    #                 pass #raise ValueError(f'[Drive]: tuning not VALUES HERE')
                 
-                drive_configs[address] = tuning
+    #             drive_configs[address] = tuning
 
-        return drive_configs
+    #     return drive_configs
 
 class Service(Thread):
 
     def __init__(
         self,
-        conductor:Conductor = None, 
+        synth:Synth, 
         service_type:str = 'physical', 
         input_hint:str = "USB", 
         output_hint:str = "USB", 
@@ -172,11 +175,8 @@ class Service(Thread):
 
          
         # Setup Conductor
-        self._conductor = conductor
-        if self._conductor is None:
-            #TODO: remember to do loopback by default
-            self._conductor = Conductor(loopback=False)
-            #self._conductor = Conductor()
+        self._synth = synth
+
 
         # Get the service type
         if service_type != 'physical' and service_type!='virtual':
@@ -196,7 +196,7 @@ class Service(Thread):
 
         # Set up logger
         if log_file is not None:
-            pass #TODO: set up logging to a file        
+            pass #TODO: set up logging to a file, and level     
         
         self._logger = logging.getLogger(__name__)
 
@@ -230,7 +230,7 @@ class Service(Thread):
                 if input_msg is not None:
                     incoming_msgs.append(input_msg)
 
-            outgoing_msgs = self._conductor.conduct(incoming_msgs)
+            outgoing_msgs = self._synth.update(incoming_msgs)
    
             #try to write the outgoing messages to the output
             if (not self._midi_output.closed and len(outgoing_msgs)>0):
@@ -240,7 +240,7 @@ class Service(Thread):
         #Clean up before stopping
         #When quitting make sure the conductor shuts up
         self._logger.info("Cleaning up...")
-        self._conductor.silence()
+        self._synth.reset()
         self._logger.info("Exited.")
         
     def quit(self):
@@ -250,26 +250,10 @@ class Service(Thread):
         self._stop_event.set()
 
     def get(self, **kwargs)->list[Message]:
-        """_summary_
-            Get the output from the Conductor
-            **kwargs are passed to Queue.get() see:
-            https://docs.python.org/3/library/queue.html
-        Returns:
-            list[Message]: The output from the conductor
-        """
         self._logger.debug(f'Returning messages from the outgoing queue')
         return self._outgoing_q.get(**kwargs)
 
     def put(self, messages:list[Message] ,**kwargs):
-        """_summary_
-            Send Midi messages to the Conductor
-            **kwargs are passed to Queue.put() see:
-            https://docs.python.org/3/library/queue.html
-
-        Args:
-            messages (list[Message]): A list of messages to send to the 
-                Conductor
-        """
         self._logger.debug(f'Put {len(messages)} messages into incoming queue')
         self._incoming_q.put(messages,**kwargs)
 
@@ -280,9 +264,3 @@ class Service(Thread):
                 return option
 
         raise ValueError(f'Could not find port with hint: {hint.upper()}')
-
-
-
-
-
-

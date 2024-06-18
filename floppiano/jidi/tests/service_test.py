@@ -1,4 +1,7 @@
+from jidi.voices import DriveVoice
+from jidi.synths import DriveSynth
 from jidi.services import Configuration, Service
+
 import logging
 import time
 #write a config
@@ -32,7 +35,11 @@ import time
 logging.basicConfig(level=logging.DEBUG)
 
 
-cs = Service()
+voices = [DriveVoice(i) for i in range(8,18)]
+
+synth = DriveSynth(voices)
+
+cs = Service(synth)
 cs.start()
 
 try:    
