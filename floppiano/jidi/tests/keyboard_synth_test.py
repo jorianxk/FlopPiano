@@ -63,7 +63,7 @@ l = logging.getLogger(__name__)
 
 
 #voices = tuple(Voice() for i in range(8,18))
-voices = [DriveVoice(i) for i in range(8,18)]
+voices = [Voice() for i in range(8,18)]
 
 synth = KeyboardSynth(voices, Keyboard(), loopback=True)
 

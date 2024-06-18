@@ -1,6 +1,6 @@
 import jidi.bus as bus
 from jidi.voices import Voice, DriveVoice
-from jidi.synths import Synth, KeyboardSynth
+from jidi.synths import Synth, KeyboardSynth, DriveSynth
 from jidi.devices import Keyboard
 import logging
 from mido import Message
@@ -9,7 +9,7 @@ class DebugBus(bus.Bus):
     def __init__(self) -> None:
         super().__init__()
     def write(self, address: int, register: int, data: list) -> None:
-        raise bus.BusException("poop")
+        pass #raise bus.BusException("")
     def read(self, address: int, register: int, length: int) -> list[int]:
         pass
 bus.default_bus(DebugBus())
@@ -57,20 +57,25 @@ def test_sysex(synth:Synth):
             synth.update([])
 
 
-voices = tuple(DriveVoice(8) for i in range(8,18))
+
+
+
+
+
+voices = tuple(DriveVoice(i) for i in range(8,18))
 
 # synth = Synth(voices)
-synth = KeyboardSynth(voices, Keyboard())
+synth = DriveSynth(voices)
 
-synth.update([
-    Message(
-        'note_on',
-        note = 69
-    )
-])
+# synth.update([
+#     Message(
+#         'note_on',
+#         note = 69
+#     )
+# ])
 #print(len(PitchBendRange))
-#test_control_change(synth)
+test_control_change(synth)
 
-test_sysex(synth)
+#test_sysex(synth)
 
 

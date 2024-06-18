@@ -1,13 +1,13 @@
 from jidi.voices import DriveVoice
-from jidi.synths import Synth
+from jidi.synths import DriveSynth
 import mido
 import logging
 import time
 
-transpose = 0
+transpose = -12
 #test_midi_file = 'assets/Testing_MIDI/80_Synth_track.mid'
 #test_midi_file = 'assets/Testing_MIDI/Backstreet_Boys_I Want_It_That_Way.mid'
-test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
+#test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'assets/Testing_MIDI/bloody.mid'
 #test_midi_file = 'assets/Testing_MIDI/brahms-symphony3-3-theme-piano-solo.mid'
 #test_midi_file = 'assets/Testing_MIDI/castle_deep.mid'
@@ -17,10 +17,7 @@ test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'assets/Testing_MIDI/Finish_the_Fight.mid'
 #test_midi_file = 'assets/Testing_MIDI/FNF_DubstepV2.mid'
 #test_midi_file = 'assets/Testing_MIDI/gerudo.mid'
-#test_midi_file = 'assets/Testing_MIDI/Happy Birthday_Black.mid'
 #test_midi_file = 'assets/Testing_MIDI/Happy_Birthday_MIDI.mid'
-#test_midi_file = 'assets/Testing_MIDI/Happy_Birthday.mid'
-#test_midi_file = 'assets/Testing_MIDI/HappyBirthday.mid'
 #test_midi_file = 'assets/Testing_MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
 #test_midi_file = 'assets/Testing_MIDI/imperial.mid'
 #test_midi_file = 'assets/Testing_MIDI/knight_rider.mid'
@@ -31,7 +28,7 @@ test_midi_file = 'assets/Testing_MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'assets/Testing_MIDI/metallica-one.mid'
 #test_midi_file = 'assets/Testing_MIDI/phantom_of_the_floppera.mid'
 #test_midi_file = 'assets/Testing_MIDI/phonk.mid'
-#test_midi_file = 'assets/Testing_MIDI/Sarias_Song_piano.mid'
+test_midi_file = 'assets/Testing_MIDI/Sarias_Song_piano.mid'
 #test_midi_file = 'assets/Testing_MIDI/debussy-doctor-gradus-ad-parnassum.mid'
 #test_midi_file = 'assets/Testing_MIDI/runescape_lumbridge_piano.mid'
 #test_midi_file = 'assets/Testing_MIDI/drunken-sailor.mid'
@@ -59,12 +56,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 voices = [DriveVoice(i) for i in range(8,18)]
 
+synth = DriveSynth(voices)
 
-synth = Synth(voices)
 
-print(f'Playing {test_midi_file} in 3 second [ctrl+c to stop]')
+print(f'Playing {test_midi_file} in 2 second [ctrl+c to stop]')
 
-time.sleep(3)
+time.sleep(2)
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():

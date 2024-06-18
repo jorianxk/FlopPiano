@@ -174,7 +174,6 @@ class Synth(MIDIParser, MIDIListener):
         return self._flush_output()
 
     def reset(self) -> None:
-        print("called")
         try:        
             for voice in self.voices:
                 voice.update(make_noise=False)

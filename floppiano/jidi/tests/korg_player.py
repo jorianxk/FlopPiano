@@ -1,6 +1,5 @@
 from jidi.voices import DriveVoice
-from jidi.synths import Synth
-from jidi.devices import Keyboard
+from jidi.synths import DriveSynth
 import mido
 import logging
 
@@ -22,8 +21,8 @@ logging.basicConfig(level=logging.DEBUG)
 voices = [DriveVoice(i) for i in range(8,18)]
 
 
-synth = Synth(voices)
-
+synth = DriveSynth(voices)
+synth.crash_mode = 1
 
 print("Begin Playing! [ctrl+c to exit]")
 

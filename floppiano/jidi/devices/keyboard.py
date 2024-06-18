@@ -1,4 +1,5 @@
 from enum import IntEnum
+from .device import Device
 from .. import bus
 from ..midi import MIDIUtil
 
@@ -77,7 +78,7 @@ class KeyboardListener():
     def _modulation_spin(self, modulation:int) -> None:
         pass
 
-class Keyboard():
+class Keyboard(Device):
     KEY_BYTE_MAP = (
         (
             Keys.KEY_1, 
