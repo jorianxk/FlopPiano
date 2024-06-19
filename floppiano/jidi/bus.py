@@ -75,7 +75,7 @@ def default_bus(bus_object:Bus = None):
         bus = bus_object
     else:
         try:
-            bus = SMBusWrapper(bus_number=1) # 1 indicates /dev/ic2-1 for RPi's
+            bus = SMBusWrapper(bus_number=22) # 1 indicates /dev/ic2-1 for RPi's
         except NameError as ne:
             bus = Bus()
     
