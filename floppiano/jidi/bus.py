@@ -1,6 +1,6 @@
 #Try to import smbus for The SMBusWrapper (default bus) class
 try:
-    from smbus import SMBus
+    from smbus2 import SMBus
 except ModuleNotFoundError:
     pass
 

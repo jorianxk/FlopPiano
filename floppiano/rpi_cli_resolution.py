@@ -67,7 +67,7 @@ lines = lines.decode("utf-8")
 line = lines.strip()
 
 #The leading spaces prevent the output from being cropped (see above)
-print(f'                        Columns: {columns}    Lines: {lines}', end = "")
+print(f'Columns: {columns}    Lines: {lines}', end = "")
 
 
 #Jorian ran this script and got "Columns: 90    Lines:30"
