@@ -1,6 +1,7 @@
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.effects import Effect
+from asciimatics.widgets import DropdownList
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
@@ -13,7 +14,8 @@ class TabHeader(Effect):
             screen:Screen, 
             tab_name:str, 
             tab_row:list[str], 
-            divider_row:list[str]):
+            divider_row:list[str],
+            theme = 'default'):
         super().__init__(screen)
         """_summary_
             An effect that will be drawn at the top of each Tab that shows the
@@ -27,11 +29,12 @@ class TabHeader(Effect):
                 the Tab names with decorators)
             divider_row (list[str]): The second row of text that will be drawn
                 (i.e the tab dividers)
+            theme (optional): The ascii theme to use on the TabHeader
         """
 
         # An asciimatics theme
-        self._theme = None
-        self.set_theme('default')
+        # self._theme = None
+        self.theme = theme
         
         self._tab_name = tab_name
         self._tab_row = tab_row
@@ -50,7 +53,7 @@ class TabHeader(Effect):
         x = 0 #Location to draw at
         for tab_label in self._tab_row:
             #Get the color, attribute, and background color for drawing
-            pallet = self.palette['disabled']
+            pallet = self.palette['borders']
 
             # If the tab name is the selected tab's name highlight it
             if tab_label.strip() == self._tab_name:
@@ -65,7 +68,7 @@ class TabHeader(Effect):
         x = 0
         for divider_label in self._divider_row:
             #All dividers are disabled colored
-            pallet = self.palette['disabled']
+            pallet = self.palette['borders']
             screen.print_at(
                 divider_label, 
                 x, 
@@ -73,7 +76,12 @@ class TabHeader(Effect):
                 pallet[0], pallet[1], pallet[2])
             x += len(divider_label)
 
-    def set_theme(self, theme):
+    @property
+    def theme(self):
+        return self._theme
+
+    @theme.setter
+    def theme(self, theme):
         """
         Shamelessly stolen from asciimatics to support theming
 
@@ -111,7 +119,7 @@ class Tab(Scene):
     # Constants for switching tabs
     NEXT_TAB_KEY = Screen.KEY_PAGE_UP
     PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
-    def __init__(self, screen:Screen, name:str):    
+    def __init__(self, screen:Screen, name:str, theme = 'default'):    
         Scene.__init__(
             self,
             effects=[], 
@@ -128,6 +136,7 @@ class Tab(Scene):
             name (str): The unique name of the Tab
         """
         self.screen = screen
+        self.theme = theme
 
         # The previous tab in the TabGroup - used for going to the prior Tab
         self.prior_tab_name = None
@@ -161,17 +170,36 @@ class Tab(Scene):
     #     """
     #     return self.screen.height - self._tab_header.height
 
-    def fix(self, tab_header:Effect, prior_tab_name:str, next_tab_name:str):
+    @property
+    def theme(self):
+        return self._theme
+
+    @theme.setter
+    def theme(self, theme):
+        """
+        Shamelessly stolen from asciimatics to support theming
+
+        Pick a palette from the list of supported THEMES.
+
+        :param theme: The name of the theme to set.
+        """
+        if theme in THEMES:
+            self._theme = theme
+            self.palette = THEMES[theme]
+
+
+    def fix(self, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
         """_summary_
             Called by TabGroup to setup the Tab's TabHeader and event handling
         Args:s
-            tab_header (Effect): The TabHeader to be used with the Tab
+            tab_header (TabHeader): The TabHeader to be used with the Tab
             prior_tab_name (str): The name of the previous Tab in the TabGroup
             next_tab_name (str): The name of the next Tab in the TabGroup
         """
         self.prior_tab_name = prior_tab_name
         self.next_tab_name = next_tab_name
         self._tab_header = tab_header
+        self._tab_header.theme = self.theme
         # Make sure the TabHeader is the first effect in the Tab
         self._effects.insert(0, tab_header)
 
@@ -424,5 +452,36 @@ class TabGroup():
             length += len(text)
         return length
 
+class DropDown(DropdownList):
+    def __init__(self, options, start_option=None ,**kwargs):
+        super().__init__(options, **kwargs)
 
-    
+        self.old_value = None
+
+        if start_option is not None:
+            for index, option in enumerate(self.options):
+                if option[0]==start_option:break
+            else:
+                raise ValueError("start_option not in options")
+
+            self._line = index
+            self._value = start_option
+
+
+    @DropdownList.value.setter
+    def value(self, new_value):
+        # Only trigger change notification after we've changed selection
+        old_value = self._value
+        self._value = new_value
+        for i, [_, value] in enumerate(self._options):
+            if value == new_value:
+                self._line = i
+                break
+        else:
+            #Overridden to comment out the below
+            #self._value = self._line = None
+            pass 
+
+        if old_value != self._value and self._on_change:
+            self.old_value = old_value
+            self._on_change()
