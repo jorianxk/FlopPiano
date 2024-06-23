@@ -1,11 +1,18 @@
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.effects import Effect
-from asciimatics.widgets import DropdownList
+from asciimatics.widgets import DropdownList, TextBox
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
 
+
+from .app import App
+
+import logging
+
+
+#TODO update docstrings for Tab and TabHeader for App() changes
 
 class TabHeader(Effect):
     
@@ -135,6 +142,7 @@ class Tab(Scene):
             screen (Screen): The Screen that the The Tab will be drawn with
             name (str): The unique name of the Tab
         """
+        self.app = None
         self.screen = screen
         self.theme = theme
 
@@ -188,7 +196,7 @@ class Tab(Scene):
             self.palette = THEMES[theme]
 
 
-    def fix(self, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
+    def fix(self, app:App, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
         """_summary_
             Called by TabGroup to setup the Tab's TabHeader and event handling
         Args:s
@@ -196,6 +204,7 @@ class Tab(Scene):
             prior_tab_name (str): The name of the previous Tab in the TabGroup
             next_tab_name (str): The name of the next Tab in the TabGroup
         """
+        self.app = app
         self.prior_tab_name = prior_tab_name
         self.next_tab_name = next_tab_name
         self._tab_header = tab_header
@@ -215,7 +224,7 @@ class TabGroup():
     R_DIV ='└'
     T_DIV = '┴'
 
-    def __init__(self, screen, tabs:list[Tab]=[]):
+    def __init__(self, screen, app:App, tabs:list[Tab]=[]):
         """_summary_
             A TabGroup is a collection of Tabs. When a Tab is added to the 
             TabGroup, the Tab is setup for use. That is, the TabGroup
@@ -225,6 +234,7 @@ class TabGroup():
             tabs (list[Tab], optional): A list of Tab to add upon instantiation
         """
         self.screen = screen
+        self.app = app
         self._tabs:dict[str,Tab] = {}
 
         for tab in tabs:
@@ -297,7 +307,7 @@ class TabGroup():
             prior_tab_name = self.tabs[prior].name  
 
             #Give the Tab it's header and neighboring tab names
-            tab.fix(headers[tab.name], prior_tab_name, next_tab_name)
+            tab.fix(self.app, headers[tab.name], prior_tab_name, next_tab_name)
     
     @staticmethod
     def _group(tab_names:list[str], screen)->list[list[str]]:
@@ -456,7 +466,7 @@ class DropDown(DropdownList):
     def __init__(self, options, start_option=None ,**kwargs):
         super().__init__(options, **kwargs)
 
-        self.old_value = None
+        self._old_value = None
 
         if start_option is not None:
             for index, option in enumerate(self.options):
@@ -467,6 +477,12 @@ class DropDown(DropdownList):
             self._line = index
             self._value = start_option
 
+    def revert(self):
+        for i, [_, value] in enumerate(self._options):
+            if value == self._old_value:
+                self._line = i
+                self._value = self._old_value
+                break
 
     @DropdownList.value.setter
     def value(self, new_value):
@@ -480,8 +496,28 @@ class DropDown(DropdownList):
         else:
             #Overridden to comment out the below
             #self._value = self._line = None
-            pass 
+            return #Do nothing
 
         if old_value != self._value and self._on_change:
-            self.old_value = old_value
+            self._old_value = old_value
             self._on_change()
+
+class LoggerText(TextBox, logging.StreamHandler):
+
+    def __init__(self, height, history_length:int = 100, label=None, name=None,  **kwargs):
+        TextBox.__init__(self,height, label, name, as_string=False, line_wrap=True, parser=None, on_change=None, readonly=True, **kwargs)
+        logging.StreamHandler.__init__(self)
+
+        self._logged_lines = []
+        self._history_length = history_length
+       
+
+    def emit(self, record):
+        if len(self._logged_lines) >=self._history_length:
+            self._logged_lines = []
+        
+        #TODO format this
+        self._logged_lines.append(f'{record.name}, [{record.levelname}], {record.getMessage()}')
+        self.value = self._logged_lines
+        self.reset()
+
