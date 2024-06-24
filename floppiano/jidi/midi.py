@@ -245,6 +245,7 @@ class MIDIParser():
             case _:
                 pass
 
+    #TODO: Move this method to MIDIUtil
     @staticmethod
     def has_channel(msg:Message)->bool:    
         try:

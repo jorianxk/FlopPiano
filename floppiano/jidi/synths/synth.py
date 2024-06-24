@@ -103,6 +103,8 @@ class CommandMap(dict):
                 names.append(item)
         return names
 
+
+#TODO add polyphony - mono/poly  support
 class Synth(MIDIParser, MIDIListener):
 
     #warning: type checking: no explicit errors!
@@ -149,6 +151,7 @@ class Synth(MIDIParser, MIDIListener):
             control_change_map = CommandMap()
             control_change_map[1]   = 'modulation'
             control_change_map[76]  = 'pitch_bend_range'
+            control_change_map[77]  = 'modulation_wave'
             control_change_map[120] = 'reset'
             control_change_map[123] = 'muted'
         self.control_change_map = control_change_map

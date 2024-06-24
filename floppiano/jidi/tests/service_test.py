@@ -1,6 +1,6 @@
 from jidi.voices import DriveVoice
 from jidi.synths import DriveSynth
-from jidi.services import Configuration, Service
+from jidi.services import Configuration, SynthService
 
 import logging
 import time
@@ -39,7 +39,7 @@ voices = [DriveVoice(i) for i in range(8,18)]
 
 synth = DriveSynth(voices)
 
-cs = Service(synth)
+cs = SynthService(synth)
 cs.start()
 
 try:    

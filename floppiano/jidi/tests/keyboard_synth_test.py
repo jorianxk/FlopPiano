@@ -67,6 +67,7 @@ voices = [Voice() for i in range(8,18)]
 
 synth = KeyboardSynth(voices, Keyboard(), loopback=True)
 
+print(synth.pitch_bend_range)
 
 while True:
     try:

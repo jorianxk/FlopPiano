@@ -2,12 +2,8 @@ from threading import Thread, Event
 from queue import Queue, Empty
 
 
-from configparser import ConfigParser
-
-
-
-from mido.ports import BaseInput, BaseOutput, BasePort
-from mido import Message
+from mido.ports import BaseInput, BaseOutput
+from mido import Message, MidiFile
 
 from jidi.synths import Synth
 
@@ -15,71 +11,203 @@ import mido
 import logging
 
 
-class Configuration():
+class SynthService(Thread):
+
+    def __init__(
+        self,
+        synth:Synth, 
+        service_type:str = 'physical', 
+        input_hint:str = "USB", 
+        output_hint:str = "USB", 
+        log_file:str = None, 
+        log_level:int = logging.INFO):
+
+         
+        # Setup Conductor
+        self._synth = synth
+
+
+        # Get the service type
+        if service_type != 'physical' and service_type!='virtual':
+            raise ValueError("Service type must be 'physical' or 'virtual'")
+        #TODO: add virtual support
+        if service_type == 'virtual': 
+            raise NotImplementedError('virtual service not implemented')
+
+        # Set up ports
+        self._midi_input:BaseInput = mido.open_input(
+            SynthService._find_port(input_hint, mido.get_input_names()))
+
+        self._midi_output:BaseOutput = mido.open_output(
+            SynthService._find_port(output_hint, mido.get_output_names()))
+
+        # Set up logger
+        if log_file is not None:
+            pass #TODO: set up logging to a file, and level     
+        
+        self._logger = logging.getLogger(__name__)
+
+        self._stop_event = Event()
+
+        #TODO max sizes for queues is arbitrary and only really needed for the
+        #outgoing queue. We don't know if the user will consume outgoing 
+        #messages but incoming messages we consume incoming messages as 
+        #soon as possible.        
+        self._incoming_q = Queue(100)
+        self._outgoing_q = Queue(100)
+
+        #All above went well, so we're good to start
+        Thread.__init__(self)
+
+    def run(self):
+        self._logger.info("Started.")
+        while True:
+            if (self._stop_event.is_set()): break
+
+            incoming_msgs:list[Message] = []
+            outgoing_msgs:list[Message] = []
+
+            #get any incoming messages from the application
+            try: incoming_msgs.extend(self._incoming_q.get_nowait())
+            except Empty: pass
+
+            #Get the messages from the input
+            if(not self._midi_input.closed):
+                input_msg = self._midi_input.receive(block=False)
+                if input_msg is not None:
+                    incoming_msgs.append(input_msg)
+
+            outgoing_msgs = self._synth.update(incoming_msgs)
+   
+            #try to write the outgoing messages to the output
+            if (not self._midi_output.closed and len(outgoing_msgs)>0):
+                for msg in outgoing_msgs:
+                    self._midi_output.send(msg)
+
+        #Clean up before stopping
+        #When quitting make sure the conductor shuts up
+        self._logger.info("Cleaning up...")
+        self._synth.reset()
+        self._logger.info("Exited.")
+        
+    def quit(self):
+        """_summary_
+            Stop the Service Thread
+        """
+        self._stop_event.set()
+
+    def get(self, **kwargs)->list[Message]:
+        self._logger.debug(f'Returning messages from the outgoing queue')
+        return self._outgoing_q.get(**kwargs)
+
+    def put(self, messages:list[Message] ,**kwargs):
+        self._logger.debug(f'Put {len(messages)} messages into incoming queue')
+        self._incoming_q.put(messages,**kwargs)
 
     @staticmethod
-    def default() -> ConfigParser:
-        # '#' entries are just comments in the configuration file.
-        config = ConfigParser()
-        config['Service'] = {
-            '#service_type': "['physical', 'virtual']",
-            'service_type' : 'physical',    # ['physical', 'virtual']
-            '#input_hint'  : 'If physical -> USB interface name hints, if virtual -> port #',
-            'input_hint'   : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-            '#output_hint' : '# If physical -> USB interface name hints, if virtual -> port #',
-            'output_hint'  : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-            '#log_file'    : 'Any file path',
-            'log_file'     : 'some path',   # Any file path
-            '#log_level'   : "['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']",
-            'log_level'    : 'INFO'         # ['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
-        }
+    def _find_port(hint:str, options:list[str])->str:
+        for option in options:
+            if option.startswith(hint.upper()):
+                return option
 
-        config['Conductor'] = {
-            '#keyboard_address': '[0x8-0x77]',
-            'keyboard_address' : 0x77,      # [0x8-0x77]
-            '#loopback'        : '[True, False]',
-            'loopback'         : False,     # [True, False]
-            '#input_channel'   : '[0-16]',
-            'input_channel'    : -1,        # [0-16]
-            '#output_channel'  : '[0-15]',
-            'output_channel'   : 0,        # [0-15]
-            '#output_mode'     : "['rollover', 'keys', 'off']",
-            'output_mode'      : 'rollover' # ['rollover', 'keys', 'off']
-        }
+        raise ValueError(f'Could not find port with hint: {hint.upper()}')
 
-        for drive_num in range(1,11):
-            config[f'Drive {drive_num}']={
-                '#address':'[0x8-0x77]',
-                'address' : drive_num+7,  # [0x8-0x77]
-                #'#tuning' : '[[0-9],[0-9],[0-9],[0-9],[0-9],[0-9]]'
-                #'tuning'  : '1,2,3,4,5,6' # TODO: depends on how we handle tuning
-            }
+class MIDIPlayerService(Thread):
 
-        return config
+    def __init__(self, synth_service:SynthService, midi_file:str, transpose:int):
+        
+        #TODO CHECK IF IF FILE EXISTS and clean this up
+        self._stop_event = Event()
 
-    @staticmethod
-    def read(config_file_path:str):
-        #TODO, what do we do with the config
-        config = ConfigParser()
-        with open(config_file_path, 'r') as config_file:
-            config.read(config_file_path)
 
-        try:
-            #Read the server configuration--------------------------------------
-            serviceconfigs = Configuration._service_configs(config)
+        self._synth_service = synth_service
+        self._midi_file = midi_file
+        self._transpose = transpose
 
-            #Read the Conductor configuration-----------------------------------
+        Thread.__init__(self)
 
-            conductorconfigs = Configuration._conductor_configs(config)
 
-            #Read the drive/Note configurations---------------------------------
 
-            noteconfigs =  Configuration._note_configs(config)
+    def run(self):
+        if self._midi_file is None: return
 
-        except KeyError as ke:
-            raise ValueError(f'Could not find section {ke}') from ke
-        except ValueError as ve:
-            raise ValueError(f'Bad value: {ve}') from ve
+        for msg in MidiFile(self._midi_file).play():
+            if self._stop_event.is_set():break
+            if (msg.type == "note_on" or msg.type =="note_off"):
+                msg.note = msg.note + self._transpose
+            self._synth_service.put([msg])    
+
+        self._stop_event.clear()
+
+    def quit(self):
+        self._stop_event.set()
+
+
+# class Configuration():
+
+#     @staticmethod
+#     def default() -> ConfigParser:
+#         # '#' entries are just comments in the configuration file.
+#         config = ConfigParser()
+#         config['Service'] = {
+#             '#service_type': "['physical', 'virtual']",
+#             'service_type' : 'physical',    # ['physical', 'virtual']
+#             '#input_hint'  : 'If physical -> USB interface name hints, if virtual -> port #',
+#             'input_hint'   : 'some string', # If physical -> USB interface name hints, if virtual -> port #
+#             '#output_hint' : '# If physical -> USB interface name hints, if virtual -> port #',
+#             'output_hint'  : 'some string', # If physical -> USB interface name hints, if virtual -> port #
+#             '#log_file'    : 'Any file path',
+#             'log_file'     : 'some path',   # Any file path
+#             '#log_level'   : "['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']",
+#             'log_level'    : 'INFO'         # ['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
+#         }
+
+#         config['Conductor'] = {
+#             '#keyboard_address': '[0x8-0x77]',
+#             'keyboard_address' : 0x77,      # [0x8-0x77]
+#             '#loopback'        : '[True, False]',
+#             'loopback'         : False,     # [True, False]
+#             '#input_channel'   : '[0-16]',
+#             'input_channel'    : -1,        # [0-16]
+#             '#output_channel'  : '[0-15]',
+#             'output_channel'   : 0,        # [0-15]
+#             '#output_mode'     : "['rollover', 'keys', 'off']",
+#             'output_mode'      : 'rollover' # ['rollover', 'keys', 'off']
+#         }
+
+#         for drive_num in range(1,11):
+#             config[f'Drive {drive_num}']={
+#                 '#address':'[0x8-0x77]',
+#                 'address' : drive_num+7,  # [0x8-0x77]
+#                 #'#tuning' : '[[0-9],[0-9],[0-9],[0-9],[0-9],[0-9]]'
+#                 #'tuning'  : '1,2,3,4,5,6' # TODO: depends on how we handle tuning
+#             }
+
+#         return config
+
+#     @staticmethod
+#     def read(config_file_path:str):
+#         #TODO, what do we do with the config
+#         config = ConfigParser()
+#         with open(config_file_path, 'r') as config_file:
+#             config.read(config_file_path)
+
+#         try:
+#             #Read the server configuration--------------------------------------
+#             serviceconfigs = Configuration._service_configs(config)
+
+#             #Read the Conductor configuration-----------------------------------
+
+#             conductorconfigs = Configuration._conductor_configs(config)
+
+#             #Read the drive/Note configurations---------------------------------
+
+#             noteconfigs =  Configuration._note_configs(config)
+
+#         except KeyError as ke:
+#             raise ValueError(f'Could not find section {ke}') from ke
+#         except ValueError as ve:
+#             raise ValueError(f'Bad value: {ve}') from ve
 
            
     # @staticmethod
@@ -161,106 +289,3 @@ class Configuration():
     #             drive_configs[address] = tuning
 
     #     return drive_configs
-
-class Service(Thread):
-
-    def __init__(
-        self,
-        synth:Synth, 
-        service_type:str = 'physical', 
-        input_hint:str = "USB", 
-        output_hint:str = "USB", 
-        log_file:str = None, 
-        log_level:int = logging.INFO):
-
-         
-        # Setup Conductor
-        self._synth = synth
-
-
-        # Get the service type
-        if service_type != 'physical' and service_type!='virtual':
-            raise ValueError("Service type must be 'physical' or 'virtual'")
-        #TODO: add virtual support
-        if service_type == 'virtual': 
-            raise NotImplementedError('virtual service not implemented')
-
-        # Set up ports
-        self._midi_input:BaseInput = mido.open_input(
-            Service._find_port(input_hint, mido.get_input_names())
-        )
-
-        self._midi_output:BaseOutput = mido.open_output(
-            Service._find_port(output_hint, mido.get_output_names())
-        )
-
-        # Set up logger
-        if log_file is not None:
-            pass #TODO: set up logging to a file, and level     
-        
-        self._logger = logging.getLogger(__name__)
-
-        self._stop_event = Event()
-
-        #TODO max sizes for queues is arbitrary and only really needed for the
-        #outgoing queue. We don't know if the user will consume outgoing 
-        #messages but incoming messages we consume incoming messages as 
-        #soon as possible.        
-        self._incoming_q = Queue(100)
-        self._outgoing_q = Queue(100)
-
-        #All above went well, so we're good to start
-        Thread.__init__(self)
-
-    def run(self):
-        self._logger.info("Started.")
-        while True:
-            if (self._stop_event.is_set()): break
-
-            incoming_msgs:list[Message] = []
-            outgoing_msgs:list[Message] = []
-
-            #get any incoming messages from the application
-            try: incoming_msgs.extend(self._incoming_q.get_nowait())
-            except Empty: pass
-
-            #Get the messages from the input
-            if(not self._midi_input.closed):
-                input_msg = self._midi_input.receive(block=False)
-                if input_msg is not None:
-                    incoming_msgs.append(input_msg)
-
-            outgoing_msgs = self._synth.update(incoming_msgs)
-   
-            #try to write the outgoing messages to the output
-            if (not self._midi_output.closed and len(outgoing_msgs)>0):
-                for msg in outgoing_msgs:
-                    self._midi_output.send(msg)
-
-        #Clean up before stopping
-        #When quitting make sure the conductor shuts up
-        self._logger.info("Cleaning up...")
-        self._synth.reset()
-        self._logger.info("Exited.")
-        
-    def quit(self):
-        """_summary_
-            Stop the Service Thread
-        """
-        self._stop_event.set()
-
-    def get(self, **kwargs)->list[Message]:
-        self._logger.debug(f'Returning messages from the outgoing queue')
-        return self._outgoing_q.get(**kwargs)
-
-    def put(self, messages:list[Message] ,**kwargs):
-        self._logger.debug(f'Put {len(messages)} messages into incoming queue')
-        self._incoming_q.put(messages,**kwargs)
-
-    @staticmethod
-    def _find_port(hint:str, options:list[str])->str:
-        for option in options:
-            if option.startswith(hint.upper()):
-                return option
-
-        raise ValueError(f'Could not find port with hint: {hint.upper()}')

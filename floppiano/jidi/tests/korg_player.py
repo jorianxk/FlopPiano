@@ -22,8 +22,8 @@ voices = [DriveVoice(i) for i in range(8,18)]
 
 
 synth = DriveSynth(voices)
-synth.crash_mode = 1
 
+print(synth.pitch_bend_range)
 print("Begin Playing! [ctrl+c to exit]")
 
 try:

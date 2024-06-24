@@ -7,7 +7,7 @@ from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
 
 
-from .app import App
+from .app import App, AppException
 
 import logging
 
@@ -517,7 +517,13 @@ class LoggerText(TextBox, logging.StreamHandler):
             self._logged_lines = []
         
         #TODO format this
-        self._logged_lines.append(f'{record.name}, [{record.levelname}], {record.getMessage()}')
+        self._logged_lines.append(f'{record.getMessage()}')
         self.value = self._logged_lines
         self.reset()
 
+
+    def update(self, frame_no):
+        try:
+            super().update(frame_no)
+        except AttributeError as ae:
+            raise AppException("LoggerText got AttributeError on update()") from ae
