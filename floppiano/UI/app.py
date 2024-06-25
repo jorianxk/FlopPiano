@@ -6,7 +6,7 @@ class AppException(Exception):
 
 class App():
     """_summary_
-        An abstract class for to do stuff
+        An abstract class to do app stuff
     """
     def __init__(self) -> None:
         pass

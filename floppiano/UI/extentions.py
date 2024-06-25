@@ -145,18 +145,41 @@ class Tab(Scene):
         self.app = None
         self.screen = screen
         self.theme = theme
-
+        self.page = True
         # The previous tab in the TabGroup - used for going to the prior Tab
         self.prior_tab_name = None
         # The next tab in the TabGroup - used for going to the next Tab
         self.next_tab_name = None
     
+    @property
+    def page(self) -> bool:
+        """_summary_
+            A property for determining if the Tab is able to switch to the 
+            prior or next tab aka 'page'
+        Returns:
+            bool: True if the Tab can switch Tabs, False otherwise
+        """
+        return self._page
+    
+    @page.setter
+    def page(self, can_page:bool):
+        """_summary_
+            A setter for the page property
+        Args:
+            can_page (bool): True if the Tab should be able to switch to Tabs, 
+                False otherwise
+        """
+        self._page = can_page
+
+
     def process_event(self, event):
         """_summary_
             Overridden from Scene to handle moving other Tabs in the TabGroup.
         """
-        #Only be sensitive to keyboard events
-        if isinstance(event, KeyboardEvent):
+
+
+        #Only be sensitive to keyboard events if we can page
+        if isinstance(event, KeyboardEvent) and self.page:
 
             if event.key_code == Tab.PRIOR_TAB_KEY: #Go to the prior Tab
                 raise NextScene(self.prior_tab_name)
@@ -475,7 +498,7 @@ class DropDown(DropdownList):
                 raise ValueError("start_option not in options")
 
             self._line = index
-            self._value = start_option
+            self._value = option[1]  
 
     def revert(self):
         for i, [_, value] in enumerate(self._options):

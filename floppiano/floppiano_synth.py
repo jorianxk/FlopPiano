@@ -1,6 +1,7 @@
+from mido import Message
 from jidi.bus import BusException
 from jidi.devices import Drive, Keyboard
-from jidi.voices import DriveVoice
+from jidi.voices import Voice , DriveVoice
 from jidi.synths import KeyboardSynth
 
 class FlopPianoSynth(KeyboardSynth):
@@ -31,6 +32,60 @@ class FlopPianoSynth(KeyboardSynth):
 
 
     #-------------------------Overrides from Synth-----------------------------#
+    #overridden to change log message
+    def _voice_on(
+            self, 
+            msg:Message, 
+            source:str,
+            active_stack:dict[int, Voice]) -> None:
+        try:
+            #get an available voice and remove it from the pool
+            nextVoice:DriveVoice = self._available_voices.pop()
+
+            #Modify the note to match the incoming message
+            nextVoice.note = msg.note
+
+            #add the note to the active voice, so that it will be played
+            active_stack[msg.note] = nextVoice
+
+            self.logger.debug(
+                f'added: {msg.note} to {source} stack [{nextVoice.address}]')
+
+        except IndexError as ie: #There are no available voices. 
+            self.logger.debug(
+                f'could not add: {msg.note} to {source} stack, '
+                'no available voices - rolled')
+            #We can't play it so pass it along
+            self._output.append(msg)
+    
+    def _voice_off(
+            self,
+            msg:Message,
+            source:str, 
+            active_stack:dict[int, Voice]) -> None:
+        try:
+            #get the active Voice
+            playedVoice:DriveVoice = active_stack.pop(msg.note)
+
+            #stop the note playing
+            playedVoice.update(make_noise=False)
+            self.logger.debug(
+                f'removed: {msg.note} from {source} active stack [{playedVoice.address}]')          
+
+            #add the drive back to the available voice pool
+            self._available_voices.append(playedVoice)
+
+        except KeyError as ke:
+            self.logger.debug(
+                f'could not remove: {msg.note} from {source} stack, '
+                f"it's not playing [rolled?]") 
+            #if we're not playing that note pass it along
+            self._output.append(msg)
+        except BusException as be:
+            self.logger.warning(
+                f'could not remove: {msg.note} from {source} active stack,'
+                ' there was was a problem silencing the voice') 
+
 
     # overridden to update drive spin and crash modes
     def _sound(self) -> None:

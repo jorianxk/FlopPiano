@@ -1,7 +1,7 @@
 from mido import Message
 
 from .synth import Synth
-from ..voices import DriveVoice
+from ..voices import Voice, DriveVoice
 from ..bus import BusException
 
 

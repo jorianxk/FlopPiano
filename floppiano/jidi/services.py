@@ -1,31 +1,71 @@
 from threading import Thread, Event
-from queue import Queue, Empty
+from queue import Queue, Empty, Full
 
 
 from mido.ports import BaseInput, BaseOutput
 from mido import Message, MidiFile
 
 from jidi.synths import Synth
-
+from jidi.midi import MIDIParser
 import mido
 import logging
-
 
 class SynthService(Thread):
 
     def __init__(
-        self,
-        synth:Synth, 
-        service_type:str = 'physical', 
-        input_hint:str = "USB", 
-        output_hint:str = "USB", 
-        log_file:str = None, 
-        log_level:int = logging.INFO):
+            self, 
+            synth:Synth, 
+            incoming_size:int = 100, 
+            outgoing_size:int =100):
+        Thread.__init__(self)
 
-         
-        # Setup Conductor
+        #synth to pump
         self._synth = synth
+        #stop flag
+        self._stop_event = Event()
+       
+        # outgoing queue -We don't know if the user will consume outgoing 
+        # messages but incoming messages we consume as soon as possible.        
+        self._incoming_q = Queue(incoming_size)
+        self._outgoing_q = Queue(outgoing_size)
 
+    def run(self):
+        #do this until stop flag is set
+        while not self._stop_event.is_set():
+            incoming_messages = []
+            try: incoming_messages.extend(self._incoming_q.get_nowait())
+            except Empty: pass
+
+            outgoing_messages = self._synth.update(incoming_messages)
+
+            if len(outgoing_messages)>0:
+                try:
+                    self._outgoing_q.put_nowait(outgoing_messages)
+                except Full: pass #if full ignore
+        #reset the synth before stopping        
+        self._synth.reset()
+
+    def quit(self):
+        """_summary_
+            Stop the Service Thread
+        """
+        self._stop_event.set()
+
+    def get(self, **kwargs)->list[Message]:
+        return self._outgoing_q.get(**kwargs)
+
+    def put(self, messages:list[Message] ,**kwargs):
+        self._incoming_q.put(messages,**kwargs)
+
+class PortService(SynthService):
+
+    def __init__(
+            self,
+            synth: Synth,
+            service_type:str = 'physical', 
+            input_hint:str = 'USB', 
+            output_hint:str = 'USB', 
+            **kwargs):
 
         # Get the service type
         if service_type != 'physical' and service_type!='virtual':
@@ -35,74 +75,88 @@ class SynthService(Thread):
             raise NotImplementedError('virtual service not implemented')
 
         # Set up ports
-        self._midi_input:BaseInput = mido.open_input(
-            SynthService._find_port(input_hint, mido.get_input_names()))
+        self._inport:BaseInput = mido.open_input(
+            PortService._find_port(input_hint, mido.get_input_names()))
 
-        self._midi_output:BaseOutput = mido.open_output(
-            SynthService._find_port(output_hint, mido.get_output_names()))
-
-        # Set up logger
-        if log_file is not None:
-            pass #TODO: set up logging to a file, and level     
+        self._outport:BaseOutput = mido.open_output(
+            PortService._find_port(output_hint, mido.get_output_names()))
         
-        self._logger = logging.getLogger(__name__)
-
-        self._stop_event = Event()
-
-        #TODO max sizes for queues is arbitrary and only really needed for the
-        #outgoing queue. We don't know if the user will consume outgoing 
-        #messages but incoming messages we consume incoming messages as 
-        #soon as possible.        
-        self._incoming_q = Queue(100)
-        self._outgoing_q = Queue(100)
-
         #All above went well, so we're good to start
-        Thread.__init__(self)
+        
+        self._inport_enable = Event()
+        self._inport_enable.set()
+        self._outport_enable = Event()
+        self._outport_enable.set()
+
+        SynthService.__init__(self, synth, **kwargs)
+
 
     def run(self):
-        self._logger.info("Started.")
-        while True:
-            if (self._stop_event.is_set()): break
+        self.exc = None
+        try:
+            #do this until stop flag is set
+            while not self._stop_event.is_set():
+                incoming_messages:list[Message] = []
+                outgoing_messages:list[Message] = []
 
-            incoming_msgs:list[Message] = []
-            outgoing_msgs:list[Message] = []
+                #get any incoming messages from the application
+                try: incoming_messages.extend(self._incoming_q.get_nowait())
+                except Empty: pass
 
-            #get any incoming messages from the application
-            try: incoming_msgs.extend(self._incoming_q.get_nowait())
-            except Empty: pass
+                #TODO exception if the port is closed
+                #Get the messages from the input port
+                if(not self._inport.closed): 
+                    input_msg = self._inport.receive(block=False)
+                    #only add them if we are inport is enabled
+                    if input_msg is not None and self._inport_enable.is_set():
+                        incoming_messages.append(input_msg)
 
-            #Get the messages from the input
-            if(not self._midi_input.closed):
-                input_msg = self._midi_input.receive(block=False)
-                if input_msg is not None:
-                    incoming_msgs.append(input_msg)
+                outgoing_msgs = self._synth.update(incoming_messages)
 
-            outgoing_msgs = self._synth.update(incoming_msgs)
-   
-            #try to write the outgoing messages to the output
-            if (not self._midi_output.closed and len(outgoing_msgs)>0):
-                for msg in outgoing_msgs:
-                    self._midi_output.send(msg)
+                if len(outgoing_messages)>0:
+                    #try to write the outgoing messages to the output port
+                    #TODO exception if the port is closed
+                    if (not self._outport.closed) and self._outport_enable.is_set():
+                        for msg in outgoing_msgs:
+                            self._outport.send(msg)
+                    #Return any output messages to the application
+                    try:
+                        self._outgoing_q.put_nowait(outgoing_messages)
+                    except Full: pass #if full ignore
+                    
+            #Reset the synth before stopping
+            self._synth.reset()
+        except Exception as e:
+            self.exc = e
 
-        #Clean up before stopping
-        #When quitting make sure the conductor shuts up
-        self._logger.info("Cleaning up...")
-        self._synth.reset()
-        self._logger.info("Exited.")
-        
-    def quit(self):
-        """_summary_
-            Stop the Service Thread
-        """
-        self._stop_event.set()
+    def join(self, timeout: float | None = None) -> None:
+        super().join(timeout)
+        if self.exc:
+            raise self.exc
 
-    def get(self, **kwargs)->list[Message]:
-        self._logger.debug(f'Returning messages from the outgoing queue')
-        return self._outgoing_q.get(**kwargs)
+    @property
+    def inport_enable(self):
+        return self._inport_enable.is_set()
 
-    def put(self, messages:list[Message] ,**kwargs):
-        self._logger.debug(f'Put {len(messages)} messages into incoming queue')
-        self._incoming_q.put(messages,**kwargs)
+    
+    @inport_enable.setter
+    def inport_enable(self, enable:bool):
+        if enable:
+            self._inport_enable.set()
+        else:
+            self._inport_enable.clear()
+    
+    @property
+    def outport_enable(self):
+        return self._outport_enable.is_set()
+
+    @outport_enable.setter
+    def outport_enable(self, enable:bool):
+        if enable:
+            self._outport_enable.set()
+        else:
+            self._outport_enable.clear()
+
 
     @staticmethod
     def _find_port(hint:str, options:list[str])->str:
@@ -111,181 +165,108 @@ class SynthService(Thread):
                 return option
 
         raise ValueError(f'Could not find port with hint: {hint.upper()}')
+    
 
-class MIDIPlayerService(Thread):
 
-    def __init__(self, synth_service:SynthService, midi_file:str, transpose:int):
+class MIDPlayerService(SynthService):
+
+    def __init__(self, port_service:PortService, mid_file:str, transpose:int):
         
-        #TODO CHECK IF IF FILE EXISTS and clean this up
-        self._stop_event = Event()
-
-
-        self._synth_service = synth_service
-        self._midi_file = midi_file
+        #TODO Validate if file exists
+        self._mid_file = mid_file
         self._transpose = transpose
 
-        Thread.__init__(self)
+
+        if not port_service.is_alive():
+            raise ValueError("port_service is dead")
+
+        self._port_service = port_service
 
 
+        #All above went well, so we're good to start
+        SynthService.__init__(self, None, 1, 1)
+    
 
     def run(self):
-        if self._midi_file is None: return
+        #only run if the port service is alive
+        if self._port_service.is_alive():
+            #disable midi inport from the inport 
+            self._port_service.inport_enable = False
 
-        for msg in MidiFile(self._midi_file).play():
-            if self._stop_event.is_set():break
-            if (msg.type == "note_on" or msg.type =="note_off"):
-                msg.note = msg.note + self._transpose
-            self._synth_service.put([msg])    
-
-        self._stop_event.clear()
-
-    def quit(self):
-        self._stop_event.set()
-
-
-# class Configuration():
-
-#     @staticmethod
-#     def default() -> ConfigParser:
-#         # '#' entries are just comments in the configuration file.
-#         config = ConfigParser()
-#         config['Service'] = {
-#             '#service_type': "['physical', 'virtual']",
-#             'service_type' : 'physical',    # ['physical', 'virtual']
-#             '#input_hint'  : 'If physical -> USB interface name hints, if virtual -> port #',
-#             'input_hint'   : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-#             '#output_hint' : '# If physical -> USB interface name hints, if virtual -> port #',
-#             'output_hint'  : 'some string', # If physical -> USB interface name hints, if virtual -> port #
-#             '#log_file'    : 'Any file path',
-#             'log_file'     : 'some path',   # Any file path
-#             '#log_level'   : "['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']",
-#             'log_level'    : 'INFO'         # ['CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET']
-#         }
-
-#         config['Conductor'] = {
-#             '#keyboard_address': '[0x8-0x77]',
-#             'keyboard_address' : 0x77,      # [0x8-0x77]
-#             '#loopback'        : '[True, False]',
-#             'loopback'         : False,     # [True, False]
-#             '#input_channel'   : '[0-16]',
-#             'input_channel'    : -1,        # [0-16]
-#             '#output_channel'  : '[0-15]',
-#             'output_channel'   : 0,        # [0-15]
-#             '#output_mode'     : "['rollover', 'keys', 'off']",
-#             'output_mode'      : 'rollover' # ['rollover', 'keys', 'off']
-#         }
-
-#         for drive_num in range(1,11):
-#             config[f'Drive {drive_num}']={
-#                 '#address':'[0x8-0x77]',
-#                 'address' : drive_num+7,  # [0x8-0x77]
-#                 #'#tuning' : '[[0-9],[0-9],[0-9],[0-9],[0-9],[0-9]]'
-#                 #'tuning'  : '1,2,3,4,5,6' # TODO: depends on how we handle tuning
-#             }
-
-#         return config
-
-#     @staticmethod
-#     def read(config_file_path:str):
-#         #TODO, what do we do with the config
-#         config = ConfigParser()
-#         with open(config_file_path, 'r') as config_file:
-#             config.read(config_file_path)
-
-#         try:
-#             #Read the server configuration--------------------------------------
-#             serviceconfigs = Configuration._service_configs(config)
-
-#             #Read the Conductor configuration-----------------------------------
-
-#             conductorconfigs = Configuration._conductor_configs(config)
-
-#             #Read the drive/Note configurations---------------------------------
-
-#             noteconfigs =  Configuration._note_configs(config)
-
-#         except KeyError as ke:
-#             raise ValueError(f'Could not find section {ke}') from ke
-#         except ValueError as ve:
-#             raise ValueError(f'Bad value: {ve}') from ve
-
-           
-    # @staticmethod
-    # def _service_configs(config:ConfigParser):
-
-    #     service_type = config['Service'].get('type')
-    #     if service_type is None:
-    #         raise ValueError('[Service]: type not given')
-    #     if service_type != 'physical' and service_type != 'virtual':
-    #         print(service_type)
-    #         raise ValueError("[Service]: type not ['physical', 'virtual']")
-
-    #     #TODO: We need to validate this!
-    #     input_hint = config['Service'].get('input_hint')
-    #     if input_hint is None:
-    #         raise ValueError('[Service]: input_hint not given')
-
-    #     #TODO: We need to validate this!
-    #     output_hint = config['Service'].get('output_hint')
-    #     if output_hint is None:
-    #         raise ValueError('[Service]: output_hint not given')
-
-    #     #TODO: dont' do logging if logfile is none!
-    #     log_file = config['Service'].get('log_file')
-
-    #     log_level = config['Service'].get('log_level',"INFO").upper()
-    #     if (log_level not in logging.getLevelNamesMapping().keys()):
-    #         raise ValueError('[Service]: log_level not '
-    #                         f'{list(logging.getLevelNamesMapping().keys())}')
-    #     log_level = logging.getLevelNamesMapping()[log_level]
-
-    #     return (service_type, input_hint, output_hint, log_file, log_level)
-        
-    # @staticmethod
-    # def _conductor_configs(config:ConfigParser):
-        
-    #     keyboard_address = config['Conductor'].getint('keyboard_address', 0x77)
-    #     if keyboard_address < 0x8 or keyboard_address > 0x77:
-    #         raise ValueError(f'[Conductor]: keyboard_address not [{0x8}-{0x77}]')
-        
-    #     loopback = config['Conductor'].getboolean('loopback', True)
-        
-    #     input_channel = config['Conductor'].getint('input_channel', 0)
-    #     if input_channel < -1 or input_channel > 16:
-    #         raise ValueError(f'[Conductor]: input_channel not [0-16]')
-
-    #     output_channel = config['Conductor'].getint('output_channel', 0)
-    #     if output_channel < 0 or output_channel > 15:
-    #         raise ValueError(f'[Conductor]: output_channel not [0-15]')
-        
-    #     output_mode = config['Conductor'].get('output_mode', 'rollover').upper()
-    #     if output_mode not in OutputModes._member_names_:
-    #         raise ValueError('[Conductor]: output_mode not '
-    #                         f'{OutputModes._member_names_}')
-        
-    #     output_mode = OutputModes._member_map_[output_mode]
-
-    #     return (keyboard_address, loopback, output_channel, input_channel, output_mode)
-
-    # @staticmethod
-    # def _note_configs(config:ConfigParser):
-    #     #TODO remember to init notes correctly
-    #     drive_configs:dict[int, str] = {}
-    #     for section in config.sections():
+            for msg in MidiFile(self._mid_file).play():
+                #stop if the port service is dead or if told to
+                if (self._stop_event.is_set() or 
+                    not self._port_service.is_alive()): break
+                
+                # apply the transpose
+                if (msg.type == "note_on" or msg.type =="note_off"):
+                    msg.note = msg.note + self._transpose
+                
+                # redirect all messages with a channel to the synth
+                if MIDIParser.has_channel(msg):
+                    msg.channel = self._port_service._synth.input_channel
+                
+                self._port_service.put([msg])
             
-    #         if section.upper().startswith("DRIVE"):
-    #             address = config[section].getint("address")
 
-    #             if address is None:
-    #                 raise ValueError(f'[{section}]: address not given')
-    #             elif address<0x8 or address >0x77:
-    #                 raise ValueError(f'[Drive]: address not [{0x8}-{0x77}]')
-                
-    #             #TODO handle tuning here!
-    #             tuning = config[section].get("tuning")
-    #             if tuning is None:
-    #                 pass #raise ValueError(f'[Drive]: tuning not VALUES HERE')
-                
-    #             drive_configs[address] = tuning
+            #send a reset
+            msg = Message(
+                type = 'control_change',
+                control = self._port_service._synth.control_change_map.code('reset'),
+                value = 0,
+                channel = self._port_service._synth.input_channel
+            )
+            self._port_service.put([msg])
 
-    #     return drive_configs
+            #re-enable inport
+            self._port_service.inport_enable = True
+
+        
+
+
+# class MIDPlayerService(SynthService):
+
+#     def __init__(self, synth: Synth, mid_file:str, transpose:int, **kwargs):
+        
+#         #TODO Validate if file exists
+#         self._mid_file = mid_file
+#         self._transpose = transpose
+#         #All above went well, so we're good to start
+#         SynthService.__init__(self, synth, **kwargs)
+
+#     def run(self):
+#         for msg in MidiFile(self._mid_file).play():
+#             #Stop if commanded to
+#             if self._stop_event.is_set():break
+
+    
+#             incoming_messages:list[Message] = []
+#             outgoing_messages:list[Message] = []
+
+#             #get any incoming messages from the application
+#             try: incoming_messages.extend(self._incoming_q.get_nowait())
+#             except Empty: pass
+
+#             # redirect all messages with a channel to the synth
+#             if MIDIParser.has_channel(msg):
+#                 msg.channel = self._synth.input_channel
+
+#             # apply the transpose
+#             if (msg.type == "note_on" or msg.type =="note_off"):
+#                 msg.note = msg.note + self._transpose
+            
+#             #add the mid file messages to the incoming
+#             incoming_messages.append(msg)
+
+#             #let the synth work 
+#             outgoing_messages = self._synth.update(incoming_messages)
+            
+#             #return any messages back to the application
+#             if len(outgoing_messages)>0:
+#                 try:
+#                     self._outgoing_q.put_nowait(outgoing_messages)
+#                 except Full: pass #if full ignore
+
+#         #reset the synth before stopping
+#         self._synth.reset()
+

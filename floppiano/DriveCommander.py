@@ -80,7 +80,7 @@ import sys
 import cmd
 import time
 import math
-from smbus import SMBus
+from smbus2 import SMBus
 
 class DriveState:
     """
@@ -180,7 +180,7 @@ class DriveCommander:
 
     def __init__(self)->None:
         #Set class settings
-        self.i2cbus = SMBus(1) # indicates /dev/ic2-1
+        self.i2cbus = SMBus(22) # indicates /dev/ic2-1
         self.slave_address = 0x8
         self.driveState = DriveState()
         self.send_on_execute = False

@@ -188,17 +188,19 @@ class Synth(MIDIParser, MIDIListener):
         return self._flush_output()
 
     def reset(self) -> None:
-        self._available_voices.extend(
-            list(self._active_voices.values()))        
+        #TODO: Explore reset behavior
+        self._available_voices = list(self.voices)
+        # self._available_voices.extend(
+        #     list(self._active_voices.values()))        
         self._active_voices = {}
         
-        self.logger.info("active stack cleared")
+        self.logger.info("update stack cleared")
   
         for voice in self.voices:
             #This could raise a BusException
             voice.update(make_noise=False)
 
-        self.logger.info("voices silenced") 
+        self.logger.info("update voices silenced") 
     
     def _sound(self) -> None:
         for voice in self._active_voices.values():
