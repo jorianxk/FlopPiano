@@ -1,5 +1,5 @@
 from enum import Enum, IntEnum
-from mido import Message
+from ..midi import MIDIUtil
 
 class PitchBendRange(Enum):
     __order__ = 'HALF WHOLE MINOR3RD MAJOR3RD FOURTH FIFTH OCTAVE'
@@ -24,18 +24,18 @@ class Voice():
         An Voice is:
             -Monophonic (sounds one note at a time)
             -Plays MIDI a midi note
-            -Its note can be pitch bent (via midi message pitchwheel, and takes a valid midi pitch)
-            -Its note can be modulated (via midi modulate control change message, and takes a valid midi control value )
+            -Its note can be pitch bent 
+            -Its note can be modulated 
     """
-    _MIN_PITCH_BEND = -8192
-    _MAX_PITCH_BEND = 8191
-    _MIN_MODULATION = 0
-    _MAX_MODULATION = 127
-    _MIN_NOTE = 0
-    _MAX_NOTE = 127
-
     def __init__(self) -> None:
-        pass
+        
+        self._note = None
+        self._sounding = False
+    
+    
+    @property
+    def sounding(self) -> bool:
+        return self._sounding   
     
     @property    
     def note(self) -> int:
@@ -43,19 +43,22 @@ class Voice():
     
     @note.setter
     def note(self, note:int) -> None:
-        if (note <Voice._MIN_NOTE or note >Voice._MAX_NOTE):
+        if not MIDIUtil.isValidNote(note):
             raise ValueError(f'{note} is not a valid MIDI note')
         self._note = note
 
-    def pitch_bend(self, amount:int, pitch_bend_range:PitchBendRange) -> None:
-        if amount<Voice._MIN_PITCH_BEND or amount>Voice._MAX_PITCH_BEND:
-            raise ValueError(f'{amount} is not a valid MIDI pitch')
+    def pitch_bend(self, pitch:int, pitch_bend_range:PitchBendRange) -> None:
+        if not MIDIUtil.isValidPitch(pitch):
+            raise ValueError(f'{pitch} is not a valid MIDI pitch')
 
-    def modulate(self, amount:int, modulation_wave:ModulationWave) -> None:
-        if amount<Voice._MIN_MODULATION or amount>Voice._MAX_MODULATION:
-            raise ValueError(f'{amount} is not a valid MIDI modulation value')
+    def modulate(self, modulation:int, modulation_wave:ModulationWave) -> None:
+        if not MIDIUtil.isValidModulation(modulation):
+            raise ValueError(f'{modulation} is not a valid MIDI modulation')
 
-    def update(self, make_noise:bool) -> None:
-        pass
+    def sound(self):
+        self._sounding = True
+
+    def silence(self):
+        self._sounding = False
 
 
