@@ -3,17 +3,21 @@ from asciimatics.scene import Scene
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.exceptions import StopApplication, ResizeScreenError
 
-from mido import Message
 
+
+
+
+from mido import Message
 from UI.app import App, AppException
-from UI.extentions import Tab, TabGroup
+from UI.splashscenes import jb_splash, floppiano_splash
+from UI.extensions import Tab, TabGroup
 from UI.tabs import SoundTab, SettingsTab, MIDIPlayerTab, AboutTab
 
 from jidi.voices import DriveVoice
 from jidi.devices import Keyboard
 from floppiano_synth import FlopPianoSynth
 
-from jidi.services import PortService, MIDPlayerService
+#from jidi.services import PortService, MIDPlayerService
 
 
 import logging
@@ -41,17 +45,17 @@ class FlopPiano(App):
         #TODO better setup on all the things
         voices = [DriveVoice(i) for i in range(8,18)]
         self._synth = FlopPianoSynth(voices, Keyboard(), loopback = False)
-        self._synth.logger.setLevel(logging.DEBUG)
+        #self._synth.logger.setLevel(logging.DEBUG)
   
         self._sysex_map = self._synth.sysex_map
         self._control_change_map = self._synth.control_change_map
 
-        self._port_service:PortService = PortService(self._synth)
-        self._mid_player:MIDPlayerService = None
+        #self._port_service:PortService = PortService(self._synth)
+        #self._mid_player:MIDPlayerService = None
 
     def run(self):
         last_scene = None
-        self._port_service.start() #start the port service 
+        #self._port_service.start() #start the port service 
 
         while True:
             try:                    
@@ -73,8 +77,8 @@ class FlopPiano(App):
                 print(traceback.format_exc())
                 break #quits
 
-        self._port_service.quit() # request quit
-        self._port_service.quit() # wait for stop
+        #self._port_service.quit() # request quit
+        #self._port_service.quit() # wait for stop
   
 
     def do_action(self, action: str, args=None):
@@ -138,6 +142,14 @@ class FlopPiano(App):
 
             scenes = tab_group.tabs
 
+
+            scenes.insert(0, jb_splash(screen, 300))
+            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo3.txt'))
+            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2.txt'))
+            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2b.txt'))
+            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo1.txt'))
+
+
             screen.play(scenes, stop_on_resize=True, start_scene=last_scene, allow_int=True)
 
     def _change_theme(self, theme:str, scene:Scene):
@@ -148,54 +160,55 @@ class FlopPiano(App):
             raise ResizeScreenError("theme change", scene)
 
     def _change_synth(self, attr:str, attr_value:int):
-        #don't change anything if the port service is not running
-        if self._port_service.is_alive():
-            # is the attribute in the sysex map?
-            if attr in self._sysex_map.names():
-                msg = Message(
-                    type='sysex',
-                    data = [self._synth.sysex_id, 
-                            self._sysex_map.code(attr), 
-                            attr_value]
-                )
-                self._port_service.put([msg])
-            # is the attribute in the control change map?
-            elif attr in self._control_change_map.names():
-                msg = Message(
-                    type='control_change',
-                    control = self._control_change_map.code(attr),
-                    value = attr_value,
-                    channel = self._synth.input_channel
-                )
-                self._port_service.put([msg])
-            # attribute is unknown
-            else:
-                #do nothing
-                pass
-        else:
-            raise DeadPortService("port_service dead on _change_synth()")
+        # #don't change anything if the port service is not running
+        # if self._port_service.is_alive():
+        #     # is the attribute in the sysex map?
+        #     if attr in self._sysex_map.names():
+        #         msg = Message(
+        #             type='sysex',
+        #             data = [self._synth.sysex_id, 
+        #                     self._sysex_map.code(attr), 
+        #                     attr_value]
+        #         )
+        #         self._port_service.put([msg])
+        #     # is the attribute in the control change map?
+        #     elif attr in self._control_change_map.names():
+        #         msg = Message(
+        #             type='control_change',
+        #             control = self._control_change_map.code(attr),
+        #             value = attr_value,
+        #             channel = self._synth.input_channel
+        #         )
+        #         self._port_service.put([msg])
+        #     # attribute is unknown
+        #     else:
+        #         #do nothing
+        #         pass
+        # else:
+        #     raise DeadPortService("port_service dead on _change_synth()")
+        pass
 
     def _play_mid_file(self, mid_file:str, transpose:int):
-        if self._port_service.is_alive():
-            #don't play if the mid player is already in use
-            if (self._mid_player is None) or (not self._mid_player.is_alive()):
-                self._mid_player = MIDPlayerService(
-                    self._port_service,
-                    mid_file,
-                    transpose)
+        # if self._port_service.is_alive():
+        #     #don't play if the mid player is already in use
+        #     if (self._mid_player is None) or (not self._mid_player.is_alive()):
+        #         self._mid_player = MIDPlayerService(
+        #             self._port_service,
+        #             mid_file,
+        #             transpose)
                 
-                self._mid_player.start()
-        else:
-            raise DeadPortService("port_service dead on _play_mid_file")
+        #         self._mid_player.start()
+        # else:
+        #     raise DeadPortService("port_service dead on _play_mid_file")
+        pass
     
     def _stop_mid_file(self):
-        if self._mid_player is not None:
-            if self._mid_player.is_alive():
-                self._mid_player.quit() #request stop
-                self._mid_player.join() #wait for stop
-            self._mid_player = None
-
-
+        # if self._mid_player is not None:
+        #     if self._mid_player.is_alive():
+        #         self._mid_player.quit() #request stop
+        #         self._mid_player.join() #wait for stop
+        #     self._mid_player = None
+        pass
 
     def _drive_test(self):
         # #Stop the active service so that we can control the drives manually

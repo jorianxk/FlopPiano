@@ -12,7 +12,7 @@ from mido import Message
 #from floppiano.UI.app import App
 #from floppiano.UI.extentions import TabHeader
 
-from .extentions import Tab, DropDown, LoggerText
+from .extensions import Tab, DropDown, LoggerText
 
 
 from jidi.devices import Drive
