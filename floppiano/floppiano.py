@@ -10,22 +10,19 @@ from asciimatics.exceptions import StopApplication, ResizeScreenError
 from mido import Message
 from UI.app import App, AppException
 from UI.splashscenes import jb_splash, floppiano_splash
-from UI.extensions import Tab, TabGroup
+from UI.screensavers import FloppySaver
+from UI.extensions import Tab, TabGroup, InactivityError
 from UI.tabs import SoundTab, SettingsTab, MIDIPlayerTab, AboutTab
 
 from jidi.voices import DriveVoice
 from jidi.devices import Keyboard
 from floppiano_synth import FlopPianoSynth
 
-#from jidi.services import PortService, MIDPlayerService
-
 
 import logging
 import traceback
-import time
 
-class DeadPortService(Exception):
-    pass
+
 
 
 class FlopPiano(App):
@@ -42,43 +39,41 @@ class FlopPiano(App):
         self.logger = logging.getLogger("FlopPiano")
         self.logger.setLevel(logging.INFO)
 
-        #TODO better setup on all the things
+
         voices = [DriveVoice(i) for i in range(8,18)]
         self._synth = FlopPianoSynth(voices, Keyboard(), loopback = False)
-        #self._synth.logger.setLevel(logging.DEBUG)
+
   
         self._sysex_map = self._synth.sysex_map
         self._control_change_map = self._synth.control_change_map
 
-        #self._port_service:PortService = PortService(self._synth)
-        #self._mid_player:MIDPlayerService = None
+
 
     def run(self):
-        last_scene = None
-        #self._port_service.start() #start the port service 
+        restart_reason = None
+        start_scene = None
 
         while True:
             try:                    
-                Screen.wrapper(self._ui_init, catch_interrupt=False, arguments=[last_scene])
+                Screen.wrapper(
+                    self._ui_init, 
+                    catch_interrupt=False, 
+                    arguments=[restart_reason, start_scene])
             except ResizeScreenError as e:
-                last_scene = e.scene
+                restart_reason = "resized"
+                start_scene = e.scene
+            except InactivityError as ie:
+                restart_reason = "inactivity"
+                start_scene = ie.scene
             except KeyboardInterrupt as ke:
                 break #quits
             except StopApplication as sa:
                 break #quits
             except AppException as ae:
                 self.logger.error(ae)
-            except DeadPortService as dps:
-                #TODO handle restart of port service
-                print(traceback.format_exc())
-                print("Port service died!")
-                break
             except Exception as e:
                 print(traceback.format_exc())
                 break #quits
-
-        #self._port_service.quit() # request quit
-        #self._port_service.quit() # wait for stop
   
 
     def do_action(self, action: str, args=None):
@@ -104,10 +99,8 @@ class FlopPiano(App):
             case _:
                 pass
     
-    def _ui_init(self, screen:Screen, last_scene:Scene):
-
-            tab_group = TabGroup(screen, self)
-            
+    def _ui_init(self, screen:Screen, restart_reason:str, start_scene:Scene):
+            tab_group = TabGroup(screen, self)            
             tab = SoundTab(
                 screen, 
                 "Sound", 
@@ -142,15 +135,20 @@ class FlopPiano(App):
 
             scenes = tab_group.tabs
 
+            # scenes.insert(0, floppiano_splash(screen, 50,'assets/logo3.txt'))
+            # scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2.txt'))
+            # scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2b.txt'))
+            # scenes.insert(0, floppiano_splash(screen, 50,'assets/logo1.txt'))
 
             scenes.insert(0, jb_splash(screen, 300))
-            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo3.txt'))
-            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2.txt'))
-            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo2b.txt'))
-            scenes.insert(0, floppiano_splash(screen, 50,'assets/logo1.txt'))
+            
+            screen_saver = Scene([FloppySaver(screen, start_scene)],-1,True,"screensaver")
+            scenes.append(screen_saver)
 
-
-            screen.play(scenes, stop_on_resize=True, start_scene=last_scene, allow_int=True)
+            if restart_reason == 'inactivity':
+                screen.play(scenes, True, None, screen_saver, True, True)
+            else:
+                screen.play(scenes, True, None, start_scene, True, True)
 
     def _change_theme(self, theme:str, scene:Scene):
         #Only change the theme if it's a valid theme

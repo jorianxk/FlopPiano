@@ -11,9 +11,84 @@ from .app import App, AppException
 
 import logging
 
+def time2frames(time:float, frame_rate:int=20) -> int:
+    """_summary_
+        Converts a time (in seconds) to an integer number of frames
+    Args:
+        time (float): Time in seconds (or fractions of seconds)
+        frame_rate (int, optional): the number of frames per second.
+            Defaults to 20.
+
+    Returns:
+        int: The number of frames round(frame_rate*time) 
+    """
+    return int(round(frame_rate*time))
+
+
+
+class InactivityError(Exception):
+    """
+        An exception raised by an Inactivity effect 
+    """
+
+    def __init__(self, scene=None):
+        """_summary_
+
+        Args:
+            scene (_type_, optional): The Scene to return back to
+             Defaults to None.
+        """
+        super().__init__()
+        self._scene = scene
+
+    @property
+    def scene(self):
+        """
+        The Scene that was running before the inactivity period
+        """
+        return self._scene
+
+class InactivityEffect(Effect):
+    def __init__(self, screen, return_scene:Scene, inactivity_time:float=5.0):
+        """_summary_
+
+        Args:
+            screen (_type_): The Screen
+            return_scene (Scene): the scene to return to
+            inactivity_time (float, optional): The time in seconds before 
+             triggering the InactivityError. Defaults to 60
+        """
+        super().__init__(screen)
+        self._return_scene = return_scene
+        self._trigger_frame = time2frames(inactivity_time)
+        self._frame_count = 0
+        self._had_input = False
+    
+    def _update(self, frame_no):
+        if self._had_input:
+            self._frame_count = 0
+            self._had_input = False
+        else:
+            self._frame_count +=1
+
+        if self._frame_count >= self._trigger_frame:
+            raise InactivityError(self._return_scene)
+        
+        screen:Screen = self.screen
+        screen.print_at(f'{self._frame_count}/{self._trigger_frame}',0,0, colour= Screen.COLOUR_RED)
+    
+    def process_event(self, event):return event
+    
+    def handle_inactivity(self, event):
+        if isinstance(event, KeyboardEvent):
+            self._had_input = True
+
+    def reset(self):return super().reset()
+    def stop_frame(self):return 0
+
+
 
 #TODO update docstrings for Tab and TabHeader for App() changes
-
 class TabHeader(Effect):
     
     def __init__(
@@ -150,6 +225,11 @@ class Tab(Scene):
         self.prior_tab_name = None
         # The next tab in the TabGroup - used for going to the next Tab
         self.next_tab_name = None
+
+        #for screen saver
+        self._inactivity_effect = InactivityEffect(self.screen, self)
+        #Added to our effects so it will be drawn
+        self.add_effect(self._inactivity_effect)
     
     @property
     def page(self) -> bool:
@@ -176,11 +256,10 @@ class Tab(Scene):
         """_summary_
             Overridden from Scene to handle moving other Tabs in the TabGroup.
         """
-
+        self._inactivity_effect.handle_inactivity(event)
 
         #Only be sensitive to keyboard events if we can page
         if isinstance(event, KeyboardEvent) and self.page:
-
             if event.key_code == Tab.PRIOR_TAB_KEY: #Go to the prior Tab
                 raise NextScene(self.prior_tab_name)
             elif event.key_code == Tab.NEXT_TAB_KEY: #Go to the next Tab
@@ -188,10 +267,11 @@ class Tab(Scene):
             else: # Do nothing
                 pass
         
-        # It is very important that we call the super().process_events because
-        # otherwise all the effects in the Tab would not get keyboard and mouse
-        # events
+
         return super().process_event(event)
+        
+        
+        
     
     # def useable_height(self) -> int:
     #     """_summary_
