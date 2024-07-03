@@ -9,7 +9,7 @@ from .extensions import time2frames
 
 
 
-def jb_splash(screen:Screen, duration:int) -> Scene:    
+def jb_splash(screen:Screen) -> Scene:    
     # Color of the jb_logo
     logo_color = Screen.COLOUR_WHITE 
     # The time in second the logo should be displayed before the bombardment
@@ -22,7 +22,7 @@ def jb_splash(screen:Screen, duration:int) -> Scene:
 
     #Read the jb_logo text from file
     jb_logo = "Jacob's Splash Screen"
-    with open('assets/jb_logo.txt') as file:
+    with open('assets/jb_logo.txt',encoding="utf8") as file:
         jb_logo = file.read()
 
     effects = []

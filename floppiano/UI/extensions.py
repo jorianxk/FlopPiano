@@ -7,7 +7,7 @@ from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
 
 
-from .app import App, AppException
+from .app import App
 
 import logging
 
@@ -129,8 +129,7 @@ class TabHeader(Effect):
             frame_no (int): The frame number (not used)
         """
         # Convenience variable for pylance type hinting
-        screen:Screen = self.screen
-
+        screen:Screen = self.screen    
         # Draw the first row
         x = 0 #Location to draw at
         for tab_label in self._tab_row:
@@ -157,6 +156,9 @@ class TabHeader(Effect):
                 1, 
                 pallet[0], pallet[1], pallet[2])
             x += len(divider_label)
+
+        #TODO: Remove the below, debug only
+        screen.print_at(screen._frame, 0,0, colour=Screen.COLOUR_RED)
 
     @property
     def theme(self):
@@ -199,8 +201,10 @@ class TabHeader(Effect):
 
 class Tab(Scene):
     # Constants for switching tabs
-    NEXT_TAB_KEY = Screen.KEY_PAGE_UP
-    PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
+    # NEXT_TAB_KEY = Screen.KEY_PAGE_UP
+    # PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
+    NEXT_TAB_KEY = Screen.KEY_F2
+    PRIOR_TAB_KEY = Screen.KEY_F1
     def __init__(self, screen:Screen, name:str, theme = 'default'):    
         Scene.__init__(
             self,
@@ -227,9 +231,9 @@ class Tab(Scene):
         self.next_tab_name = None
 
         #for screen saver
-        self._inactivity_effect = InactivityEffect(self.screen, self)
+        #self._inactivity_effect = InactivityEffect(self.screen, self)
         #Added to our effects so it will be drawn
-        self.add_effect(self._inactivity_effect)
+        #self.add_effect(self._inactivity_effect)
     
     @property
     def page(self) -> bool:
@@ -256,7 +260,7 @@ class Tab(Scene):
         """_summary_
             Overridden from Scene to handle moving other Tabs in the TabGroup.
         """
-        self._inactivity_effect.handle_inactivity(event)
+        #self._inactivity_effect.handle_inactivity(event)
 
         #Only be sensitive to keyboard events if we can page
         if isinstance(event, KeyboardEvent) and self.page:
@@ -629,4 +633,5 @@ class LoggerText(TextBox, logging.StreamHandler):
         try:
             super().update(frame_no)
         except AttributeError as ae:
-            raise AppException("LoggerText got AttributeError on update()") from ae
+            pass
+            # raise AppException("LoggerText got AttributeError on update()") from ae

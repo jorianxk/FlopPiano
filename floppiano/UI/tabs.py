@@ -422,11 +422,7 @@ class MIDIPlayerTab(Tab):
         self.app.do_action('stop_mid_file')
         #re-enable paging
         self.page = True
-    
 
-
-
- 
 
 class AboutTab(Tab):
 
@@ -452,11 +448,11 @@ class AboutTab(Tab):
         about_text.value = ['This is some about text about us', 'Jorian Hates asciimattics','Farts']
 
 
-        layout.add_widget(Label("Application Log:", align='^'))
-        loggerText = LoggerText(height=4)
-        if logger is not None:
-            logger.addHandler(loggerText)
-        layout.add_widget(loggerText)
+        # layout.add_widget(Label("Application Log:", align='^'))
+        # loggerText = LoggerText(height=4)
+        # if logger is not None:
+        #     logger.addHandler(loggerText)
+        # layout.add_widget(loggerText)
 
 
         self.frame.fix()
