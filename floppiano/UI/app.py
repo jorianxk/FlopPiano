@@ -21,7 +21,6 @@ class App():
 
     def run(self):
         pass
-
     
     @property
     def theme(self):
@@ -39,3 +38,5 @@ class App():
         if theme in THEMES:
             self._theme = theme
             self.palette = THEMES[theme]
+        else:
+            self._theme = 'default'

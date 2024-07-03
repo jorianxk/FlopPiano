@@ -20,9 +20,9 @@ def time2frames(time:float, frame_rate:int=20) -> int:
 def event_draw(screen:Screen, event=None, repeat = False):    
     scene = screen._scenes[screen._scene_index]
 
-    #TODO: think about the below
-    if screen.has_resized(): 
-        raise ResizeScreenError("Screen resized", scene)
+    # # #TODO: think about the below
+    # if screen.has_resized(): 
+    #     raise ResizeScreenError("Screen resized", scene)
     try:
         # Check for an event now and remember for refresh reasons.
         #JORIAN commented out the below line

@@ -122,8 +122,6 @@ class Tab(Scene):
     # Constants for switching tabs
     NEXT_TAB_KEY = Screen.KEY_PAGE_UP
     PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
-    # NEXT_TAB_KEY = Screen.KEY_F2
-    # PRIOR_TAB_KEY = Screen.KEY_F1
     def __init__(self, app:App, name:str):    
         Scene.__init__(
             self,

@@ -1,6 +1,6 @@
 from UI.app import App
 from UI.ascii.util import event_draw
-from UI.ascii.tabs import TabGroup
+from UI.ascii.tabs import TabGroup, Tab
 from UI.content import (
     run_splash, SoundTab)
 
@@ -16,6 +16,17 @@ import traceback
 import logging
 import os
 
+Tab.NEXT_TAB_KEY = Screen.KEY_F2
+Tab.PRIOR_TAB_KEY = Screen.KEY_F1
+
+
+
+#TODO Screen resizing no bueno
+# except ResizeScreenError as rse:
+#     self._screen.reset()
+#     self._screen.close(restore=True)
+#     print("Screen resized")
+#     break # exit
 
 class FlopPiano(App):
 
@@ -56,7 +67,7 @@ class FlopPiano(App):
         try:
             self._init_ui()
         except Exception as e:
-            self.screen.close()
+            self.screen.close(restore=True)
             print(traceback.format_exc())
             exit(1)
         #init_ui
@@ -65,12 +76,11 @@ class FlopPiano(App):
 
     def _loop(self):
         #draw once
-        event_draw(self._screen)
+        self._draw(force=True)
+
         while True:
             try:
-                keyboard_event = self._keyboard_event()
-                if keyboard_event is not None: #we got a keyboard event
-                    event_draw(self._screen, keyboard_event)
+                self._draw()
 
                 # if piano keys:
                 #     midi_stream.append(piano_key_midi) 
@@ -88,18 +98,14 @@ class FlopPiano(App):
                 
 
             except KeyboardInterrupt as ki:
-                self._close()
+                self._screen.close(restore=True)
                 break # exit
             except StopApplication as sa:
-                self._close()
+                self._screen.close(restore=True)
                 break # exit
-            except ResizeScreenError as rse:
-                self._close()
-                print("Screen resized")
-                break
             except Exception as e:
                 #self.logger.error(e)
-                self._close()
+                self._screen.close(restore=True)
                 print(traceback.format_exc())
                 break # exit
                 
@@ -117,28 +123,26 @@ class FlopPiano(App):
 
         self.logger.debug(f"Found asset directory: '{self._asset_dir}'")
 
-    def _keyboard_event(self) -> KeyboardEvent:
-        event = self._screen.get_event()
-        #ignore mouse events
-        if isinstance(event, KeyboardEvent):
-            return event
-        
-        return None
-
-    def _init_ui(self):
+    def _init_ui(self, start_scene:Scene=None):
 
         tab_group = TabGroup(self._screen)
         tab_group.add_tab(SoundTab(self, "sound"))
 
         tab_group.fix()
+        
+        self._screen.set_scenes(tab_group.tabs, start_scene=start_scene)
 
-        self._screen.set_scenes(tab_group.tabs)
+
+    def _draw(self , force:bool = False):
+        if force:
+            event_draw(self._screen)
+            return
+        
+        event = self._screen.get_event()
+        if isinstance(event, KeyboardEvent):
+            event_draw(self._screen, event) # If event is none that's fine
 
         
-
-
-    def _close(self):
-        self._screen.close()
 
 if __name__ == '__main__':
     #logging.basicConfig(level=logging.DEBUG)
