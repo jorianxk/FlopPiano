@@ -1,92 +1,11 @@
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.effects import Effect
-from asciimatics.widgets import DropdownList, TextBox
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
 
-
-from .app import App
-
-import logging
-
-def time2frames(time:float, frame_rate:int=20) -> int:
-    """_summary_
-        Converts a time (in seconds) to an integer number of frames
-    Args:
-        time (float): Time in seconds (or fractions of seconds)
-        frame_rate (int, optional): the number of frames per second.
-            Defaults to 20.
-
-    Returns:
-        int: The number of frames round(frame_rate*time) 
-    """
-    return int(round(frame_rate*time))
-
-
-
-class InactivityError(Exception):
-    """
-        An exception raised by an Inactivity effect 
-    """
-
-    def __init__(self, scene=None):
-        """_summary_
-
-        Args:
-            scene (_type_, optional): The Scene to return back to
-             Defaults to None.
-        """
-        super().__init__()
-        self._scene = scene
-
-    @property
-    def scene(self):
-        """
-        The Scene that was running before the inactivity period
-        """
-        return self._scene
-
-class InactivityEffect(Effect):
-    def __init__(self, screen, return_scene:Scene, inactivity_time:float=5.0):
-        """_summary_
-
-        Args:
-            screen (_type_): The Screen
-            return_scene (Scene): the scene to return to
-            inactivity_time (float, optional): The time in seconds before 
-             triggering the InactivityError. Defaults to 60
-        """
-        super().__init__(screen)
-        self._return_scene = return_scene
-        self._trigger_frame = time2frames(inactivity_time)
-        self._frame_count = 0
-        self._had_input = False
-    
-    def _update(self, frame_no):
-        if self._had_input:
-            self._frame_count = 0
-            self._had_input = False
-        else:
-            self._frame_count +=1
-
-        if self._frame_count >= self._trigger_frame:
-            raise InactivityError(self._return_scene)
-        
-        screen:Screen = self.screen
-        screen.print_at(f'{self._frame_count}/{self._trigger_frame}',0,0, colour= Screen.COLOUR_RED)
-    
-    def process_event(self, event):return event
-    
-    def handle_inactivity(self, event):
-        if isinstance(event, KeyboardEvent):
-            self._had_input = True
-
-    def reset(self):return super().reset()
-    def stop_frame(self):return 0
-
-
+from ..app import App
 
 #TODO update docstrings for Tab and TabHeader for App() changes
 class TabHeader(Effect):
@@ -201,11 +120,11 @@ class TabHeader(Effect):
 
 class Tab(Scene):
     # Constants for switching tabs
-    # NEXT_TAB_KEY = Screen.KEY_PAGE_UP
-    # PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
-    NEXT_TAB_KEY = Screen.KEY_F2
-    PRIOR_TAB_KEY = Screen.KEY_F1
-    def __init__(self, screen:Screen, name:str, theme = 'default'):    
+    NEXT_TAB_KEY = Screen.KEY_PAGE_UP
+    PRIOR_TAB_KEY = Screen.KEY_PAGE_DOWN
+    # NEXT_TAB_KEY = Screen.KEY_F2
+    # PRIOR_TAB_KEY = Screen.KEY_F1
+    def __init__(self, app:App, name:str):    
         Scene.__init__(
             self,
             effects=[], 
@@ -221,19 +140,16 @@ class Tab(Scene):
             screen (Screen): The Screen that the The Tab will be drawn with
             name (str): The unique name of the Tab
         """
-        self.app = None
-        self.screen = screen
-        self.theme = theme
+        self._app = app
         self.page = True
         # The previous tab in the TabGroup - used for going to the prior Tab
         self.prior_tab_name = None
         # The next tab in the TabGroup - used for going to the next Tab
         self.next_tab_name = None
 
-        #for screen saver
-        #self._inactivity_effect = InactivityEffect(self.screen, self)
-        #Added to our effects so it will be drawn
-        #self.add_effect(self._inactivity_effect)
+    @property
+    def app(self):
+        return self._app
     
     @property
     def page(self) -> bool:
@@ -260,16 +176,15 @@ class Tab(Scene):
         """_summary_
             Overridden from Scene to handle moving other Tabs in the TabGroup.
         """
-        #self._inactivity_effect.handle_inactivity(event)
-
-        #Only be sensitive to keyboard events if we can page
-        if isinstance(event, KeyboardEvent) and self.page:
-            if event.key_code == Tab.PRIOR_TAB_KEY: #Go to the prior Tab
-                raise NextScene(self.prior_tab_name)
-            elif event.key_code == Tab.NEXT_TAB_KEY: #Go to the next Tab
-                raise NextScene(self.next_tab_name)
-            else: # Do nothing
-                pass
+        if self.prior_tab_name is not None and self.next_tab_name is not None:
+            #Only be sensitive to keyboard events if we can page
+            if isinstance(event, KeyboardEvent) and self.page:
+                if event.key_code == Tab.PRIOR_TAB_KEY: #Go to the prior Tab
+                    raise NextScene(self.prior_tab_name)
+                elif event.key_code == Tab.NEXT_TAB_KEY: #Go to the next Tab
+                    raise NextScene(self.next_tab_name)
+                else: # Do nothing
+                    pass
         
 
         return super().process_event(event)
@@ -285,25 +200,8 @@ class Tab(Scene):
     #     """
     #     return self.screen.height - self._tab_header.height
 
-    @property
-    def theme(self):
-        return self._theme
 
-    @theme.setter
-    def theme(self, theme):
-        """
-        Shamelessly stolen from asciimatics to support theming
-
-        Pick a palette from the list of supported THEMES.
-
-        :param theme: The name of the theme to set.
-        """
-        if theme in THEMES:
-            self._theme = theme
-            self.palette = THEMES[theme]
-
-
-    def fix(self, app:App, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
+    def fix(self, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
         """_summary_
             Called by TabGroup to setup the Tab's TabHeader and event handling
         Args:s
@@ -311,11 +209,11 @@ class Tab(Scene):
             prior_tab_name (str): The name of the previous Tab in the TabGroup
             next_tab_name (str): The name of the next Tab in the TabGroup
         """
-        self.app = app
+
         self.prior_tab_name = prior_tab_name
         self.next_tab_name = next_tab_name
         self._tab_header = tab_header
-        self._tab_header.theme = self.theme
+        self._tab_header.theme = self.app.theme
         # Make sure the TabHeader is the first effect in the Tab
         self._effects.insert(0, tab_header)
 
@@ -331,7 +229,7 @@ class TabGroup():
     R_DIV ='└'
     T_DIV = '┴'
 
-    def __init__(self, screen, app:App, tabs:list[Tab]=[]):
+    def __init__(self, screen:Screen, tabs:list[Tab]=[]):
         """_summary_
             A TabGroup is a collection of Tabs. When a Tab is added to the 
             TabGroup, the Tab is setup for use. That is, the TabGroup
@@ -341,7 +239,7 @@ class TabGroup():
             tabs (list[Tab], optional): A list of Tab to add upon instantiation
         """
         self.screen = screen
-        self.app = app
+
         self._tabs:dict[str,Tab] = {}
 
         for tab in tabs:
@@ -414,7 +312,7 @@ class TabGroup():
             prior_tab_name = self.tabs[prior].name  
 
             #Give the Tab it's header and neighboring tab names
-            tab.fix(self.app, headers[tab.name], prior_tab_name, next_tab_name)
+            tab.fix(headers[tab.name], prior_tab_name, next_tab_name)
     
     @staticmethod
     def _group(tab_names:list[str], screen)->list[list[str]]:
@@ -568,70 +466,3 @@ class TabGroup():
         for text in row:
             length += len(text)
         return length
-
-class DropDown(DropdownList):
-    def __init__(self, options, start_option=None ,**kwargs):
-        super().__init__(options, **kwargs)
-
-        self._old_value = None
-
-        if start_option is not None:
-            for index, option in enumerate(self.options):
-                if option[0]==start_option:break
-            else:
-                raise ValueError("start_option not in options")
-
-            self._line = index
-            self._value = option[1]  
-
-    def revert(self):
-        for i, [_, value] in enumerate(self._options):
-            if value == self._old_value:
-                self._line = i
-                self._value = self._old_value
-                break
-
-    @DropdownList.value.setter
-    def value(self, new_value):
-        # Only trigger change notification after we've changed selection
-        old_value = self._value
-        self._value = new_value
-        for i, [_, value] in enumerate(self._options):
-            if value == new_value:
-                self._line = i
-                break
-        else:
-            #Overridden to comment out the below
-            #self._value = self._line = None
-            return #Do nothing
-
-        if old_value != self._value and self._on_change:
-            self._old_value = old_value
-            self._on_change()
-
-class LoggerText(TextBox, logging.StreamHandler):
-
-    def __init__(self, height, history_length:int = 100, label=None, name=None,  **kwargs):
-        TextBox.__init__(self,height, label, name, as_string=False, line_wrap=True, parser=None, on_change=None, readonly=True, **kwargs)
-        logging.StreamHandler.__init__(self)
-
-        self._logged_lines = []
-        self._history_length = history_length
-       
-
-    def emit(self, record):
-        if len(self._logged_lines) >=self._history_length:
-            self._logged_lines = []
-        
-        #TODO format this
-        self._logged_lines.append(f'{record.getMessage()}')
-        self.value = self._logged_lines
-        self.reset()
-
-
-    def update(self, frame_no):
-        try:
-            super().update(frame_no)
-        except AttributeError as ae:
-            pass
-            # raise AppException("LoggerText got AttributeError on update()") from ae

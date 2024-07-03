@@ -5,8 +5,7 @@ from asciimatics.effects import Print
 from asciimatics.particles import ShootScreen, Explosion, ExplosionFlames
 from random import randint
 
-from .extensions import time2frames
-
+from ..ascii.util import time2frames
 
 
 def jb_splash(screen:Screen) -> Scene:    
@@ -109,4 +108,10 @@ def floppiano_splash(screen:Screen, duration:int, txt_file:str) -> Scene:
     
     return floppiano_scene
 
+def run_splash(screen:Screen):
+    scenes = []
 
+    scenes.append(floppiano_splash(screen,50,"assets/logo3.txt"))
+    scenes.append(jb_splash(screen))
+
+    screen.play(scenes,repeat=False)
