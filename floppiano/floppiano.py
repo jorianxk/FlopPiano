@@ -20,7 +20,6 @@ Tab.NEXT_TAB_KEY = Screen.KEY_F2
 Tab.PRIOR_TAB_KEY = Screen.KEY_F1
 
 
-
 #TODO Screen resizing no bueno
 # except ResizeScreenError as rse:
 #     self._screen.reset()
@@ -103,33 +102,33 @@ class FlopPiano(App):
             except StopApplication as sa:
                 self._screen.close(restore=True)
                 break # exit
+            except ResizeScreenError as rse:
+                #self._screen.reset()
+                self._screen.close(restore=False)
+                self._screen = Screen.open(catch_interrupt=False)
+                self._init_ui(rse.scene)
+                self._draw(force=True)
+                #print("Screen resized")
+                #break # exit
             except Exception as e:
                 #self.logger.error(e)
                 self._screen.close(restore=True)
                 print(traceback.format_exc())
-                break # exit
-                
-
-        
+                break # exit       
     
 
     def _find_assets(self):
-        self.logger.debug(f"Verifying asset directory: '{self._asset_dir}'")   
-
+        self.logger.debug(f"Verifying asset directory: '{self._asset_dir}'")
         if not os.path.isdir(self._asset_dir):
             self.logger.critical(
                 f"Asset directory '{self._asset_dir} not'found. exiting...")
             raise RuntimeError("Could not find assets")
-
         self.logger.debug(f"Found asset directory: '{self._asset_dir}'")
 
     def _init_ui(self, start_scene:Scene=None):
-
         tab_group = TabGroup(self._screen)
         tab_group.add_tab(SoundTab(self, "sound"))
-
-        tab_group.fix()
-        
+        tab_group.fix()        
         self._screen.set_scenes(tab_group.tabs, start_scene=start_scene)
 
 
@@ -139,7 +138,7 @@ class FlopPiano(App):
             return
         
         event = self._screen.get_event()
-        if isinstance(event, KeyboardEvent):
+        if isinstance(event, KeyboardEvent):# only draw on keyboard events
             event_draw(self._screen, event) # If event is none that's fine
 
         
