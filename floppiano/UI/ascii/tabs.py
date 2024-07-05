@@ -187,17 +187,6 @@ class Tab(Scene):
 
         return super().process_event(event)
         
-        
-        
-    
-    # def useable_height(self) -> int:
-    #     """_summary_
-    #         The usable height of the Tab
-    #     Returns:
-    #         int: The Screen's height - The height of the TabHeader
-    #     """
-    #     return self.screen.height - self._tab_header.height
-
 
     def fix(self, tab_header:TabHeader, prior_tab_name:str, next_tab_name:str):
         """_summary_

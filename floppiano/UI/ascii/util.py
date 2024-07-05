@@ -1,5 +1,6 @@
 from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError, StopApplication, NextScene
+from asciimatics.event import KeyboardEvent
 
 
 
@@ -17,57 +18,35 @@ def time2frames(time:float, frame_rate:int=20) -> int:
     return int(round(frame_rate*time))
 
 
-def event_draw(screen:Screen, event=None, repeat = False):    
-
-    scene = screen._scenes[screen._scene_index]
-
-    #TODO: think about the below
-    if screen.has_resized(): 
-        raise ResizeScreenError("Screen resized", scene)
-
+def keyboard_event_draw(screen:Screen, force=False, repeat = False) -> bool:    
+    # Only update/draw on keyboard events or if we force an update
+    # bypass effect event handling so that all effects will get events
+    #returns true if a draw actually occured
     try:
-        # Check for an event now and remember for refresh reasons.
-        #JORIAN commented out the below line
-        #event = screen.get_event()
-        
-        got_event = False
-        if event is not None:
-            event = scene.process_event(event)
-            got_event = True
+        drew = False # Did we draw things or not?
+        scene = screen._scenes[screen._scene_index]
+        event = screen.get_event()
+        # Only update on keyboard events or if we force an update
+        if isinstance(event, KeyboardEvent) or force:
+            screen._frame += 1
+            # TODO: if forced the event might be none is that ok?
+            # We want all effects to get events ..
+            scene.process_event(event) 
+            for effect in scene.effects:
+                # Update the effect and delete if needed.
+                effect.update(screen._frame)
+                if effect.delete_count is not None:
+                    effect.delete_count -= 1
+                    if effect.delete_count <= 0:
+                        scene.remove_effect(effect)
+            drew = True # We did the draw
 
-        # got_event = event is not None
-        # # Now process all the input events
-        # while event is not None:
-        #     event = scene.process_event(event)
-        #     if event is not None and screen._unhandled_input is not None:
-        #         screen._unhandled_input(event)
-        #     event = screen.get_event()
-
-        # Only bother with a refresh if there was an event to process or
-        # we have to refresh due to the refresh limit required for an
-        # Effect.
-
-        screen._frame += 1
-        screen._idle_frame_count -= 1
-        #if got_event or screen._idle_frame_count <= 0 or screen._forced_update:
-        screen._forced_update = False
-        screen._idle_frame_count = 1000000
-        for effect in scene.effects:
-            # Update the effect and delete if needed.
-            effect.update(screen._frame)
-            if effect.delete_count is not None:
-                effect.delete_count -= 1
-                if effect.delete_count <= 0:
-                    scene.remove_effect(effect)
-
-            # Sort out when we next _need_ to do a refresh.
-            if effect.frame_update_count > 0:
-                screen._idle_frame_count = min(screen._idle_frame_count,
-                                                effect.frame_update_count)
         screen.refresh()
-        
+     
         if 0 < scene.duration <= screen._frame:
             raise NextScene()
+        
+        return drew
     except NextScene as e:
         # Tidy up the current scene.
         scene.exit()
@@ -98,6 +77,7 @@ def event_draw(screen:Screen, event=None, repeat = False):
         if scene.clear:
             screen.clear()
 
+        #force the screen to update
         #TODO make sure there is no infinite recursion
-        event_draw(screen)
+        return keyboard_event_draw(screen, force=True)
 

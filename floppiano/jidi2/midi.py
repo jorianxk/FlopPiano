@@ -287,7 +287,7 @@ class MIDIUtil():
         Returns:
             bool: True if the integer is a MIDI modulation, False otherwise
         """  
-        return MIDIUtil.isValidMIDINote(modulation)
+        return MIDIUtil.isValidNote(modulation)
 
     @staticmethod
     def hasChannel(msg:Message) -> bool:
@@ -355,7 +355,7 @@ class MIDIListener():
         Raises:
             ValueError: If the channel is not a valid MIDI channel
         """
-        if not MIDIUtil.isValidMIDIChannel(channel):
+        if not MIDIUtil.isValidChannel(channel):
             raise ValueError("Channel must be [0-15]") 
         self._input_channel = channel
 
