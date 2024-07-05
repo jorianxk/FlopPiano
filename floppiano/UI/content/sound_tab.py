@@ -1,30 +1,33 @@
 from asciimatics.widgets import ( 
-    Frame, Layout, Label, Button, Divider, VerticalDivider, PopUpDialog)
-
-# from floppiano.UI.app import App
-from jidi.devices import Drive
-from jidi.voices import PitchBendRange, ModulationWave
+    Layout, Label, Button, Divider, VerticalDivider, PopUpDialog)
 
 from ..ascii.tabs import Tab
-from ..ascii.widgets import DropDown
+from ..ascii.widgets import DynamicFrame, DropDown
+
+
+from jidi2.synths import (PITCH_BEND_RANGES, MODULATION_WAVES, DriveSynth)
+
+
+# self.add_effect(
+# PopUpDialog(self.app.screen, 'Polyphony changing is not yet supported', ["OK"]))
+
 
 class SoundTab(Tab):
 
     def __init__(self, app, name: str):
         super().__init__(app, name)
 
-
         #Frame Setup
-        self.frame = Frame(
+        self.frame = DynamicFrame(
             self.app.screen,
             self.app.screen.height-2,
             self.app.screen.width,
             y=2,
             has_border=False,
             can_scroll=False,
-            reduce_cpu=True)
+            on_update=self.update_widgets)
         self.frame.set_theme(self.app.theme)
-   
+
         #--------------------Table Layout and Widgets--------------------------#
 
         #Layout for table 
@@ -38,7 +41,7 @@ class SoundTab(Tab):
         table_layout.add_widget(Divider(),2)
 
         #Modifier Labels
-        table_layout.add_widget(Label('Crash Mode', align='<'),0)
+        table_layout.add_widget(Label('Bow', align='<'),0)
         table_layout.add_widget(Label('Drive Spin', align='<'),0)
         table_layout.add_widget(Label('Pitch Bend Range', align='<'),0)
         table_layout.add_widget(Label('Modulation Wave', align='<'),0)
@@ -46,44 +49,32 @@ class SoundTab(Tab):
 
         table_layout.add_widget(VerticalDivider(height=7),1)
 
-        #Crash Mode DropDown
-        crash_modes = []
-        start_crash_mode = None
-        for mode_name, mode_value in Drive.CrashMode.__members__.items():
-            # if mode_value == start_values['crash_mode']: 
-            #     start_crash_mode=mode_name
-            crash_modes.append((mode_name,mode_value))
-        self.crash_mode_dd = DropDown(
-            options = crash_modes,
-            start_option = start_crash_mode,
-            name = 'crash_mode_dd',
-            on_change = self.crash_mode,
+        self.synth:DriveSynth = self.app.resource('synth')
+
+        #Bow DropDown  
+        self.bow_dd = DropDown(
+            options = (('off', 0),('on', 1)),
+            start_index = self.synth.bow,
+            name = 'bow_dd',
+            on_change = self.bow,
             fit = False,
         )       
-        table_layout.add_widget(self.crash_mode_dd, 2)
+        table_layout.add_widget(self.bow_dd, 2)
     
         #Drive Spin DropDown
-        drive_spins = (('OFF', False),('ON', True))
         self.drive_spin_dd = DropDown(
-            options = drive_spins,
-            start_option= None, #'ON' if start_values['spin'] else 'OFF',
+            options = (('off', 0), ('on', 1)),
+            start_index = self.synth.spin,
             name = 'drive_spin_dd',
             on_change = self.drive_spin,
             fit = False
         )  
         table_layout.add_widget(self.drive_spin_dd, 2)
 
-        #Pitch Bend Range DropDown
-        pitch_bend_ranges =[]
-        self.start_pitch_bend_range = None
-        for index, name in enumerate(PitchBendRange.__members__.keys()):
-            # if name == PitchBendRange(start_values['pitch_bend_range']).name:
-            #     self.start_pitch_bend_range = name
-            pitch_bend_ranges.append((name,index))
-
+        #Pitch Bend Range DropDown 
         self.pitch_bend_range_dd = DropDown(
-            options = pitch_bend_ranges,
-            start_option = self.start_pitch_bend_range,
+            options = DropDown.list2options(list(PITCH_BEND_RANGES.keys())),
+            start_index = self.synth.pitch_bend_range,
             name = 'pitch_bend_range_dd',
             on_change = self.pitch_bend_range,
             fit = False
@@ -91,15 +82,9 @@ class SoundTab(Tab):
         table_layout.add_widget(self.pitch_bend_range_dd, 2)     
         
         #Modulation Wave DropDown
-        modulation_waves = []
-        start_modulation_wave = None
-        for wave_name, wave_value in ModulationWave.__members__.items():
-            # if wave_value == start_values['modulation_wave']:
-            #     start_modulation_wave = wave_name
-            modulation_waves.append((wave_name,wave_value))
         self.modulation_wave_dd = DropDown(
-            options = modulation_waves,
-            start_option = start_modulation_wave,
+            options = DropDown.list2options(MODULATION_WAVES),
+            start_index = self.synth.modulation_wave,
             name = 'modulation_wave_dd',
             on_change = self.modulation_wave,
             fit = False
@@ -107,10 +92,9 @@ class SoundTab(Tab):
         table_layout.add_widget(self.modulation_wave_dd, 2)    
 
         #Polyphony DropDown
-        polyphonies = (('MONO', False),('POLY', True))
         self.polyphony_dd = DropDown(
-            options = polyphonies,
-            start_option =  None ,#'POLY' if start_values['polyphony'] else 'MONO',
+            options = (('mono', 0),('poly', 1)),
+            start_index = self.synth.polyphonic,
             name = 'polyphonies_dd',
             on_change = self.polyphony,
             fit = False
@@ -139,39 +123,25 @@ class SoundTab(Tab):
         reset_layout.add_widget(Divider(),2)
       
 
-        #Frames must be the last one added to have input focus
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
 
+    def update_widgets(self):
+        self.bow_dd.value = self.synth.bow
+        self.drive_spin_dd.value = self.synth.spin
+        self.pitch_bend_range_dd.value = self.synth.pitch_bend_range
+        self.modulation_wave_dd.value = self.synth.modulation_wave
+        self.polyphony_dd.value = self.synth.polyphonic
 
-    def crash_mode(self):
-        self.app.action(
-            'change_synth',
-            ('crash_mode',self.crash_mode_dd.value))
-    
+    def bow(self):
+        self.synth.bow = self.bow_dd.value    
     def drive_spin(self):
-        self.app.action(
-            'change_synth',
-            ('spin',self.drive_spin_dd.value))
-
+        self.synth.spin = self.drive_spin_dd.value
     def pitch_bend_range(self):
-        self.app.action(
-            'change_synth',
-            ('pitch_bend_range',self.pitch_bend_range_dd.value))
-
-
+        self.synth.pitch_bend_range = self.pitch_bend_range_dd.value
     def modulation_wave (self):
-        self.app.action(
-            'change_synth',
-            ('modulation_wave',self.modulation_wave_dd.value))
-
-
+        self.synth.modulation_wave = self.modulation_wave_dd.value
     def reset_clicked(self):
-        self.app.action(
-            'change_synth',
-            ('reset',0))
-    
+        self.synth.reset()    
     def polyphony (self):
-         #TODO update this when polyphone switching support is added to synth
-         self.add_effect(
-            PopUpDialog(self.app.screen, 'Polyphony changing is not yet supported', ["OK"]))
+        self.synth.polyphonic = self.polyphony_dd.value

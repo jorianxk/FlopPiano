@@ -57,14 +57,14 @@ class SettingsTab(Tab):
 
         self.input_channel_dd = DropDown(
             options = channels, 
-            start_option = str(start_values['input_channel']),
+            start_index = str(start_values['input_channel']),
             on_change = self.input_channel,
             fit = False)
         table_layout.add_widget(self.input_channel_dd,2)
 
         self.output_channel_dd = DropDown(
             options = channels, 
-            start_option = str(start_values['output_channel']),
+            start_index = str(start_values['output_channel']),
             on_change = self.output_channel,
             fit = False)
         table_layout.add_widget(self.output_channel_dd,2)
@@ -76,7 +76,7 @@ class SettingsTab(Tab):
             output_modes.append((name,index))
         self.output_mode_dd = DropDown(
             options = output_modes,
-            start_option = start_values['output_modes'][start_values['output_mode']],
+            start_index = start_values['output_modes'][start_values['output_mode']],
             on_change = self.output_mode,
             fit = False
         )  
@@ -86,7 +86,7 @@ class SettingsTab(Tab):
         loopbacks = (('OFF', False),('ON', True))
         self.loopback_dd = DropDown(
             options = loopbacks,
-            start_option= 'ON' if start_values['loopback'] else 'OFF',
+            start_index= 'ON' if start_values['loopback'] else 'OFF',
             on_change = self.loopback,
             fit = False
         )  
@@ -98,7 +98,7 @@ class SettingsTab(Tab):
             themes.append((name,name))
         self.theme_dd = DropDown(
             options = themes,
-            start_option = self.theme,
+            start_index = self.theme,
             on_change = self.change_theme,
             fit = False
         )  

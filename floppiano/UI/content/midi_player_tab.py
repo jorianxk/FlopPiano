@@ -33,7 +33,7 @@ class MIDIPlayerTab(Tab):
         transposes = []
         for i in range(-12,13):
             transposes.append((str(i),i))
-        self.transpose_dd = DropDown(options=transposes, start_option="0")
+        self.transpose_dd = DropDown(options=transposes, start_index="0")
 
         layout.add_widget(self.transpose_dd)
 
