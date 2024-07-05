@@ -13,7 +13,6 @@ from jidi2.synths import (PITCH_BEND_RANGES, MODULATION_WAVES, DriveSynth)
 
 
 class SoundTab(Tab):
-
     def __init__(self, app, name: str):
         super().__init__(app, name)
 
@@ -56,27 +55,27 @@ class SoundTab(Tab):
             options = (('off', 0),('on', 1)),
             start_index = self.synth.bow,
             name = 'bow_dd',
-            on_change = self.bow,
+            on_change = self.bow_changed,
             fit = False,
         )       
         table_layout.add_widget(self.bow_dd, 2)
     
-        #Drive Spin DropDown
-        self.drive_spin_dd = DropDown(
+        #Spin DropDown
+        self.spin_dd = DropDown(
             options = (('off', 0), ('on', 1)),
             start_index = self.synth.spin,
             name = 'drive_spin_dd',
-            on_change = self.drive_spin,
+            on_change = self.spin_changed,
             fit = False
         )  
-        table_layout.add_widget(self.drive_spin_dd, 2)
+        table_layout.add_widget(self.spin_dd, 2)
 
         #Pitch Bend Range DropDown 
         self.pitch_bend_range_dd = DropDown(
             options = DropDown.list2options(list(PITCH_BEND_RANGES.keys())),
             start_index = self.synth.pitch_bend_range,
             name = 'pitch_bend_range_dd',
-            on_change = self.pitch_bend_range,
+            on_change = self.pitch_bend_range_changed,
             fit = False
         )  
         table_layout.add_widget(self.pitch_bend_range_dd, 2)     
@@ -86,7 +85,7 @@ class SoundTab(Tab):
             options = DropDown.list2options(MODULATION_WAVES),
             start_index = self.synth.modulation_wave,
             name = 'modulation_wave_dd',
-            on_change = self.modulation_wave,
+            on_change = self.modulation_wave_changed,
             fit = False
         )  
         table_layout.add_widget(self.modulation_wave_dd, 2)    
@@ -96,7 +95,7 @@ class SoundTab(Tab):
             options = (('mono', 0),('poly', 1)),
             start_index = self.synth.polyphonic,
             name = 'polyphonies_dd',
-            on_change = self.polyphony,
+            on_change = self.polyphony_changed,
             fit = False
         )  
         table_layout.add_widget(self.polyphony_dd, 2)
@@ -128,20 +127,20 @@ class SoundTab(Tab):
 
     def update_widgets(self):
         self.bow_dd.value = self.synth.bow
-        self.drive_spin_dd.value = self.synth.spin
+        self.spin_dd.value = self.synth.spin
         self.pitch_bend_range_dd.value = self.synth.pitch_bend_range
         self.modulation_wave_dd.value = self.synth.modulation_wave
         self.polyphony_dd.value = self.synth.polyphonic
 
-    def bow(self):
+    def bow_changed(self):
         self.synth.bow = self.bow_dd.value    
-    def drive_spin(self):
-        self.synth.spin = self.drive_spin_dd.value
-    def pitch_bend_range(self):
+    def spin_changed(self):
+        self.synth.spin = self.spin_dd.value
+    def pitch_bend_range_changed(self):
         self.synth.pitch_bend_range = self.pitch_bend_range_dd.value
-    def modulation_wave (self):
+    def modulation_wave_changed (self):
         self.synth.modulation_wave = self.modulation_wave_dd.value
     def reset_clicked(self):
         self.synth.reset()    
-    def polyphony (self):
+    def polyphony_changed (self):
         self.synth.polyphonic = self.polyphony_dd.value
