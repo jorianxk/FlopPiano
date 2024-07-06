@@ -22,15 +22,15 @@ Tab.PRIOR_TAB_KEY = Screen.KEY_F1
 #         super().__init__(*args)
 
 
-
+VERSION = 2.5
 class FlopPiano(App):
 
     def __init__(
             self, 
-            theme: str = 'default', 
+            theme: str = 'default',
             handle_resize: bool = False,
             splash_start: bool = True,
-            screen_timeout:float = 30,
+            screen_timeout:float = None,
             asset_dir:str = './assets'
             ) -> None:
         
@@ -41,9 +41,7 @@ class FlopPiano(App):
         self._splash_start = splash_start
         self._screen_timeout = screen_timeout
 
-        self._synth = None
-        # Enable for screen saver
-        self._save_screen = True 
+        self._synth = None 
         # The scene that was active before the screen saver
         self._last_scene = None 
         # The time that the screen was last drawn
@@ -77,13 +75,17 @@ class FlopPiano(App):
         
 
     def _loop(self):
+        #forcably Draw the screen once
         self._draw(force=True)
         self._last_draw_time = time.time()
+        needs_redraw = False
 
-        while True:
-            # Draw the screen 1 time/s if the screensaver is active. Otherwise, 
-            # draw only when there is a keyboardevent or a screen resize
+        while True:            
+            # If something requested a redraw and the screen saver is not active
+            # force a draw to happen
             self._draw()
+            #if self._draw(needs_redraw): needs_redraw = False
+        
 
 
 
@@ -101,7 +103,6 @@ class FlopPiano(App):
             return self._synth
         else:
             return None
-
     
 
     def _find_assets(self):
@@ -113,17 +114,16 @@ class FlopPiano(App):
         self.logger.debug(f"Found asset directory: '{self._asset_dir}'")
 
     def _draw(self, force: bool = False) -> bool:
-        #overridden to handle the screen saver logic
-        if force: 
-            self._last_draw_time = time.time()
-            return super()._draw(force)
+        # overridden to handle the screen saver logic
+        # force drawing only works if the screen saver is not active
 
-        #Is the screen saver active? (last_scene will be set if so)
-        if self._last_scene is not None:
+        #Is the screen saver active? 
+        if self._last_scene is not None: # (last_scene will be set if so)
             #force draw the screen saver every 1 second
             if time.time() - self._last_draw_time >=1:
                 try:
-                    return self._draw(force=True)
+                    self._last_draw_time = time.time()
+                    return super()._draw(True)
                 except StopApplication:
                     # Exit the screen saver - a key was pressed
                     # re-init the scenes, ignore the start scene
@@ -133,19 +133,27 @@ class FlopPiano(App):
                     # disable the screen saver by setting last_scene to None
                     self._last_scene = None
                     #force the screen to draw once
-                    return self._draw(force=True)
-        else:
-            # draw only if there is a keyboard event or if the screen resizes
-            # draw will return true if any of the above happend
-            if super()._draw(): self._last_draw_time = time.time()
+                    self._last_draw_time = time.time()
+                    return super()._draw(True)
+        else: #Screen saver is not active
 
-            if self._save_screen: #if the screen saver is enabled
+            if force: 
+                self._last_draw_time = time.time()
+                return super()._draw(force=True)
+            # draw only if there is a keyboard event or if the screen resizes
+            if super()._draw(): 
+                self._last_draw_time = time.time()
+                return True #we drew
+
+            #if the screen saving is is enabled, check the screentimeout
+            if self._screen_timeout is not None: 
                 if time.time() - self._last_draw_time >= self._screen_timeout:
                     #enable the screen saver by setting the last_scene
                     self._last_scene = \
                         self.screen._scenes[self.screen._scene_index]
                     #Force the screen to have only the screen saver as a scene
-                    self.screen.set_scenes(screen_saver(self.screen))
+                    self.screen.set_scenes(screen_saver(self.screen,VERSION))
+                    
                     
   
 
@@ -154,7 +162,7 @@ if __name__ == '__main__':
     FlopPiano(
         handle_resize=False,
         splash_start=False, 
-        screen_timeout=5).run()
+        screen_timeout=1).run()
     
 
 
