@@ -1,11 +1,11 @@
 from asciimatics.screen import Screen
-from asciimatics.scene import Scene
 from asciimatics.effects import Effect
 from asciimatics.exceptions import StopApplication
 from asciimatics.event import KeyboardEvent
 
 from random import randint
 from operator import add
+
 class FloppySaver(Effect):
 
     def __init__(self, screen, version:float):
@@ -169,12 +169,3 @@ class FloppySaver(Effect):
     def stop_frame(self):
         return 0
     
-
-
-def screen_saver(screen:Screen, version:float):
-    return [Scene([FloppySaver(screen, version)],-1,clear=True)]
-    #screen.play([Scene([FloppySaver(screen)],-1,clear=True)])
-
-
-
-

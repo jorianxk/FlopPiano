@@ -9,6 +9,23 @@ class Drive ():
     A class that represents a floppy drive
     """
 
+    # CTRL = 0, 0, 0, 0, 0, 0, 0, 0 = register number
+    # Registers
+    
+    # 0 -> State = 0, bow_mask, spin mask, enable_mask, 0, bow, spin, enable
+    
+    # 1 -> Frequency =  {
+    #   (0, 0, 0, 0, 0, 0, 0, 0)
+    #   (0, 0, 0, 0, 0, 0, 0, 0)
+    #   (0, 0, 0, 0, 0, 0, 0, 0)
+    #   (0, 0, 0, 0, 0, 0, 0, 0)
+    # } i.e. 4 bytes representing a float
+
+    # 2 -> Modulation_rate = {
+    #   (0, 0, 0, 0, 0, 0, 0, 0) -> rate if rate ==0: modulation off
+    # 2 -> Modulation_frequency = {
+    #   (0, 0, 0, 0, 0, 0, 0, 0) -> freq?
+
     #init with default values of the firmware
     def __init__(
             self,

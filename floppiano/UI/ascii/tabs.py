@@ -9,7 +9,7 @@ from ..app import App
 
 #TODO update docstrings for Tab and TabHeader for App() changes
 class TabHeader(Effect):
-    
+    _FRAME_RATE_DEBUG = False
     def __init__(
             self, 
             screen:Screen, 
@@ -76,8 +76,8 @@ class TabHeader(Effect):
                 pallet[0], pallet[1], pallet[2])
             x += len(divider_label)
 
-        #TODO: Remove the below, debug only
-        screen.print_at(screen._frame, 0,0, colour=Screen.COLOUR_RED)
+        if  TabHeader._FRAME_RATE_DEBUG:
+            screen.print_at(screen._frame, 0,0, colour=Screen.COLOUR_RED)
 
     @property
     def theme(self):

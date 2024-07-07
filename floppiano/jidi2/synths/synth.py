@@ -126,6 +126,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
         pitch_bend_range:str = 'half',
         pitch_bend:int = 0,
         modulation_wave:str = 'sine',
+        modulation_rate:int = 1,
         modulation: int = 0,
         muted:bool = False,
         polyphonic:bool = True, 
@@ -145,6 +146,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self.pitch_bend_range = pitch_bend_range        
         self.pitch_bend = pitch_bend
         self.modulation_wave = modulation_wave
+        self.modulation_rate = modulation_rate
         self.modulation = modulation
         self.muted = muted
         self.polyphonic = polyphonic
@@ -154,6 +156,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
             control_change_map[1]   = 'modulation'
             control_change_map[76]  = 'pitch_bend_range'
             control_change_map[77]  = 'modulation_wave'
+            control_change_map[78]  = 'modulation_rate'
             control_change_map[120] = 'reset'
             control_change_map[123] = 'muted'
         self.control_change_map = control_change_map
@@ -163,7 +166,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
             sysex_map[0] = 'input_channel'
             sysex_map[1] = 'output_channel'
             sysex_map[2] = 'output_mode'
-            sysex_map[3] = 'polyphonic'
+            sysex_map[3] = 'polyphonic' #TODO   This needs to be cc 126/127 see: https://nickfever.com/music/midi-cc-list
         self.sysex_map = sysex_map
 
 
@@ -183,49 +186,42 @@ class Synth(MIDIParser, MIDIListener, ABC):
     def reset(self) -> None:
         """
         """
-    @ abstractmethod
-    def sound(self) -> None:
-        """
-        """
 
     def parse(self, messages:list[Message], source = None) -> list[Message]:
-        #process all the messages from the messages
+        # process all the messages from the messages
         for msg in messages: MIDIParser.parse(self, msg, source)        
-        
-        self.sound()
-
+        # Flush the output
         return self._flush_output()
 
     def _flush_output(self)->list[Message]:
-        #Ready the outputs
+        # Ready the outputs
         output_buffer:list[Message] = [] 
     
-        match self.output_mode:
-            case OUTPUT_MODES.index('off'):
-                #output buffer is already empty, nothing to do
-                pass
-            case OUTPUT_MODES.index('rollover'): 
-                output_buffer = self._output
-            case _:
-                #a new output mode has probably been added - we don't know
-                # what to do with it so don't do anything
-                pass
+        if self.output_mode == OUTPUT_MODES.index('off'):
+            # output buffer is already empty, nothing to do
+            pass
+        elif self.output_mode == OUTPUT_MODES.index('rollover'): 
+            output_buffer = self._output
+        else:
+            # A new output mode has probably been added - we don't know what to 
+            # do with it so don't do anything
+            pass
             
-        #clear the the output
+        # clear the the output
         self._output = []       
         return output_buffer
 
     def _map_attr(self, attr_name:str, value=None) -> None:
         try:
             attr = self.__getattribute__(attr_name)
-            #Are we setting a property or calling a function?
+            # Are we setting a property or calling a function?
             if callable(attr):
                 attr() # Call the function
             else:
-                #set the property
+                # set the property
                 self.__setattr__(attr_name, value)
-                #pitch bend and modulation happen frequently so they need to 
-                #be logged at the debug and not info level
+                # pitch bend and modulation happen frequently so they need to 
+                # be logged at the debug and not info level
                 level = logging.INFO
                 if attr_name =='pitch_bend' or attr_name =='modulation':
                     level = logging.DEBUG
@@ -257,36 +253,28 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self._output.append(msg) 
     
     def on_pitchwheel(self, msg: Message, source) -> None:
-        #set the pitch bend value
+        # set the pitch bend value
         self._map_attr('pitch_bend', msg.pitch) 
-        #pass along all pitchwheel messages
+        # pass along all pitchwheel messages
         self._output.append(msg)
 
     def on_sysex(self, msg: Message, source) -> None:
-        #ignore any system messages that don't have 3 data bytes
+        # ignore any system messages that don't have 3 data bytes
         if (not (len(msg.data)<3 or len(msg.data)>3)):
             id = msg.data[0]
             command = msg.data[1]
             value = msg.data[2]
-            #check that the first byte matches our sysex_id, ignore it otherwise
+            # check that the first byte matches our sysex_id, ignore it otherwise
             if id == self.sysex_id:
                 #make sure its a valid command
                 if command in self.sysex_map:
                     attr_name = self.sysex_map[command]
                     self._map_attr(attr_name, value)
-        #pass along all sysex messages
+        # pass along all sysex messages
         self._output.append(msg)
 
 
     #--------------------Properties--------------------------------------------#
-
-    @property
-    def polyphonic(self) -> bool:
-        return self._polyphonic
-    
-    @polyphonic.setter
-    def polyphonic(self, polyphonic:bool):
-        self._polyphonic = bool(polyphonic)
 
     @property
     def output_channel(self) -> int:
@@ -369,7 +357,17 @@ class Synth(MIDIParser, MIDIListener, ABC):
             raise ValueError('Not a modulation wave')
 
         self._modulation_wave = modulation_wave
- 
+    
+    @property
+    def modulation_rate(self) -> int:
+        return self._modulation_rate
+    
+    @modulation_rate.setter
+    def modulation_rate(self, modulation_rate:int) -> None:
+        if modulation_rate<0 or modulation_rate>127:
+            raise ValueError("modulation_rate must be [0-127]")
+        self._modulation_rate = modulation_rate
+
     @property
     def modulation(self) -> int:
         return self._modulation
@@ -388,3 +386,11 @@ class Synth(MIDIParser, MIDIListener, ABC):
     @muted.setter
     def muted(self, muted:bool) -> None:
         self._muted = bool(muted)
+
+    @property
+    def polyphonic(self) -> bool:
+        return self._polyphonic
+    
+    @polyphonic.setter
+    def polyphonic(self, polyphonic:bool):
+        self._polyphonic = bool(polyphonic)

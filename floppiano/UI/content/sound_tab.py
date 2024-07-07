@@ -1,11 +1,9 @@
-from asciimatics.widgets import ( 
-    Layout, Label, Button, Divider, VerticalDivider, PopUpDialog)
+from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
 
 from ..ascii.tabs import Tab
 from ..ascii.widgets import DynamicFrame, DropDown
 
-
-from jidi2.synths import (PITCH_BEND_RANGES, MODULATION_WAVES, DriveSynth)
+from jidi2.synths import (PITCH_BEND_RANGES, DriveSynth)
 
 
 # self.add_effect(
@@ -15,6 +13,8 @@ from jidi2.synths import (PITCH_BEND_RANGES, MODULATION_WAVES, DriveSynth)
 class SoundTab(Tab):
     def __init__(self, app, name: str):
         super().__init__(app, name)
+
+        self.synth:DriveSynth = self.app.resource('synth')
 
         #Frame Setup
         self.frame = DynamicFrame(
@@ -43,12 +43,12 @@ class SoundTab(Tab):
         table_layout.add_widget(Label('Bow', align='<'),0)
         table_layout.add_widget(Label('Drive Spin', align='<'),0)
         table_layout.add_widget(Label('Pitch Bend Range', align='<'),0)
-        table_layout.add_widget(Label('Modulation Wave', align='<'),0)
+        table_layout.add_widget(Label('Modulation Rate', align='<'),0)
+        # Drives only have one modulation wave
+        #table_layout.add_widget(Label('Modulation Wave', align='<'),0)
         table_layout.add_widget(Label('Polyphony', align='<'),0)        
 
         table_layout.add_widget(VerticalDivider(height=7),1)
-
-        self.synth:DriveSynth = self.app.resource('synth')
 
         #Bow DropDown  
         self.bow_dd = DropDown(
@@ -80,15 +80,28 @@ class SoundTab(Tab):
         )  
         table_layout.add_widget(self.pitch_bend_range_dd, 2)     
         
-        #Modulation Wave DropDown
-        self.modulation_wave_dd = DropDown(
-            options = DropDown.list2options(MODULATION_WAVES),
-            start_index = self.synth.modulation_wave,
-            name = 'modulation_wave_dd',
-            on_change = self.modulation_wave_changed,
-            fit = False
-        )  
-        table_layout.add_widget(self.modulation_wave_dd, 2)    
+
+        #TODO limit the rates to the actual availible rates
+        modulation_rates = []
+        for rate in range(0,128):
+            modulation_rates.append((str(rate),rate))
+        self.modulation_rate_dd = DropDown(
+            options = modulation_rates, 
+            start_index = self.synth.modulation_rate,
+            on_change = self.modulation_rate_changed,
+            fit = False)
+        table_layout.add_widget(self.modulation_rate_dd,2)
+        
+        # Drives only have one modulation wave
+        # #Modulation Wave DropDown
+        # self.modulation_wave_dd = DropDown(
+        #     options = DropDown.list2options(MODULATION_WAVES),
+        #     start_index = self.synth.modulation_wave,
+        #     name = 'modulation_wave_dd',
+        #     on_change = self.modulation_wave_changed,
+        #     fit = False
+        # )  
+        # table_layout.add_widget(self.modulation_wave_dd, 2)    
 
         #Polyphony DropDown
         self.polyphony_dd = DropDown(
@@ -129,7 +142,9 @@ class SoundTab(Tab):
         self.bow_dd.value = self.synth.bow
         self.spin_dd.value = self.synth.spin
         self.pitch_bend_range_dd.value = self.synth.pitch_bend_range
-        self.modulation_wave_dd.value = self.synth.modulation_wave
+        self.modulation_rate_dd.value = self.synth.modulation_rate
+        # Drives only have one modulation wave
+        #self.modulation_wave_dd.value = self.synth.modulation_wave
         self.polyphony_dd.value = self.synth.polyphonic
 
     def bow_changed(self):
@@ -138,8 +153,11 @@ class SoundTab(Tab):
         self.synth.spin = self.spin_dd.value
     def pitch_bend_range_changed(self):
         self.synth.pitch_bend_range = self.pitch_bend_range_dd.value
-    def modulation_wave_changed (self):
-        self.synth.modulation_wave = self.modulation_wave_dd.value
+    def modulation_rate_changed(self):
+        self.synth.modulation_rate = self.modulation_rate_dd.value
+    # Drives only have one modulation wave
+    # def modulation_wave_changed (self):
+    #     self.synth.modulation_wave = self.modulation_wave_dd.value
     def reset_clicked(self):
         self.synth.reset()    
     def polyphony_changed (self):

@@ -1,28 +1,24 @@
-from asciimatics.screen import Screen
-from asciimatics.widgets import ( 
-    Frame, Layout, Label, TextBox)
+from asciimatics.widgets import Layout, Label, TextBox
 from asciimatics.widgets.utilities import THEMES
 
-
 from ..ascii.tabs import Tab
-
-import logging
-
+from ..ascii.widgets import DynamicFrame
 
 class AboutTab(Tab):
 
-    def __init__(self, screen: Screen, name: str, logger:logging.Logger = None, theme='default'):
-        super().__init__(screen, name, theme)
+    def __init__(self, app, name: str):
+        super().__init__(app, name)
 
         #Frame Setup
-        self.frame = Frame(
-            screen,
-            screen.height-2,
-            screen.width,y=2,
+        self.frame = DynamicFrame(
+            self.app.screen,
+            self.app.screen.height-2,
+            self.app.screen.width,
+            y=2,
             has_border=False,
             can_scroll=False,
-            reduce_cpu=True)
-        self.frame.set_theme(self.theme)    
+            on_update=self.update_widgets)
+        self.frame.set_theme(self.app.theme)   
 
         layout = Layout([1],True)
         self.frame.add_layout(layout)
@@ -42,3 +38,6 @@ class AboutTab(Tab):
 
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
+    
+    def update_widgets(self):
+        pass

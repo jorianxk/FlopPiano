@@ -8,6 +8,7 @@ from .ascii.util import keyboard_event_draw, draw_now
 
 from time import time
 
+
 #TODO Docstrings
 class App(ABC):
     """_summary_
@@ -21,9 +22,6 @@ class App(ABC):
         self._screen:Screen = None
         self.theme = theme
         self._handle_resize = handle_resize
-        #The time at which when the last draw finished
-        #self._last_draw_time = None   
-        #self._frame_rate = frame_rate #frames per second
 
     @property
     def screen(self) -> Screen:
@@ -66,57 +64,6 @@ class App(ABC):
         self.screen.close()
         self._screen = None
  
-    # def _draw(self) -> bool:
-    #     #returns true if a draw actually occured
-    #     if self.screen is None: #The the first draw call
-    #         # Open the screen
-    #         self._screen = Screen.open(catch_interrupt=False)
-    #         #clear the screen 
-    #         self.screen.clear()
-    #         # init the scenes and get the first scene
-    #         scenes, start_scene = self._draw_init(self.screen)
-    #         # Set the scenes with the start scene first
-    #         self.screen.set_scenes(scenes, start_scene)
-    #         #Force the screen to draw
-    #         draw_now(self.screen)
-    #         self._last_draw_time = time()
-    #         return True
-
-    #     elif self.screen.has_resized(): #The screen resized
-    #         # Don't handle the resize if it's not enabled
-    #         if not self._handle_resize: 
-    #             raise ResizeScreenError("Screen Resized")
-    #         # save the last scene
-    #         last_scene = self.screen._scenes[self.screen._scene_index] 
-    #         # Close the screen
-    #         self.screen.close(restore=False) 
-    #         # Re-open the screen (at new size)
-    #         self._screen = Screen.open(catch_interrupt=False)
-    #         #clear the screen
-    #         self.screen.clear()
-    #         # Re-init the scenes (but we ignore the start scene)
-    #         scenes, _ = self._draw_init(self.screen) 
-    #         # Set the scenese and starting with the scene before the resize
-    #         self.screen.set_scenes(scenes, last_scene)
-    #         # Force the screen to draw
-    #         draw_now(self.screen)
-    #         self._last_draw_time = time()
-    #         return True 
-
-    #     else: # A normal draw call
-    #         event = self.screen.get_event()
-    #         #ignore all events that are not keyboard events
-    #         if not isinstance(event, KeyboardEvent): event = None 
-    #         # Only draw at frame rate or if a keyboard event occurs
-    #         if event or (time()- self._last_draw_time >= self._frame_rate):
-    #             draw_now(self.screen, event)
-    #             self._last_draw_time = time()
-    #             return True
-    #         #If we got here we did not draw
-    #         return False
-
-            
-
     def _draw(self, force:bool = False) -> bool:
         #returns true if a draw actually occured
         if self.screen is None: #The the first draw call
