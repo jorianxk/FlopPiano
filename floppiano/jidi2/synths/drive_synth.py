@@ -204,8 +204,10 @@ class DriveSynth(Synth):
         self._modulation = modulation       
 
         #TODO only 1-16hz sounds good, do we want this hard coded?
+        # 0 -> no modulation
         modulation_freq = MIDIUtil.integer_map_range(
-            self.modulation, 0, 127, 1, 16)       
+            self.modulation, 0, 127, 0, 16)
+                   
         Drives.modulation_frequency(0,modulation_freq)
     
     @Synth.muted.setter

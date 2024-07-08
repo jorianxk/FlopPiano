@@ -97,7 +97,7 @@ class Drives():
             enable = bool(enable) << CTRL_EN 
             CTRL = CTRL | enable
 
-        print("CTRL: ","{:08b}".format(CTRL), CTRL)
+        #print("CTRL: ","{:08b}".format(CTRL), CTRL)
 
         if CTRL != 0: 
             bus.write(address, CTRL_REG, [CTRL])
