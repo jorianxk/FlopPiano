@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import logging
 from mido import Message
 from ..midi import MIDIUtil, MIDIListener, MIDIParser
+from typing import Any, Callable
 
 class CommandMap(dict):
     """_summary_
@@ -116,7 +117,7 @@ PITCH_BEND_RANGES = {
 MODULATION_WAVES = ['sine', 'square', 'saw', 'triangle']
 
 
-#TODO add polyphony - mono/poly  support
+
 class Synth(MIDIParser, MIDIListener, ABC):
     def __init__(
         self,
@@ -130,63 +131,100 @@ class Synth(MIDIParser, MIDIListener, ABC):
         modulation_rate:int = 1,
         modulation: int = 0,
         muted:bool = False,
-        polyphonic:bool = True, 
+        polyphonic:bool = True,
+        poly_voices:int = 0, 
         control_change_map:CommandMap = None,
         sysex_map:CommandMap = None) -> None:
+        
+        #Set up this before, so that inherited properties work with observers        
+        self._attr_observers = {}
+        self.logger = logging.getLogger(__name__) 
 
         MIDIListener.__init__(self, input_channel)
-        MIDIParser.__init__(self, self)
-
-        self.logger = logging.getLogger(__name__) 
+        MIDIParser.__init__(self, self)       
  
-
+        # System attributes #
         #self.input_channel = input_channel inherited from MidiListener
         self.output_channel = output_channel
         self.output_mode = output_mode  
         self.sysex_id = sysex_id   
+
+        # Sound behavior attributes #
         self.pitch_bend_range = pitch_bend_range        
         self.pitch_bend = pitch_bend
         self.modulation_wave = modulation_wave
         self.modulation_rate = modulation_rate
         self.modulation = modulation
-        self.muted = muted
-        self.polyphonic = polyphonic
+        self.muted = muted # no getter/setter needed (bool)
 
-        if control_change_map is None:
-            control_change_map = CommandMap()
-            control_change_map[1]   = 'modulation'
-            control_change_map[76]  = 'pitch_bend_range'
-            control_change_map[77]  = 'modulation_wave'
-            control_change_map[78]  = 'modulation_rate'
-            control_change_map[120] = 'reset'
-            control_change_map[123] = 'muted'
-        self.control_change_map = control_change_map
+        # Polyphony attributes #
+        # private set via mono_mode() and poly_mode()
+        self._polyphonic = polyphonic 
+        # private set via mono_mode()
+        self._mono_voices = 0
+        # public because this is not supported via MIDI control change 127 
+        # i.e. it's custom       
+        self.poly_voices = poly_voices
+
+        # MIDI message attribute mappings #
+        #See https://nickfever.com/music/midi-cc-list for details
 
         if sysex_map is None:
             sysex_map = CommandMap()
-            sysex_map[0] = 'input_channel'
-            sysex_map[1] = 'output_channel'
-            sysex_map[2] = 'output_mode'
-            sysex_map[3] = 'polyphonic' #TODO   This needs to be cc 126/127 see: https://nickfever.com/music/midi-cc-list
+            sysex_map[0] = 'input_channel'  # Custom
+            sysex_map[1] = 'output_channel' # Custom
+            sysex_map[2] = 'output_mode'    # Custom
         self.sysex_map = sysex_map
 
+        if control_change_map is None:
+            control_change_map = CommandMap()
+            control_change_map[1]   = 'modulation'       # Standard MIDI
+            control_change_map[16]  = 'pitch_bend_range' # Custom
+            control_change_map[17]  = 'modulation_wave'  # Custom
+            control_change_map[18]  = 'modulation_rate'  # Custom
+            control_change_map[19]  = 'poly_voices'      # Custom
+            control_change_map[120] = 'mute'             # Standard MIDI
+            control_change_map[121] = 'reset'            # Standard MIDI
+            control_change_map[126] = 'mono_mode'        # Standard MIDI
+            control_change_map[127] = 'poly_mode'        # Standard MIDI
+        self.control_change_map = control_change_map
 
         self._output:list[Message] = []
     
     #------------------------------Methods-------------------------------------#
 
     @abstractmethod
-    def note_on(self, msg: Message, source) -> Message:
+    def note_on(self, note:int, velocity:int, source) -> bool:
         """
         """
+        return False
+
     @abstractmethod
-    def note_off(self, msg: Message, source) -> Message:
+    def note_off(self, note:int, velocity:int, source) -> bool:
         """
         """
+        return False
+    
+
     @abstractmethod
     def reset(self) -> None:
+        #On a reset all things should be set back to 
+        #and by MIDI there is no mute release so, it must be reset
+        self.muted = False
         """
         """
+
+    def mute(self) -> None:
+        self.muted = True
+
+    def mono_mode(self, mono_voices:int=0):
+        if mono_voices<0 or mono_voices>127:
+            raise ValueError('mono_voices must be [0,127]')
+        self.polyphonic = False  #disable polyphony
+        self._mono_voices = mono_voices
+    
+    def poly_mode(self):
+        self.polyphonic = True #enable polyphony
 
     def parse(self, messages:list[Message], source = None) -> list[Message]:
         # process all the messages from the messages
@@ -202,22 +240,54 @@ class Synth(MIDIParser, MIDIListener, ABC):
             # output buffer is already empty, nothing to do
             pass
         elif self.output_mode == OUTPUT_MODES.index('rollover'): 
-            output_buffer = self._output
+            output_buffer = self._output.copy()
         else:
             # A new output mode has probably been added - we don't know what to 
             # do with it so don't do anything
             pass
             
         # clear the the output
-        self._output = []       
-        return output_buffer
+        self._output = []
 
-    def _map_attr(self, attr_name:str, value=None) -> None:
+        # ensure all outgoing messages are on self.output_channel
+        for msg in output_buffer:
+            if MIDIUtil.hasChannel(msg):
+                msg.channel = self.output_channel
+
+        return output_buffer
+    
+    def attach_observer(self, attr_name:str, observer:Callable):
+        if attr_name in self._attr_observers.keys():
+            #already in the dict
+            self._attr_observers[attr_name].append(observer)
+        else:
+            self._attr_observers[attr_name] = [observer]
+    
+    def detach_observer(self, attr_name:str, observer:Callable):
+        #Don't attempt to except and errors
+        self._attr_observers[attr_name].remove(observer)
+
+
+    def __setattr__(self, name:str, value:Any) -> None:
+        object.__setattr__(self, name,value)
+
+        #Fire the observer
+        if name in self._attr_observers.keys(): 
+            for observer in self._attr_observers[name]:
+                observer(value)
+
+
+    def _map_attr(self, attr_name:str, value:Any = None) -> None:
         try:
             attr = self.__getattribute__(attr_name)
             # Are we setting a property or calling a function?
             if callable(attr):
-                attr() # Call the function
+                try: #if the function takes an argument pass it 
+                    attr(value)
+                    self.logger.info(f'{attr}({value}): success')
+                except TypeError: #if the function does not take an argument
+                    attr()
+                    self.logger.info(f'{attr}(): success')
             else:
                 # set the property
                 self.__setattr__(attr_name, value)
@@ -229,28 +299,30 @@ class Synth(MIDIParser, MIDIListener, ABC):
                 
                 self.logger.log(level,f'{attr_name} set to: {value}')
         except ValueError as ve:
-            self.logger.warning(f'{attr_name} NOT set: {ve}')
+            self.logger.warning(f'Bad value while mapping {attr_name}: {ve}')
         except Exception as e:
-            self.logger.error(f'Error during {attr_name} - skipping')
+            self.logger.error(f'Error while mapping {attr_name}: {e}')
     
 
     #-------------------Overridden from MIDIListener---------------------------#
 
     def on_note_on(self, msg: Message, source) -> None:
-        rollover = self.note_on(msg, source)
-        if isinstance(msg, Message):
-            self._output.append(rollover)
+        # if the note_on function did not handle the message we need to pass it
+        # along
+        if (self.note_on(msg.note, msg.velocity, source)):
+            self._output.append(msg)
    
     def on_note_off(self, msg: Message, source) -> None:
-        rollover = self.note_off(msg, source)
-        if isinstance(msg, Message):
-            self._output.append(rollover)
+        # if the note_off function did not handle the message we need to pass it
+        # along
+        if (self.note_off(msg.note, msg.velocity, source)):
+            self._output.append(msg)
 
     def on_control_change(self, msg: Message, source) -> None:
         if msg.control in self.control_change_map:
             attr_name = self.control_change_map[msg.control]
             self._map_attr(attr_name, msg.value)
-        #pass along all control change messages
+        # pass along all control change messages
         self._output.append(msg) 
     
     def on_pitchwheel(self, msg: Message, source) -> None:
@@ -265,15 +337,15 @@ class Synth(MIDIParser, MIDIListener, ABC):
             id = msg.data[0]
             command = msg.data[1]
             value = msg.data[2]
-            # check that the first byte matches our sysex_id, ignore it otherwise
+            # check that the first byte matches our sysex_id, 
+            # ignore it otherwise
             if id == self.sysex_id:
-                #make sure its a valid command
+                # make sure its a valid command
                 if command in self.sysex_map:
                     attr_name = self.sysex_map[command]
                     self._map_attr(attr_name, value)
         # pass along all sysex messages
         self._output.append(msg)
-
 
     #--------------------Properties--------------------------------------------#
 
@@ -381,17 +453,24 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self._modulation = modulation
 
     @property
-    def muted(self) -> bool:
-        return self._muted
-    
-    @muted.setter
-    def muted(self, muted:bool) -> None:
-        self._muted = bool(muted)
+    def polyphonic(self) -> bool:
+        # no setter because polyphonic should be set via 
+        # mono_mode() and poly_mode()
+        return self._polyphonic
 
     @property
-    def polyphonic(self) -> bool:
-        return self._polyphonic
+    def mono_voices(self) -> int:
+        # no setter because mono voices should be set via mono_mode()
+        return self._mono_voices
     
-    @polyphonic.setter
-    def polyphonic(self, polyphonic:bool):
-        self._polyphonic = bool(polyphonic)
+    @property
+    def poly_voices(self) -> int:
+        return self._poly_voices
+    
+    @poly_voices.setter
+    def poly_voices(self, poly_voices:int) -> int:
+        if poly_voices <0 or poly_voices>127:
+            raise ValueError("poly_voices must be [0,127]")
+        self._poly_voices = poly_voices
+
+    

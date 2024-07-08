@@ -4,6 +4,8 @@ try:
 except ModuleNotFoundError:
     pass
 
+import logging
+
 class BusException(Exception):
     pass
 
@@ -29,6 +31,21 @@ class Bus():
             'floppiano.bus.default_bus()'
             )
 
+class DebugBus(Bus):
+    
+    def __init__(self) -> None:
+        self._logger = logging.getLogger(__name__)
+
+    def read(self, address:int, register:int, length:int)->list[int]:
+        self._logger.debug(f'read from address: {address} register: {register}'
+                           f' length: {length}')
+        return [0]*length
+
+    def write(self, address:int, register:int, data:list)->None:
+        self._logger.debug(f'write to address: {address} register: {register}'
+                           f' data: {data}')
+
+
 
 
 
@@ -47,11 +64,6 @@ class SMBusWrapper(Bus):
             return self._bus.read_i2c_block_data(address, register, length)
         except OSError as oe:
             raise BusException("Error reading from the I2C SMbus") from oe
-    # def read(self, address: int, register: int, length: int) -> list[int]:
-    #     try:
-    #         return self._bus.read_byte_data(address, register)
-    #     except OSError as oe:
-    #         raise BusException("Error reading from the I2C SMbus") from oe 
     
     def write(self, address: int, register: int, data: list) -> None:
         try:
