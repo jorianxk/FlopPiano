@@ -1,13 +1,15 @@
 from mido import Message
+from .synth import Synth, PITCH_BEND_RANGES
 from ..midi import MIDIUtil
-from .synth import Synth
+from ..devices import Drives
 
+#TODO what about bus errors?
 
 class DriveSynth(Synth):
 
     def __init__(
         self,
-        #voices: tuple[DriveVoice], TODO: The synth needs it's drives
+        drive_addresses: list[int],
         bow:bool = False,
         spin:bool = False,        
         **kwargs) -> None:
@@ -24,9 +26,10 @@ class DriveSynth(Synth):
         self.bow = bow
         self.spin = spin
 
-        self._drives = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        self._drives = drive_addresses
         self._available = self._drives.copy()
         self._active = []
+
 
 
     #-------------------------Inherited from from Synth------------------------#
@@ -46,13 +49,9 @@ class DriveSynth(Synth):
                 }
             )
             #Play the note (if not muted)
-            if not self.muted:
-                # TODO: play the note if not muted
-                # drive.freq = MIDIUtil.note2Freq(msg.note)
-                # drive.enable = True
-                pass
+            Drives.frequency(drive, MIDIUtil.MIDI2Freq(msg.note))
+            Drives.enable(drive, not self.muted)
 
-            # TODO:drive in below needs to be the address of the drive
             self.logger.debug(
                 f"Note {msg.note} from '{source}' played (addr: {drive})")
         except IndexError: 
@@ -77,19 +76,18 @@ class DriveSynth(Synth):
         if len(self._active) != 0: 
             raise Exception("mono_note_on -malformed active stack")
 
-        #We're not playing anything -play the note (if not muted)
-        if not self.muted:
-            # TODO: play the note using drive(addr0)
-            pass
-
         #Add the drive to the active stack
         self._active.append(
             {
                 'source':source,
                 'note': msg.note,
-                'drive': 0 #TODO: change this to drive(addr 0)
+                'drive': 0 
             }
         )
+
+        #We're not playing anything -play the note on all drives (if not muted)
+        Drives.frequency(0, MIDIUtil.MIDI2Freq(msg.note))
+        Drives.enable(0, not self.muted)
 
         self.logger.debug(
             f"Note {msg.note} from '{source}' played (addr: 0 monophonic)")
@@ -103,19 +101,16 @@ class DriveSynth(Synth):
         # Test to see if that note is playing
         for index ,item in enumerate(self._active):
             if item['source'] == source and item['note'] == msg.note:
-                # The note is playing                
-               
-                # TODO: stop the note from playing
-                # drive.enable = false
-               
+                #The note is playing so stop the drive
+                drive = item['drive']
+                Drives.enable(drive,False)               
                 # Remove from the active stack
                 self._active.pop(index)
                 # add the drive back to the available
-                self._available.append(item['drive'])
-                # TODO:drive in below needs to be the address of the drive
+                self._available.append(drive)
                 self.logger.debug(
                     f"Note {msg.note} from '{source}' silenced on "
-                    f'(addr: {item['drive']})')
+                    f'(addr: {drive})')
                 break
         else:
             #The note is not currently playing
@@ -141,9 +136,8 @@ class DriveSynth(Synth):
         # Check if the message is our note
         active = self._active[0]       
         if active['source'] == source and active['note'] == msg.note:
-            # TODO: stop the note from playing
-            # drive(addr 0).enable = false 
-            
+            #Stop the drive from playing
+            Drives.enable(0, False)            
             #clear the active list
             self._active =[]              
             self.logger.debug(
@@ -159,8 +153,7 @@ class DriveSynth(Synth):
         return msg
 
     def reset(self) -> None:
-        # TODO: stop all drives from playing by using drive addr 0
-        # drive(address 0).enable = false
+        Drives.enable(0,False)
         
         #clear the active stack
         self._active = []
@@ -179,9 +172,8 @@ class DriveSynth(Synth):
     @bow.setter
     def bow(self, bow:bool) -> None:
         self._bow = bool(bow)
+        Drives.bow(0,self.bow)
 
-        # TODO: drive 0 set all bow states
-        # drive(addr 0).bow = bow
 
     @property
     def spin(self):
@@ -190,39 +182,45 @@ class DriveSynth(Synth):
     @spin.setter
     def spin(self, spin:bool):
         self._spin = bool(spin)
-
-        # TODO: drive 0 set all spin states
-        # drive(addr 0).spin = spin
+        Drives.spin(0, self.spin)
         
 
     #----------------------------Property Overrides----------------------------#
 
     @Synth.modulation_rate.setter
     def modulation_rate(self, modulation_rate:int) -> None:
+        #MIDI prevents the rate from being set any higher than 127, 
+        #but the drives can go up to 255
         if modulation_rate<0 or modulation_rate>127:
             raise ValueError("modulation_rate must be [0-127]")
         self._modulation_rate = modulation_rate
 
-        # TODO: drive 0 set all modulation rates
-        # drive(addr 0).modulation_rate = modulation_rate   
+        Drives.modulation_rate(0, self.modulation_rate)
     
     @Synth.modulation.setter
     def modulation(self, modulation:int) -> None:
         if not MIDIUtil.isValidModulation(modulation):
             raise ValueError('Not a not valid modulation')
         self._modulation = modulation       
-        
-        # TODO: drive 0 set all modulation frequencies
-        # drive(addr 0).modulation = modulation
+
+        #TODO only 1-16hz sounds good, do we want this hard coded?
+        modulation_freq = MIDIUtil.integer_map_range(
+            self.modulation, 0, 127, 1, 16)       
+        Drives.modulation_frequency(0,modulation_freq)
     
     @Synth.muted.setter
     def muted(self, muted:bool) -> None:
         self._muted = bool(muted)
 
-        # TODO: ensure all of the active drives are silenced or 
-        # all active voices will sound        
-        #for item in self._active:
-            #item['drive'].enable = not muted        
+        try:
+            # Ensure all of the active drives are silenced or that all active drives
+            # will sound        
+            for item in self._active:
+                Drives.enable(item['drive'], not muted)   
+        except AttributeError:
+            # This occurs when the Synth constructor sets self.muted
+            # self._active does not exist yet 
+            pass     
   
     @Synth.polyphonic.setter
     def polyphonic(self, polyphonic:bool):
@@ -237,5 +235,52 @@ class DriveSynth(Synth):
             pass
 
         self._polyphonic = bool(polyphonic)
+
+
+
+    @Synth.pitch_bend.setter
+    def pitch_bend(self, pitch_bend:int) -> None:
+        if not MIDIUtil.isValidPitch(pitch_bend):
+            raise ValueError('Not a valid pitch bend')
+           
+        self._pitch_bend = pitch_bend
+        
+        try:
+            # We DON'T change the note since the note is the identifier for
+            # turning on/off drives. We changed the drives' sounding frequency
+         
+            # Loop through the active drives and change their pitch based on the
+            # incoming bend
+            for item in self._active:
+
+                if self.pitch_bend == 0:
+                    # Pitch bend is zero so ensure that each drive is playing 
+                    # their original note
+                    Drives.frequency(
+                        item['drive'], MIDIUtil.MIDI2Freq(item['note']))
+                else:
+                    # Pitch bend is set so we need to bend the note
+
+                    # The self.pitch_bend_range is the index of the value we 
+                    # need to bend by in PITCH_BEND_RANGES
+                    bend_range = \
+                        list(PITCH_BEND_RANGES.values())[self.pitch_bend_range]
+
+                    old_n = MIDIUtil.freq2n(MIDIUtil.MIDI2Freq(item['note']))
+                    n_mod = MIDIUtil.integer_map_range(
+                        self.pitch_bend,
+                        -8192, # Min midi pitchwheel msg value
+                        8191,  # Max midi pitchwheel msg value
+                        -bend_range, 
+                        bend_range)
+
+                    #bend the note (based on log)
+                    Drives.frequency(
+                        item['drive'], MIDIUtil.n2freq(old_n+n_mod))
+                    
+        except AttributeError:
+            # This occurs when the Synth constructor sets self.pitch and
+            # self._active does not exist yet
+            pass
 
     

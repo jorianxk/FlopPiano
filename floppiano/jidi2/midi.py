@@ -186,7 +186,7 @@ class MIDIUtil():
         Returns:
             float: The frequency in Hz of the MIDI note.
         """
-        if(not MIDIUtil.isValidMIDINote(note)):
+        if(not MIDIUtil.isValidNote(note)):
             raise ValueError("Note must be in the range [0,127]")
         return MIDIUtil.MIDI_LOOK_UP[note]['freq']
 
@@ -205,7 +205,7 @@ class MIDIUtil():
         Returns:
             str: The musical scientific notation of the note.
         """
-        if(not MIDIUtil.isValidMIDINote(note)):
+        if(not MIDIUtil.isValidNote(note)):
             raise ValueError("Note must be in the range [0,127]")    
         
         return MIDIUtil.MIDI_LOOK_UP[note]['name']
@@ -226,7 +226,7 @@ class MIDIUtil():
         n = MIDIUtil.freq2n(frequency)
         note = round(n+20)
 
-        if (MIDIUtil.isValidMIDINote(note)):
+        if (MIDIUtil.isValidNote(note)):
             return note
 
         raise ValueError(f'Frequency {frequency:0.3f} is not a midi note')

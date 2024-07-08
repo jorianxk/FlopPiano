@@ -104,13 +104,14 @@ class CommandMap(dict):
 
 OUTPUT_MODES = ['off', 'rollover']
 PITCH_BEND_RANGES = {
-    'half':0.5, 
-    'whole':1, 
-    'minor3rd':1.5, 
-    'major3rd':2, 
-    'fourth':2.5,
-    'fifth':3.5,
-    'octave':6
+    #Number indicates steps. 1/2 steps = 1 note
+    'half':0.5,     #  1 note(s) or   1/2 step(s)
+    'whole':1,      #  2 note(s) or     1 step(s)
+    'minor3rd':1.5, #  3 note(s) or 1 1/2 step(s) 
+    'major3rd':2,   #  4 note(s) or     2 step(s)
+    'fourth':2.5,   #  5 note(s) or 2 1/2 step(s)
+    'fifth':3.5,    #  7 note(s) or 3 1/2 step(s)
+    'octave':6      # 12 note(s) or     6 step(s)
     }
 MODULATION_WAVES = ['sine', 'square', 'saw', 'triangle']
 
