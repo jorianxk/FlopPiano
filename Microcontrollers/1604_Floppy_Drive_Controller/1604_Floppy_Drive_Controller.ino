@@ -1,209 +1,202 @@
-/*
- * FlopPiano - Floppy drive controller firmware.
- * Version 1.1
- * 
- * 2024-05-23
- * Jacob Brooks, Jorian Khan
- * 
- *                       Notes and Change-log:
- * 
- * Version 1.1 
- * -Corrected drive spin to be ACTIVE LOW
- * -Corrected comments
- * -Added NEW Crash mode! (See the onRecieve I2C interupt for details)
- * -Added convenience function to flop drive directions
- *             -Jorian                   
- * 
- * 
- * This code is intended to run on a ATTINY1604 and generates pulses
- * to control the SOUND that a floppy drive makes. 
- * 
- * We use the 1604's TCA0 timer in single (16 bit) mode with a single
- * compare (CMP2 & WO2) to generate a dual slope pwm with a pulse width
- * sutible for the floppy drive (see code comments for details).
- * 
- * The firmware recieves I2C commands from a raspberry pi and reacts
- * accordingly. (See the onRecieve I2C interupt for details). 
- *
- * Requires megatinycore (see below)
- * 
- * 
- * 
- * For context see
- * See megatinycore https://github.com/SpenceKonde/megaTinyCore
- * See ATTINY1604 https://www.microchip.com/en-us/product/attiny1604
- * 
- */
-
-/*
- * This if ensures that millis() and micros() is not bound to the 
- * timer A (TCA0) We don't want them to boud to TCA0 because we are using 
- * TCA0 in 16 bit (single) Dual slope PWM mode
- * 
- * To rebind the millis/micros:
- *  In arduino IDE Tools-> millis()/micros() Timer: -> 
- *  [choose any option not related to TCA0]
- * 
- * Choosing [Disabled] is recomended because it saves flash and we don't 
- * need it
- */
 #if defined(MILLIS_USE_TIMERA0) || defined(__AVR_ATtinyxy2__)
   #error "This sketch takes over TCA0, don't use TCA0 for millis()/micros()"
 #endif
 
+#include <math.h>
 #include <Wire.h>
 
-// Slave I2C of this device
+
 #define I2C_ADDR 8
+#define DEVICE_TYPE 69
 
-// The maximimum steps before changing step direction in CRASH_BOW mode
-#define STEP_LIMIT 80 
-// Value used to calculate the step pulse width.
-#define STEP_PULSE_WIDTH 10 // 10 results in ~1 us (Value depends on prescalor)
+#define ALPHA 2500000
+#define STEP_LIMIT 80
+#define STEP_PULSE_WIDTH 10
 
-// GENERAL WARNING: DO NOT USE PBA0/Chip pin 10/ Arduino pin/11
-// PBA0 is the UPDI programming pin. if set to be I/O you will need a high
-// voltage programmer to reprogram the board.
-#define ENABLE_PIN PIN_PA1 // AKA Drive Select pin - CHIP pin 11
-#define STEP_PIN   PIN_PB2 // DO NOT CHANGE - CHIP Pin 7 
-// This above pin is for WO2 and TCA0 CMP2 (drive step/ frequency generation) 
-#define DIR_PIN    PIN_PA6 // Drive Direction pin - CHIP pin 4
-#define SPIN_PIN   PIN_PA7 // Drive Spin pin - CHIP Pin 5
+#define ENABLE_PIN PIN_PA1 
+#define STEP_PIN   PIN_PB2
+#define DIR_PIN    PIN_PA6 
+#define SPIN_PIN   PIN_PA7
 
-// These are bit-masks for decoding the CTRL register I2C commands
-#define CTRL_ENABLE_bm 0b00000001
-#define CTRL_SPIN_bm   0b00000010 
-#define CTRL_CRASH_bm  0b00001100 
+#define CTRL_REG 0
+#define FREQ_REG 1
+#define MOD_RATE_REG 2
+#define MOD_FREQ_REG 3
+#define DEVICE_TYPE_REG 4
 
-//These are for changing the crash mode behavior
-//#define CRASH_OFF 0b00
-#define CRASH_BOW 0b01
-#define CRASH_FLIP 0b10
-//#define #CASH_UNUSED 0b11
+#define CTRL_EN   0b00000001
+#define CTRL_SPIN 0b00000010 
+#define CTRL_BOW  0b00000100
 
-// A byte to hold incomming I2C state changes
-// We can think of this as a single 8-bit register 
-// named CTRL (short for control)
-volatile byte CTRL = 0b0001000; //By default crash prevention is in FLIP MODE
-
-// Default TOP Value that we count up to. When this value is commaned to change
-// via I2C it results in a change of drive note frequency. The math to determine
-// what TOP value to use is done on the Raspberry Pi.
-volatile unsigned int TOP = 19111; // default value = C4 middle C ~ 261.63 Hz
-
-// A variable to hold the number of pulses or steps sent to the drive.
-// if in CRASH_BOW mode when stepCount >= STEP_LIMIT the drive's 
-// step direction will be flipped, then stepCount will be reset to zero.
-volatile byte stepCount = 0;
-
-//the current direction of the drive
-volatile bool dir = false;
+#define CTRL_EN_MASK   0b00010000
+#define CTRL_SPIN_MASK 0b00100000 
+#define CTRL_BOW_MASK  0b01000000
 
 
-//Setup all the things!
+// Current crash mode set by I2C
+volatile bool bow = false; // true = bow mode, false = flip mode
+
+// A count for how many step pulses have occurred
+volatile byte stepCount = 0; // Counts to STEP_LIMIT then resets
+
+// Arbitrary direction for stepping
+volatile bool dir = false; // flops when stepCount == STEP_LIMIT
+
+
+// The commanded frequency received via I2C
+volatile union floatToBytes {  
+    char bytes[4];
+    float toFloat;  
+}commandedFreq;
+
+
+// The frequency that is currently being played
+float currentFreq = 440.0;
+
+// Stuff for modulation TODO
+volatile byte modRate = 1; // Set via I2C defaults to 1hz
+volatile unsigned long modFreq = 0; // Set via I2C
+bool modFreqChanged = false;
+unsigned long startTime = 0;
+bool modFlip = false;
+
+
+
+
 void setup() {
-  // Setup all the pins
   pinMode(STEP_PIN, OUTPUT);
   pinMode(ENABLE_PIN, OUTPUT);
   pinMode(SPIN_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
 
-  // Start up pin states
+
   digitalWrite(ENABLE_PIN, HIGH); // normally high (Active low) drive disabled
   digitalWrite(SPIN_PIN, HIGH);   // normally high (Active low) disk spin off;
-  digitalWrite(DIR_PIN, dir);     // Arbitary drive start direction
-
-
-  // Timer setup - for drive step/note generation
-  // Take over the timer as recomended by megatinycore documentation 
+  digitalWrite(DIR_PIN, dir);     // Arbitrary drive start direction
+  
   takeOverTCA0();
-  // Set Timer A (TCA0) to Dual slope PWM mode, OVF interrupt at BOTTOM, PWM on WO2 (CMP2)
   TCA0.SINGLE.CTRLB = (TCA_SINGLE_CMP2EN_bm | TCA_SINGLE_WGMODE_DSBOTTOM_gc);
-  // Set TOP value (The value we count up to)
-  TCA0.SINGLE.PER = TOP;
-  // This sets the pulse width currently 
-  TCA0.SINGLE.CMP2 = TOP - STEP_PULSE_WIDTH;
-  // Enable interupt timer to handle crash modes
+  //Setup TCA0 to play the staring frequency
+  updateFreq(currentFreq);
+
   TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm; //enable overflow interrupt
-  // Enable timer A (TCA0) with prescaler 4
   TCA0.SINGLE.CTRLA = (TCA_SPLIT_CLKSEL_DIV4_gc | TCA_SINGLE_ENABLE_bm); 
 
-  // Join I2C bus as slave with address I2C_ADDR the second parameter (true)enables
-  // receiving general broadcasts to I2C address 0x00. This is so we can command all
-  // the drives at once if necessary 
-  Wire.begin(I2C_ADDR, true);
-  //Call receiveEvent when data received                
+  Wire.begin(I2C_ADDR, true);              
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
 }
 
+void loop() {
+
+  // Check to see we've been commanded to change frequency
+  if (currentFreq != commandedFreq.toFloat){
+    if(updateFreq(commandedFreq.toFloat)){
+      // The frequency was successfully set, so update the current frequency
+      currentFreq = commandedFreq.toFloat;
+    }
+  }
+
+  // Do modulation with a simple triangle wave generator
+  if (modFreq!=0){
+     if ((micros() - startTime) >= modFreq){
+      if (modFlip){
+        updateFreq(currentFreq);
+      }else{
+        updateFreq(currentFreq+modRate);
+      }
+      modFlip = (!modFlip);
+      modFreqChanged = true; 
+      startTime = micros();
+    }
+  }else{
+    // ensures that after modulation is disabled the frequency returns back to 
+    // normal
+    if (modFreqChanged){
+      updateFreq(currentFreq);
+      modFreqChanged = false;
+    }
+  }
+  
+}
+
+
 void receiveEvent(int numBytes) {
-  // We will always recive at least two bytes - at most three
-  /*
-   * |------------------------------------------------------------------|
-   * |                   The 'FIRST Byte' - CTRL byte                   |
-   * |------------------------------------------------------------------|
-   * |   0000   |     0      |       0      |      0     |      0       |
-   * |----------|------------|--------------|---------------------------|
-   * | Not used | Crash Mode |  Crash Mode  | Drive Spin | Drive Enable |
-   * |------------------------------------------------------------------| 
-   * 
-   *  Crash mode - the two crash mode bits represent which crash mode the
-   *  drive will use. Two bit combined give four possible states:
-   *    MSB LSB
-   *     0   0  - Crash prevention OFF
-   *     0   1  - Crash prevention ON (BOW Mode)
-   *     1   0  - Crash prevention ON (FLIP Mode)
-   *     1   1  - Not used (results in crash prevention mode off if set)
-   *     
-   *     BOW mode: The drive will step until end of travel then flip
-   *     direction (like a violin bow changing direction at the end of a
-   *     bow stroke)
-   *     
-   *     FLIP mode: THe drive will flip direction after every step/pulse
-   *  
-   *  Drive Spin - if the bit is 1, the SPIN_PIN is pulled HIGH. 0 
-   *  SPIN_PIN is pulled LOW. This is to turn on/off disc spin.
-   *  
-   *  Drive Enable - if the bit is high then the drive select/enable 
-   *  (ENABLE_PIN) pin is pulled LOW (because the drives are active low) 
-   *  and the drive is selected/enabled. If 0, then then the ENABLE_PIN
-   *  is pulled HIGH and the drive is de-selected/disabled.
-   */
-  //Get the 'FIRST Byte' it's the CTRL register write values (see above)
-  CTRL = Wire.read(); //Store CTRL register
-  
-  // Since the enable pin is active low we must 'not' the result with ^(XOR) 
-  digitalWrite(ENABLE_PIN, ((CTRL & CTRL_ENABLE_bm) ^ 1));
-  // Shift the SPIN bit over by one and active low we must 'not' the result with ^(XOR) 
-  digitalWrite(SPIN_PIN,((CTRL & CTRL_SPIN_bm) >> 1) ^1);    
-  
-  // Note Crash mode is handled in the ISR(TCA0_OVF_vector) function but, this is how
-  // We handle it: Shift the Crash bit over by 2 
-  // ((CTRL & CTRL_CRASH_bm) >> 2) == CRASH_MODE
+  // The first byte is the number of the register that the master wants to write
+  // to
+  byte regNumber = Wire.read(); 
 
-  /*  |----------------------------------------------------------------|
-   *  |      The 'SECOND Byte' - the number of bytes to follow         |
-   *  |----------------------------------------------------------------| 
-   */ 
+  if (regNumber == CTRL_REG){
+    // There should only be one byte to read (for the CTRL register). If not do 
+    // nothing
+    if (Wire.read() == 1){
+      byte CTRL = Wire.read();
 
-  /* 
-   * That is, the 'SECOND Byte's value is the number of bytes that will follow the 
-   * 'SECOND Byte'. If we are to recieve two bytes after the 'SECOND Byte', then those 
-   * two bytes represent the TOP value that should be used for pulse generation. If the 
-   * 'SECOND Byte's value is <0 or >2 then we do nothing.
-   */
-   
-  // 'SECOND Byte's value is 2, we need to use the next two bits as the TOP value
-  if(Wire.read() == 2){
-    // The first of the bytes following the 'SECOND Byte' is the upper 8 bits
-    // of the 16 bit TOP value. The next byte is the lower 8 bits of the TOP value.
-    // So we shift the upper bytes, then OR it with the lower byte.
-    TOP = (Wire.read()<< 8) | Wire.read();
-    // Update the timer's max count value with the new TOP
-    TCA0.SINGLE.PER = TOP;
-    // Compare two sets the pulse width. According the floppy drive documentation the 
-    // Pulse width should be ~0.8us to 3ms. 
-    TCA0.SINGLE.CMP2 = TOP - STEP_PULSE_WIDTH;
+      // Should act on the the enable bit? 
+      if (CTRL & CTRL_EN_MASK){        
+        // Immediately update the enable pin
+        // Since the enable pin is active low we must 'not' the result with 
+        // ^(XOR)
+        digitalWrite(ENABLE_PIN, ((CTRL & CTRL_EN) ^ 1));  
+      }
+
+      // Should act on the the spin bit? 
+      if (CTRL & CTRL_SPIN_MASK){
+        // Immediately update the spin pin
+        // Shift the SPIN bit over by one and active low we must 'not' the 
+        // result with ^(XOR)
+        digitalWrite(SPIN_PIN, ((CTRL & CTRL_SPIN) >> 1) ^ 1); 
+        
+      }
+
+      // Should act on the the bow bit? 
+      if (CTRL & CTRL_BOW_MASK){
+        // Set the bow state
+        bow = bool((CTRL & CTRL_BOW) >> 2);
+      }
+    }    
+    
+  }
+  else if (regNumber == FREQ_REG){
+    // There should be 4 bytes to read (for the frequency register). If not do 
+    // nothing
+    if (Wire.read() == 4){
+      //Read the bytes and store them in commandFreq
+      commandedFreq.bytes[0] = Wire.read();
+      commandedFreq.bytes[1] = Wire.read();
+      commandedFreq.bytes[2] = Wire.read();
+      commandedFreq.bytes[3] = Wire.read();
+    }
+    
+  }
+  else if (regNumber == MOD_RATE_REG){
+     // There should only be one byte to read (for the mod rate register). If 
+     // not do nothing
+     if (Wire.read() == 1){
+        byte proposedRate = Wire.read();
+        //Don't let modRate be zero - it won't sound like modulation if == 0
+        if (proposedRate != 0){
+          modRate = proposedRate;
+        }
+     }
+  }
+  else if (regNumber == MOD_FREQ_REG){
+     // There should only be one byte to read (for the mod freq register). If 
+     // not do nothing
+     if (Wire.read() == 1){
+        byte proposedFreq = Wire.read();
+        //Start/Restart the modulation
+        if (proposedFreq == 0){
+          modFreq = 0;
+        }
+        else{
+          modFreq = 1000000 / (2*proposedFreq);
+          startTime = micros();
+        }
+     }
+    
+  }else{
+    //Do nothing
   }
 
   //If there are any remaining bytes just read them and do nothing.
@@ -211,33 +204,38 @@ void receiveEvent(int numBytes) {
 }
 
 
+void requestEvent(){
+  // The first byte is the number of the register that the master wants to read 
+  // from
+  byte regNumber = Wire.read();
+  Wire.write(DEVICE_TYPE);
+  //Only reply when the master wants to read from register 4
+  if (regNumber == DEVICE_TYPE_REG){
+    Wire.write(DEVICE_TYPE);    
+  }
+}
+
+
 //This interrupt is fired when a step pulse is generated
 ISR(TCA0_OVF_vect) {
-  //On a step pulse increment the step count
-  //We do this every time regardless of CRASH mode just so we're doing roughly
-  //the same mem read/writes regardless of crash mode. it also helps in
-  //Transitioning between crash modes
+  // On a step pulse increment the step count
+  // We do this every time regardless of CRASH mode just so we're doing roughly
+  // the same mem read/writes regardless of crash mode. it also helps in
+  // Transitioning between crash modes
   stepCount++; 
 
   // If we have reached the step limit we need to reset the step count
   if(stepCount >= STEP_LIMIT){
     stepCount = 0;
-    // If the reached the step limit and we;re CRASH bow mode is on, then we need 
+    // If we reached the step limit and bow mode is on then we need 
     // to flip the drive step direction 
-    // (see receiveEvent(int numBytes) - The 'FIRST Byte')
-    if (((CTRL & CTRL_CRASH_bm) >> 2) == CRASH_BOW){
-      changeDirection(); //Change the direction of the drive
-    }   
+    if (bow){changeDirection();}        
   }
 
-  //If the drive is in CRASH flip mode we need to just change the direction step
-  if (((CTRL & CTRL_CRASH_bm) >> 2) == CRASH_FLIP){
-    changeDirection();
-  }   
-  
-  
-  // Always remember to clear the interrupt flags, otherwise the interrupt will fire 
-  // continually!
+  //If the drive not in bow mode just change the direction
+  if (!bow){changeDirection();}   
+
+  //Always clear the interupt flags
   TCA0.SINGLE.INTFLAGS  = TCA_SINGLE_OVF_bm; 
 }
 
@@ -248,5 +246,32 @@ void changeDirection(){
   digitalWrite(DIR_PIN, dir); //Write the direction 
 }
 
-// Nothing to see here
-void loop() {}
+
+/* Sets up the TCA0 to generate the correct pulses so that the drive 
+ * plays the frequency specified in by the freq parameter.
+ * 
+ *  Returns true if the freq given resulted in a valid TCA0 configuration.
+ *    Meaning the frequency was successfully changed and will play.
+ *  Returns false if the freq given resulted in an invalid TCA0 configuration.
+ *    Meaning the frequency was not updated and no change will occur. 
+*/ 
+bool updateFreq(float freq){
+  // Calculate the proposed top for the timer must be 16 bit value
+  unsigned int TOP = round(ALPHA/freq);
+  
+  // Check to see if the top is valid (will not break the step pulse width or 
+  // be larger than a 16 bit value)
+  if (TOP < (STEP_PULSE_WIDTH+1) || TOP > 65535){return false;}
+
+  // Don't change the top if we're already set to that value. But return true
+  // to indicate that the frequency is playing
+  if (TOP == TCA0.SINGLE.PER){return true;}
+  
+  // Update the timer's max count value with the new TOP (Changes the frequency)
+  TCA0.SINGLE.PER = TOP;
+  // Compare two sets the pulse width. According the floppy drive documentation 
+  // the pulse width should be ~0.8us to 3ms. 
+  TCA0.SINGLE.CMP2 = TOP - STEP_PULSE_WIDTH;
+  // TCA0 setup correctly 
+  return true;
+}
