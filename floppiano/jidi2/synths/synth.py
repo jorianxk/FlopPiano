@@ -223,12 +223,12 @@ class Synth(MIDIParser, MIDIListener, ABC):
         if mono_voices<0 or mono_voices>127:
             raise ValueError('mono_voices must be [0,127]')
         # disable polyphony (make monophonic)
-        self.polyphonic = False  
+        self._polyphonic = False  
         self._mono_voices = mono_voices
     
     def poly_mode(self) -> None:
         # enable polyphony (make polyphonic)
-        self.polyphonic = True 
+        self._polyphonic = True 
 
     def parse(self, messages:list[Message], source = None) -> list[Message]:
         # process all the messages from the messages
@@ -309,13 +309,13 @@ class Synth(MIDIParser, MIDIListener, ABC):
     def on_note_on(self, msg: Message, source) -> None:
         # If the note_on function did not handle the message, pass the message
         # along to the output
-        if (self.note_on(msg.note, msg.velocity, source)):
+        if not (self.note_on(msg.note, msg.velocity, source)):
             self._output.append(msg)
    
     def on_note_off(self, msg: Message, source) -> None:
         # If the note_on function did not handle the message, pass the message
         # along to the output
-        if (self.note_off(msg.note, msg.velocity, source)):
+        if not (self.note_off(msg.note, msg.velocity, source)):
             self._output.append(msg)
 
     def on_control_change(self, msg: Message, source) -> None:
