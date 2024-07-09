@@ -72,6 +72,7 @@ class Drives():
         if address != 0:
             if address<0x8 or address>0x77:
                 raise ValueError(
+                    f'Invalid drive address: {address}. '
                     f'address must be 0 or the range [{0x8},{0x77}]')
 
     @staticmethod

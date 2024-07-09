@@ -1,9 +1,20 @@
+from dataclasses import dataclass
 from .synth import Synth, PITCH_BEND_RANGES
 from ..midi import MIDIUtil
 from ..devices import Drives
 
-#TODO what about bus errors on 'Drives' calls?
+@dataclass
+class Voice():
+    """
+        A simple data class for a DriveSynth to store active and available
+        Voice information. 
+    """
+    address:int = None
+    note:int = None
+    source:str = None
 
+
+#TODO what about bus errors on 'Drives' calls?
 class DriveSynth(Synth):
 
     def __init__(
@@ -26,10 +37,11 @@ class DriveSynth(Synth):
         self.bow = bow
         self.spin = spin
 
-        self._drives = drive_addresses
-        self._available = self._drives.copy()
-        self._active = []
-
+        self._drive_addresses = drive_addresses
+        self._available:list[Voice] = DriveSynth._gen_voices(
+            self._drive_addresses)        
+        self._active:list[Voice] = []
+    
         # Setup property changed callbacks/observers
         self.attach_observer('bow', self._bow_changed)
         self.attach_observer('spin', self._spin_changed)
@@ -53,7 +65,7 @@ class DriveSynth(Synth):
         #clear the active stack
         self._active = []
         #reset the available stack
-        self._available = self._drives.copy()
+        self._available = DriveSynth._gen_voices(self._drive_addresses)
         self.logger.info('drive synth reset')
 
     #--------------------Overridden from Synth---------------------------------#
@@ -99,8 +111,9 @@ class DriveSynth(Synth):
 
     def _muted_changed(self, muted:bool) -> None:
         self.logger.info(f'_muted_changed: {muted}')
-        # Update all drives' enable states
-        Drives.enable(0, not muted)
+        # Update active drives' enable states so they are muted/not muted
+        for voice in self._active:
+            Drives.enable(voice.address, not muted)
     
     def _poly_voices_changed(self,  poly_voices:int) -> None:
         # If currently polyphonic a reset is needed to reflect the changes. 
@@ -162,4 +175,14 @@ class DriveSynth(Synth):
     @spin.setter
     def spin(self, spin:bool):
         self._spin = bool(spin)
- 
+
+    #-----------------------Static Private functions---------------------------#
+    
+    @staticmethod
+    def _gen_voices(addresses:list[int]) -> list[Voice]:
+        voices = []
+        for address in addresses:
+            Drives._check_address(address)
+            voices.append(Voice(address))
+        return voices
+    

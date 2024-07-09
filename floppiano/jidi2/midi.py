@@ -2,7 +2,7 @@ import math
 from mido import Message
 
 class MIDIUtil():
-    """_summary_
+    """
         A helper class for all things MIDI
     """
 
@@ -143,7 +143,7 @@ class MIDIUtil():
 
     @staticmethod
     def freq2n(frequency:float) -> float:
-        """_summary_
+        """
             Given an frequency, returns the corresponding 'n' value.
             See: https://en.wikipedia.org/wiki/Piano_key_frequencies
             
@@ -158,7 +158,7 @@ class MIDIUtil():
     
     @staticmethod
     def n2freq(n:float) -> float:
-        """_summary_
+        """
             Given a 'n' value, returns corresponding the frequency.
             See: https://en.wikipedia.org/wiki/Piano_key_frequencies
         Args:
@@ -174,7 +174,7 @@ class MIDIUtil():
 
     @staticmethod
     def MIDI2Freq(note:int) -> float:
-        """_summary_
+        """
             Given a MIDI note number, returns the frequency of the note
         Args:
             note (int): A MIDI note number
@@ -192,7 +192,7 @@ class MIDIUtil():
 
     @staticmethod 
     def MIDI2notation(note:int) -> str:
-        """_summary_
+        """
             Given a MIDI note number, returns the musical scientific name for 
             the note.
         Args:
@@ -212,7 +212,7 @@ class MIDIUtil():
     
     @staticmethod
     def freq2MIDI(frequency:float) -> int:
-        """_summary_
+        """
             Given a frequency, returns a the corresponding MIDI note.
         Args:
             frequency (float): The frequency in Hz
@@ -233,7 +233,7 @@ class MIDIUtil():
 
     @staticmethod
     def isValidNote(note:int) -> bool:
-        """_summary_
+        """
             Given an integer, returns True if that integer is a MIDI note.
             i.e. in the range [0,127]
         Args:
@@ -248,7 +248,7 @@ class MIDIUtil():
 
     @staticmethod
     def isValidChannel(channel:int) -> bool:
-        """_summary_
+        """
             Given an integer, returns True if that integer is a MIDI channel.
             i.e. in the range [0,15] (Note: zero Indexed because of mido)
         Args:
@@ -263,7 +263,7 @@ class MIDIUtil():
     
     @staticmethod
     def isValidPitch(pitch:int) -> bool:
-        """_summary_
+        """
             Given an integer, returns True if that integer is a MIDI pitch.
             i.e. in the range [-8192,8191] 
         Args:
@@ -278,7 +278,7 @@ class MIDIUtil():
     
     @staticmethod
     def isValidModulation(modulation:int) -> bool:
-        """_summary_
+        """
             Given an integer, returns True if that integer is a MIDI modulation.
             i.e. in the range [0,127] 
         Args:
@@ -291,7 +291,7 @@ class MIDIUtil():
 
     @staticmethod
     def hasChannel(msg:Message) -> bool:
-        """_summary_
+        """
             Given a mido.Message returns true if that message has the 'channel'
             attribute
         Args:
@@ -308,7 +308,7 @@ class MIDIUtil():
 
     @staticmethod
     def integer_map_range(x, in_min, in_max, out_min, out_max) -> int:
-        """_summary_
+        """
             A function to map a number in one range, to a another number in 
             another range - preforms integer division. 
             See:https://www.arduino.cc/reference/en/language/functions/math/map/
@@ -327,7 +327,7 @@ class MIDIUtil():
 class MIDIListener():
 
     def __init__(self, input_channel:int = 0) -> None:
-        """_summary_
+        """
             A class that should be inherited from. A MIDIListener has methods 
             that are invoked when a corresponding MIDIParser parses a message            
         Args:
@@ -338,7 +338,7 @@ class MIDIListener():
     
     @property
     def input_channel(self) -> int:
-        """_summary_
+        """
             The MIDI channel the listener is sensitive to.
         Returns:
             int: The MIDI channel the listener is sensitive to.
@@ -347,7 +347,7 @@ class MIDIListener():
     
     @input_channel.setter
     def input_channel(self, channel:int) -> None:
-        """_summary_
+        """
             Set's the input channel of the listener
         Args:
             channel (int): The channel to be set 
@@ -360,7 +360,7 @@ class MIDIListener():
         self._input_channel = channel
 
     def on_note_on(self, msg:Message, source) -> None:
-        """_summary_
+        """
             Invoked by a MIDIParser when a 'note on' message is received
         Args:
             msg (Message): the mido.Message received
@@ -370,7 +370,7 @@ class MIDIListener():
         pass
 
     def on_note_off(self, msg:Message, source) -> None:
-        """_summary_
+        """
             Invoked by a MIDIParser when a 'note off' message is received
         Args:
             msg (Message): the mido.Message received
@@ -380,7 +380,7 @@ class MIDIListener():
         pass
     
     def on_control_change(self, msg:Message, source) -> None:
-        """_summary_
+        """
             Invoked by a MIDIParser when a 'control change' message is received
         Args:
             msg (Message): the mido.Message received
@@ -390,7 +390,7 @@ class MIDIListener():
         pass
     
     def on_pitchwheel(self, msg:Message, source) -> None:
-        """_summary_
+        """
             Invoked by a MIDIParser when a 'pitchwheel' message is received
         Args:
             msg (Message): the mido.Message received
@@ -400,7 +400,7 @@ class MIDIListener():
         pass
 
     def on_sysex(self, msg:Message, source) -> None:
-        """_summary_
+        """
             Invoked by a MIDIParser when a 'sysex' message is received
         Args:
             msg (Message): the mido.Message received
@@ -412,7 +412,7 @@ class MIDIListener():
 class MIDIParser():
     
     def __init__(self, listener:MIDIListener) -> None:
-        """_summary_
+        """
             A class to parse (or switch, or invoke) MIDIListener callbacks
             when a mido MIDI Message is parsed via MIDIListener.parse()
         Args:
@@ -421,7 +421,7 @@ class MIDIParser():
         self.listener = listener
     
     def parse(self, msg:Message, source = None) -> None:
-        """_summary_
+        """
             Parses the MIDI mido Message. If the message has a valid MIDI 
             channel and that channel is the MIDIListeners channel the 
             corresponding on_<message type>() method in the listener will be 
