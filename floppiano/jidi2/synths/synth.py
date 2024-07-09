@@ -1,8 +1,24 @@
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Callable
 from mido import Message
 from ..midi import MIDIUtil, MIDIListener, MIDIParser
-from typing import Any, Callable
+
+# Constants for Synths #
+OUTPUT_MODES = ['off', 'rollover']
+
+PITCH_BEND_RANGES = {
+    #Number indicates steps. 1/2 steps = 1 note
+    'half':0.5,     #  1 note(s) or   1/2 step(s)
+    'whole':1,      #  2 note(s) or     1 step(s)
+    'minor3rd':1.5, #  3 note(s) or 1 1/2 step(s) 
+    'major3rd':2,   #  4 note(s) or     2 step(s)
+    'fourth':2.5,   #  5 note(s) or 2 1/2 step(s)
+    'fifth':3.5,    #  7 note(s) or 3 1/2 step(s)
+    'octave':6      # 12 note(s) or     6 step(s)
+    }
+
+MODULATION_WAVES = ['sine', 'square', 'saw', 'triangle']
 
 class CommandMap(dict):
     """_summary_
@@ -102,23 +118,9 @@ class CommandMap(dict):
                 names.append(item)
         return names
 
-
-OUTPUT_MODES = ['off', 'rollover']
-PITCH_BEND_RANGES = {
-    #Number indicates steps. 1/2 steps = 1 note
-    'half':0.5,     #  1 note(s) or   1/2 step(s)
-    'whole':1,      #  2 note(s) or     1 step(s)
-    'minor3rd':1.5, #  3 note(s) or 1 1/2 step(s) 
-    'major3rd':2,   #  4 note(s) or     2 step(s)
-    'fourth':2.5,   #  5 note(s) or 2 1/2 step(s)
-    'fifth':3.5,    #  7 note(s) or 3 1/2 step(s)
-    'octave':6      # 12 note(s) or     6 step(s)
-    }
-MODULATION_WAVES = ['sine', 'square', 'saw', 'triangle']
-
-
-
+# TODO: Docstrings
 class Synth(MIDIParser, MIDIListener, ABC):
+
     def __init__(
         self,
         input_channel:int = 0,
@@ -136,8 +138,8 @@ class Synth(MIDIParser, MIDIListener, ABC):
         control_change_map:CommandMap = None,
         sysex_map:CommandMap = None) -> None:
         
-        #Set up this before, so that inherited properties work with observers        
-        self._attr_observers = {}
+        #Set up this before so that inherited properties work with observers        
+        self._attr_observers:dict[str, list[callable]] = {}
         self.logger = logging.getLogger(__name__) 
 
         MIDIListener.__init__(self, input_channel)
@@ -159,16 +161,15 @@ class Synth(MIDIParser, MIDIListener, ABC):
 
         # Polyphony attributes #
         # private set via mono_mode() and poly_mode()
-        self._polyphonic = polyphonic 
+        self._polyphonic:bool = polyphonic 
         # private set via mono_mode()
-        self._mono_voices = 0
+        self._mono_voices:int = 0
         # public because this is not supported via MIDI control change 127 
         # i.e. it's custom       
         self.poly_voices = poly_voices
 
         # MIDI message attribute mappings #
         #See https://nickfever.com/music/midi-cc-list for details
-
         if sysex_map is None:
             sysex_map = CommandMap()
             sysex_map[0] = 'input_channel'  # Custom
@@ -189,9 +190,10 @@ class Synth(MIDIParser, MIDIListener, ABC):
             control_change_map[127] = 'poly_mode'        # Standard MIDI
         self.control_change_map = control_change_map
 
+        # A list of messages that should be output on parse()
         self._output:list[Message] = []
     
-    #------------------------------Methods-------------------------------------#
+    #--------------------------Force Inherit-----------------------------------#
 
     @abstractmethod
     def note_on(self, note:int, velocity:int, source) -> bool:
@@ -206,81 +208,80 @@ class Synth(MIDIParser, MIDIListener, ABC):
         return False
     
 
-    @abstractmethod
+    
+    #--------------------------Public Functions--------------------------------#
+    
     def reset(self) -> None:
-        #On a reset all things should be set back to 
-        #and by MIDI there is no mute release so, it must be reset
+        #On a reset all things should be set back to default. In MIDI there is 
+        # no 'unmute'. On reset make sure the Synth is not muted
         self.muted = False
-        """
-        """
 
     def mute(self) -> None:
         self.muted = True
 
-    def mono_mode(self, mono_voices:int=0):
+    def mono_mode(self, mono_voices:int=0) -> None:
         if mono_voices<0 or mono_voices>127:
             raise ValueError('mono_voices must be [0,127]')
-        self.polyphonic = False  #disable polyphony
+        # disable polyphony (make monophonic)
+        self.polyphonic = False  
         self._mono_voices = mono_voices
     
-    def poly_mode(self):
-        self.polyphonic = True #enable polyphony
+    def poly_mode(self) -> None:
+        # enable polyphony (make polyphonic)
+        self.polyphonic = True 
 
     def parse(self, messages:list[Message], source = None) -> list[Message]:
         # process all the messages from the messages
         for msg in messages: MIDIParser.parse(self, msg, source)        
-        # Flush the output
+        # Flush the output and return any rolled over messages
         return self._flush_output()
+    
+    def attach_observer(self, attr_name:str, observer:Callable) -> None:
+        if attr_name in self._attr_observers.keys():
+            # Already in the dict. Add a the observer to the list
+            self._attr_observers[attr_name].append(observer)
+        else:
+            # Instantiate the list of observers for the attribute
+            self._attr_observers[attr_name] = [observer]
+    
+    def detach_observer(self, attr_name:str, observer:Callable) -> None:
+        # Remove the observer for the the attribute
+        self._attr_observers[attr_name].remove(observer)
+   
+    #-------------------------Private Functions--------------------------------#
 
-    def _flush_output(self)->list[Message]:
+    def _flush_output(self) -> list[Message]:
         # Ready the outputs
         output_buffer:list[Message] = [] 
-    
         if self.output_mode == OUTPUT_MODES.index('off'):
             # output buffer is already empty, nothing to do
             pass
         elif self.output_mode == OUTPUT_MODES.index('rollover'): 
             output_buffer = self._output.copy()
         else:
-            # A new output mode has probably been added - we don't know what to 
-            # do with it so don't do anything
-            pass
-            
-        # clear the the output
+            # A new output mode has probably been added. So don't do anything
+            pass            
+        # clear the the output, so it can be reused
         self._output = []
-
         # ensure all outgoing messages are on self.output_channel
         for msg in output_buffer:
             if MIDIUtil.hasChannel(msg):
                 msg.channel = self.output_channel
-
+        # return the output buffer as the output
         return output_buffer
-    
-    def attach_observer(self, attr_name:str, observer:Callable):
-        if attr_name in self._attr_observers.keys():
-            #already in the dict
-            self._attr_observers[attr_name].append(observer)
-        else:
-            self._attr_observers[attr_name] = [observer]
-    
-    def detach_observer(self, attr_name:str, observer:Callable):
-        #Don't attempt to except and errors
-        self._attr_observers[attr_name].remove(observer)
-
 
     def __setattr__(self, name:str, value:Any) -> None:
+        # Set the attribute
         object.__setattr__(self, name,value)
-
-        #Fire the observer
+        #If an observer exists for the attribute, then call it
         if name in self._attr_observers.keys(): 
             for observer in self._attr_observers[name]:
                 observer(value)
 
-
     def _map_attr(self, attr_name:str, value:Any = None) -> None:
         try:
             attr = self.__getattribute__(attr_name)
-            # Are we setting a property or calling a function?
+            # Setting a property or calling a function?
             if callable(attr):
                 try: #if the function takes an argument pass it 
                     attr(value)
@@ -301,20 +302,19 @@ class Synth(MIDIParser, MIDIListener, ABC):
         except ValueError as ve:
             self.logger.warning(f'Bad value while mapping {attr_name}: {ve}')
         except Exception as e:
-            self.logger.error(f'Error while mapping {attr_name}: {e}')
-    
+            self.logger.error(f'Error while mapping {attr_name}: {e}')    
 
-    #-------------------Overridden from MIDIListener---------------------------#
+    #------------Overridden from MIDIListener MIDI Handling--------------------#
 
     def on_note_on(self, msg: Message, source) -> None:
-        # if the note_on function did not handle the message we need to pass it
-        # along
+        # If the note_on function did not handle the message, pass the message
+        # along to the output
         if (self.note_on(msg.note, msg.velocity, source)):
             self._output.append(msg)
    
     def on_note_off(self, msg: Message, source) -> None:
-        # if the note_off function did not handle the message we need to pass it
-        # along
+        # If the note_on function did not handle the message, pass the message
+        # along to the output
         if (self.note_off(msg.note, msg.velocity, source)):
             self._output.append(msg)
 
@@ -347,7 +347,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
         # pass along all sysex messages
         self._output.append(msg)
 
-    #--------------------Properties--------------------------------------------#
+    #------------------------------Properties----------------------------------#
 
     @property
     def output_channel(self) -> int:
@@ -410,8 +410,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
     @pitch_bend.setter
     def pitch_bend(self, pitch_bend:int) -> None:
         if not MIDIUtil.isValidPitch(pitch_bend):
-            raise ValueError('Not a valid pitch bend')
-           
+            raise ValueError('Not a valid pitch bend')           
         self._pitch_bend = pitch_bend
     
     @property
@@ -448,8 +447,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
     @modulation.setter
     def modulation(self, modulation:int) -> None:
         if not MIDIUtil.isValidModulation(modulation):
-            raise ValueError('Not a not valid modulation')
-         
+            raise ValueError('Not a not valid modulation')         
         self._modulation = modulation
 
     @property
@@ -472,5 +470,3 @@ class Synth(MIDIParser, MIDIListener, ABC):
         if poly_voices <0 or poly_voices>127:
             raise ValueError("poly_voices must be [0,127]")
         self._poly_voices = poly_voices
-
-    
