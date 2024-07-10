@@ -3,7 +3,9 @@ from UI.ascii.tabs import TabGroup, Tab, TabHeader
 from UI.content import (
     splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
 
-from jidi2.synths import DriveSynth
+
+import bus
+from synths import DriveSynth
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.exceptions import ResizeScreenError, StopApplication
@@ -13,7 +15,12 @@ import time
 import logging
 import os
 
-VERSION = 0.0
+
+bus.default_bus(bus.DebugBus())
+
+
+
+VERSION = 6.9
 # Add a frame counter
 TabHeader._FRAME_RATE_DEBUG = True
 
@@ -58,7 +65,9 @@ class FlopPiano(App):
   
     def run(self):
         #setup synth
-        self._synth = DriveSynth()
+        # TODO: fix synth setup
+        drive_addrs = [i for i in range(8,18)]
+        self._synth = DriveSynth(drive_addrs)
         #self._find_assets()
         #self._config_ports()
 
@@ -195,7 +204,7 @@ if __name__ == '__main__':
     FlopPiano(
         theme='default',
         handle_resize=False,
-        splash_start=False, 
-        screen_timeout=10,
+        splash_start=True, 
+        screen_timeout=30,
         asset_dir='./assets').run()
     

@@ -1,5 +1,5 @@
 #from mido import Message
-from ..synths import DriveSynth
+from synths import DriveSynth
 import mido
 import logging
 

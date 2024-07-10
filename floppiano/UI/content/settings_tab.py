@@ -4,7 +4,7 @@ from asciimatics.widgets.utilities import THEMES
 from ..ascii.tabs import Tab
 from ..ascii.widgets import DynamicFrame, DropDown
 
-from jidi2.synths import OUTPUT_MODES, DriveSynth
+from synths import OUTPUT_MODES, DriveSynth
 
 
 class SettingsTab(Tab):

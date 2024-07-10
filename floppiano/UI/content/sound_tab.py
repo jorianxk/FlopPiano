@@ -3,7 +3,7 @@ from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
 from ..ascii.tabs import Tab
 from ..ascii.widgets import DynamicFrame, DropDown
 
-from jidi2.synths import (PITCH_BEND_RANGES, DriveSynth)
+from synths import (PITCH_BEND_RANGES, DriveSynth)
 
 
 # self.add_effect(
