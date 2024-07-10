@@ -1,4 +1,4 @@
-from jidi2.synths import DriveSynth
+from ..synths import DriveSynth
 import mido
 import logging
 import time

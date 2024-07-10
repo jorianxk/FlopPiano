@@ -1,7 +1,7 @@
 from typing import Any
 from .synth import Synth, PITCH_BEND_RANGES
-from ..midi import MIDIUtil
-from ..devices import Drives
+from midi import MIDIUtil
+from devices import Drives
 
 #TODO what about bus errors on 'Drives' calls?
 

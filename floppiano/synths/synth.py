@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable
 from mido import Message
-from ..midi import MIDIUtil, MIDIListener, MIDIParser
+from midi import MIDIUtil, MIDIListener, MIDIParser
 
 # Constants for Synths #
 OUTPUT_MODES = ['off', 'rollover']

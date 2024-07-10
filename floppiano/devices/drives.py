@@ -1,5 +1,4 @@
-from jidi2 import bus
-from jidi2.bus import BusException
+import bus
 import struct
 
 #TODO: Doc strings
@@ -59,7 +58,7 @@ class Drives():
                 response = bus.read(address, DEVICE_TYPE_REG, 1)[0]
 
                 if response == DEVICE_TYPE: drive_addresses.append(address)
-            except BusException:
+            except bus.BusException:
                 pass
             except IndexError:
                 pass

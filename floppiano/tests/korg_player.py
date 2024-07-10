@@ -1,9 +1,7 @@
-from jidi.voices import DriveVoice
-from jidi.synths import DriveSynth
+#from mido import Message
+from ..synths import DriveSynth
 import mido
 import logging
-
-
 
 
 usb_interface = None
@@ -18,10 +16,12 @@ if usb_interface is None: raise Exception("Could not find MIDI USB Interface!")
 logging.basicConfig(level=logging.DEBUG)
 
 
-voices = [DriveVoice(i) for i in range(8,18)]
+drive_addrs = [i for i in range(8,18)]
 
 
-synth = DriveSynth(voices)
+synth = DriveSynth(drive_addrs)
+#synth.polyphonic = False
+
 
 print(synth.pitch_bend_range)
 print("Begin Playing! [ctrl+c to exit]")
@@ -29,11 +29,8 @@ print("Begin Playing! [ctrl+c to exit]")
 try:
     with mido.open_input(usb_interface) as inport:
             for msg in inport:
-                synth.update([msg])
+                synth.parse([msg])
 except KeyboardInterrupt:
     print("Exiting..")
 finally:
     synth.reset()
-
-
-
