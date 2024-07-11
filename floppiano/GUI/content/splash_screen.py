@@ -5,7 +5,7 @@ from asciimatics.effects import Print
 from asciimatics.particles import ShootScreen, Explosion
 from random import randint
 
-from floppiano.UI.util import time2frames
+from floppiano.GUI.util import time2frames
 
 
 def jb_splash(screen:Screen) -> Scene:    

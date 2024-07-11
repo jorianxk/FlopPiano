@@ -1,6 +1,6 @@
 from enum import IntEnum
-import jidi2.bus  as bus
-from jidi.midi import MIDIUtil
+import floppiano.bus  as bus
+from floppiano.midi import MIDIUtil
 
 class Keys(IntEnum):
         KEY_1       = 0

@@ -5,7 +5,7 @@ from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
 
-from floppiano.UI.app import App
+from floppiano.GUI.app import App
 
 #TODO update docstrings for Tab and TabHeader for App() changes
 class TabHeader(Effect):

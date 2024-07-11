@@ -1,8 +1,10 @@
 import floppiano.bus as bus
 
-from floppiano.UI.app import App
-from floppiano.UI.tabs import TabGroup, Tab, TabHeader
-from floppiano.UI.content import (
+
+from floppiano import VERSION
+from floppiano.GUI.app import App
+from floppiano.GUI.tabs import TabGroup, Tab, TabHeader
+from floppiano.GUI.content import (
     splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
 
@@ -20,7 +22,7 @@ bus.default_bus(bus.DebugBus())
 
 
 
-VERSION = 6.9
+
 # Add a frame counter
 TabHeader._FRAME_RATE_DEBUG = True
 
@@ -32,7 +34,7 @@ Tab.NEXT_TAB_KEY = Screen.KEY_F2
 Tab.PRIOR_TAB_KEY = Screen.KEY_F1
 
 
-class FlopPianoApp(App):
+class FlopPianoGUI(App):
 
     def __init__(
             self, 

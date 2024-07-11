@@ -1,1 +1,0 @@
-from floppiano.UI.floppiano_app import FlopPianoApp

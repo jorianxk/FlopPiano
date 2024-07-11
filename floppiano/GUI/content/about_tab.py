@@ -1,8 +1,8 @@
 from asciimatics.widgets import Layout, Label, TextBox
 from asciimatics.widgets.utilities import THEMES
 
-from floppiano.UI.tabs import Tab
-from floppiano.UI.widgets import DynamicFrame
+from floppiano.GUI.tabs import Tab
+from floppiano.GUI.widgets import DynamicFrame
 
 class AboutTab(Tab):
 

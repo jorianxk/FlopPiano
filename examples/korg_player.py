@@ -1,5 +1,5 @@
 #from mido import Message
-from ..floppiano.synths import DriveSynth
+from floppiano.synths import DriveSynth
 import mido
 import logging
 

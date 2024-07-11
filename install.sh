@@ -18,6 +18,11 @@ source "$env_dir/bin/activate"
 echo "$install_str Done."
 
 # Install dependencies 
+
+echo "$install_str Installing dependency smbus2..."
+pip install smbus2
+echo "$install_str Done."
+
 echo "$install_str Installing dependency mido[ports-rtmidi]..."
 pip install mido[ports-rtmidi]
 echo "$install_str Done."
