@@ -1,8 +1,8 @@
 from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
 from asciimatics.widgets.utilities import THEMES
 
-from floppiano.UI.ascii.tabs import Tab
-from floppiano.UI.ascii.widgets import DynamicFrame, DropDown
+from floppiano.UI.tabs import Tab
+from floppiano.UI.widgets import DynamicFrame, DropDown
 
 from floppiano.synths import OUTPUT_MODES, DriveSynth
 

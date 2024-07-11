@@ -1,3 +1,3 @@
-from .synth import (
+from floppiano.synths.synth import (
     Synth, CommandMap, OUTPUT_MODES, PITCH_BEND_RANGES, MODULATION_WAVES)
-from .drive_synth import DriveSynth
+from floppiano.synths.drive_synth import DriveSynth

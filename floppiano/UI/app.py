@@ -4,9 +4,8 @@ from asciimatics.scene import Scene
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.exceptions import ResizeScreenError
 from asciimatics.event import KeyboardEvent
-from .ascii.util import keyboard_event_draw, draw_now
+from floppiano.UI.util import keyboard_event_draw, draw_now
 
-from time import time
 
 
 #TODO Docstrings

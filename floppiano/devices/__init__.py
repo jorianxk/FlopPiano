@@ -1,1 +1,1 @@
-from .drives import Drives
+from floppiano.devices.drives import Drives
