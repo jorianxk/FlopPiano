@@ -1,11 +1,11 @@
-from UI.app import App
-from UI.ascii.tabs import TabGroup, Tab, TabHeader
-from UI.content import (
+import floppiano.bus as bus
+
+from floppiano.UI.app import App
+from floppiano.UI.ascii.tabs import TabGroup, Tab, TabHeader
+from floppiano.UI.content import (
     splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
+from floppiano.synths import DriveSynth
 
-
-import bus
-from synths import DriveSynth
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.exceptions import ResizeScreenError, StopApplication
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     FlopPiano(
         theme='default',
         handle_resize=False,
-        splash_start=True, 
+        splash_start=False, 
         screen_timeout=30,
         asset_dir='./assets').run()
     

@@ -1,4 +1,4 @@
-from ..synths import DriveSynth
+from floppiano.synths import DriveSynth
 import mido
 import logging
 import time
@@ -27,10 +27,10 @@ transpose = -12
 #test_midi_file = 'assets/Testing_MIDI/metallica-one.mid'
 #test_midi_file = 'assets/Testing_MIDI/phantom_of_the_floppera.mid'
 #test_midi_file = 'assets/Testing_MIDI/phonk.mid'
-test_midi_file = 'assets/Testing_MIDI/Sarias_Song_piano.mid'
+#test_midi_file = 'assets/Testing_MIDI/Sarias_Song_piano.mid'
 #test_midi_file = 'assets/Testing_MIDI/debussy-doctor-gradus-ad-parnassum.mid'
 #test_midi_file = 'assets/Testing_MIDI/runescape_lumbridge_piano.mid'
-#test_midi_file = 'assets/Testing_MIDI/drunken-sailor.mid'
+test_midi_file = 'assets/Testing_MIDI/drunken-sailor.mid'
 #test_midi_file = 'assets/Testing_MIDI/Sonata-c.mid'
 #test_midi_file = 'assets/Testing_MIDI/super_mario_v2.mid'
 #test_midi_file = 'assets/Testing_MIDI/super_mario.mid'
@@ -56,12 +56,12 @@ logging.basicConfig(level=logging.DEBUG)
 drive_addrs = [i for i in range(8,18)]
 
 synth = DriveSynth(drive_addrs)
-
+synth.bow  = False
 #synth.polyphonic = False
 
 print(f'Playing {test_midi_file} in 2 second [ctrl+c to stop]')
 
-time.sleep(2)
+#time.sleep(2)
 
 try:
     for msg in mido.MidiFile(test_midi_file).play():

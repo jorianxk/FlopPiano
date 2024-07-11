@@ -1,10 +1,10 @@
 from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
 from asciimatics.widgets.utilities import THEMES
 
-from ..ascii.tabs import Tab
-from ..ascii.widgets import DynamicFrame, DropDown
+from floppiano.UI.ascii.tabs import Tab
+from floppiano.UI.ascii.widgets import DynamicFrame, DropDown
 
-from synths import OUTPUT_MODES, DriveSynth
+from floppiano.synths import OUTPUT_MODES, DriveSynth
 
 
 class SettingsTab(Tab):

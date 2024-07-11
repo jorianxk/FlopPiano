@@ -1,4 +1,4 @@
-import bus
+import floppiano.bus as bus
 import struct
 
 #TODO: Doc strings

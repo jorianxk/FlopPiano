@@ -1,9 +1,9 @@
 from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
 
-from ..ascii.tabs import Tab
-from ..ascii.widgets import DynamicFrame, DropDown
+from floppiano.UI.ascii.tabs import Tab
+from floppiano.UI.ascii.widgets import DynamicFrame, DropDown
 
-from synths import (PITCH_BEND_RANGES, DriveSynth)
+from floppiano.synths import (PITCH_BEND_RANGES, DriveSynth)
 
 
 # self.add_effect(

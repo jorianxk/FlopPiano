@@ -2,8 +2,8 @@ from asciimatics.widgets import Layout, Label, PopUpDialog , FileBrowser
 
 from asciimatics.widgets import Widget
 
-from ..ascii.tabs import Tab
-from ..ascii.widgets import DynamicFrame, DropDown
+from floppiano.UI.ascii.tabs import Tab
+from floppiano.UI.ascii.widgets import DynamicFrame, DropDown
 
 import os
 
