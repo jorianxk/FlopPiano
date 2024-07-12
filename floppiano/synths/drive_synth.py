@@ -205,6 +205,18 @@ class DriveSynth(Synth):
     #--------------------Overridden from Synth---------------------------------#
 
     def mono_mode(self, mono_voices: int = 0) -> None:
+        """
+        Puts the synth in monophonic mode. If mono_voices is 0, or 
+        mono_voices is greater than the number of voices available, all the 
+        available voices will be used.
+
+        Args:
+            mono_voices (int, optional): The number of voices to used when 
+            sounding monophonically
+
+        Raises:
+            ValueError: If mono_voices is not in the range [0,127]
+        """
         # Call super to do the actual work. Overridden because a DriveSynth must
         # be reset when it's polyphony is changed
         super().mono_mode(mono_voices)
@@ -360,4 +372,7 @@ class DriveSynth(Synth):
     @spin.setter
     def spin(self, spin:bool):
         self._spin = bool(spin)
+    
+    def pop(kk):
+        pass
     

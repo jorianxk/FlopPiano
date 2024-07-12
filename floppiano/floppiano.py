@@ -2,9 +2,9 @@ import floppiano.bus as bus
 
 
 from floppiano import VERSION
-from floppiano.GUI.app import App
-from floppiano.GUI.tabs import TabGroup, Tab, TabHeader
-from floppiano.GUI.content import (
+from floppiano.UI.app import App
+from floppiano.UI.tabs import TabGroup, Tab, TabHeader
+from floppiano.UI.content import (
     splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
 
@@ -15,23 +15,8 @@ from asciimatics.widgets.utilities import THEMES
 
 import time
 import logging
+import sys
 import os
-
-
-bus.default_bus(bus.DebugBus())
-
-
-
-
-# Add a frame counter
-TabHeader._FRAME_RATE_DEBUG = True
-
-#Remove this theme - it's unsupported on windows and on headless rasp os
-THEMES.pop('tlj256', None)
-
-# Changed for Jorian's windows PC
-Tab.NEXT_TAB_KEY = Screen.KEY_F2
-Tab.PRIOR_TAB_KEY = Screen.KEY_F1
 
 
 class FlopPianoGUI(App):
@@ -200,3 +185,28 @@ class FlopPianoGUI(App):
                         )]
                     )
 
+
+if __name__ == '__main__':  
+
+    # Do we have arguments?
+    if len(sys.argv)>1 and sys.argv[1]!= '':
+        #Remove white space and split
+        args = sys.argv[1].strip().split('-')
+        #remove and duplicates
+        args = set(args)
+        for arg in args:
+            if not arg.isspace():
+                if arg == "debug":        
+                    bus.default_bus(bus.DebugBus())                
+                    TabHeader._FRAME_RATE_DEBUG = True
+                if arg =="altpage":
+                    # Changed for Jorian's windows PC
+                    Tab.NEXT_TAB_KEY = Screen.KEY_F2
+                    Tab.PRIOR_TAB_KEY = Screen.KEY_F1
+    
+    FlopPianoGUI(
+        theme='default',
+        handle_resize=False,
+        splash_start=False, 
+        screen_timeout=30,
+        asset_dir='./assets').run()

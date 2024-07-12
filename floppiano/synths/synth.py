@@ -197,14 +197,12 @@ class Synth(MIDIParser, MIDIListener, ABC):
 
     @abstractmethod
     def note_on(self, note:int, velocity:int, source) -> bool:
-        """
-        """
+
         return False
 
     @abstractmethod
     def note_off(self, note:int, velocity:int, source) -> bool:
-        """
-        """
+
         return False
     
 
@@ -217,6 +215,9 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self.muted = False
 
     def mute(self) -> None:
+        """
+        Mutes the synth
+        """
         self.muted = True
 
     def mono_mode(self, mono_voices:int=0) -> None:

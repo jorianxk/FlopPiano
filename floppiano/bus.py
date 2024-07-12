@@ -86,7 +86,7 @@ def default_bus(bus_object:Bus = None):
     else:
         try:
             bus = SMBusWrapper(bus_number=22) # 1 indicates /dev/ic2-1 for RPi's
-        except NameError as ne:
+        except Exception as e:
             bus = Bus()
     
     for attr_name in dir(bus):
