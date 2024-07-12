@@ -49,7 +49,6 @@ class Drives():
     """
     @staticmethod
     def find() -> list[int]:
-        #TODO: fix bug when no drives/ devices are on the bus
         # ping all i2c devices from from 0x8 to 0x77 and get their device type, 
         # if the type is correct add it to the list
         drive_addresses  = []

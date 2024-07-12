@@ -103,15 +103,17 @@ class SoundTab(Tab):
         # )  
         # table_layout.add_widget(self.modulation_wave_dd, 2)    
 
+        #TODO fix polyphony
         #Polyphony DropDown
-        self.polyphony_dd = DropDown(
-            options = (('mono', 0),('poly', 1)),
-            start_index = self.synth.polyphonic,
-            name = 'polyphonies_dd',
-            on_change = self.polyphony_changed,
-            fit = False
-        )  
-        table_layout.add_widget(self.polyphony_dd, 2)
+        # self.polyphony_dd = DropDown(
+        #     options = (('mono', 0),('poly', 1)),
+        #     start_index = self.synth.polyphonic,
+        #     name = 'polyphonies_dd',
+        #     on_change = self.polyphony_changed,
+        #     fit = False
+        # )  
+        # table_layout.add_widget(self.polyphony_dd, 2)
+        table_layout.add_widget(Label("FIX POLYPHONY"),2)
 
         #-----------------------------Reset button-----------------------------#
         reset_layout = Layout([1,1,1],fill_frame=False)
@@ -145,7 +147,7 @@ class SoundTab(Tab):
         self.modulation_rate_dd.value = self.synth.modulation_rate
         # Drives only have one modulation wave
         #self.modulation_wave_dd.value = self.synth.modulation_wave
-        self.polyphony_dd.value = self.synth.polyphonic
+        #self.polyphony_dd.value = self.synth.polyphonic
 
     def bow_changed(self):
         self.synth.bow = self.bow_dd.value    

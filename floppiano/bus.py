@@ -75,7 +75,7 @@ class SMBusWrapper(Bus):
 
 
 
-
+# TODO fix default bus behavior
 def default_bus(bus_object:Bus = None):
     #similar to mido's __init__.py
     #https://github.com/mido/mido/blob/main/mido/__init__.py

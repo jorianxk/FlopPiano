@@ -10,4 +10,4 @@ cd $install_dir
 source "env/bin/activate"
 
 # Run the entry point of floppiano with positional argument 1
-python -m "floppiano.floppiano" "$1"
+python -m "floppiano.main" "$1"

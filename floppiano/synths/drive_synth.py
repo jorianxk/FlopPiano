@@ -4,6 +4,7 @@ from floppiano.devices import Drives
 from floppiano.synths import Synth, PITCH_BEND_RANGES
 #TODO what about bus errors on 'Drives' calls?
 #TODO docstrings
+
 class DriveVoice():
     """
         A DriveVoice is an object that encapsulates one or more floppy drives
@@ -137,7 +138,7 @@ class DriveSynth(Synth):
         #Ensure we have valid drive addresses 
         for address in drive_addresses: Drives._check_address(address)
         
-        # Keep a copy of the Drive address the use
+        # Keep a copy of the Drive address to use
         self._drive_addresses = drive_addresses
         # Set the available voice stack to match the polyphony state
         self._available:list[DriveVoice] = self._gen_voices()        

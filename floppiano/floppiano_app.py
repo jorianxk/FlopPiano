@@ -1,7 +1,6 @@
-import floppiano.bus as bus
-
-
 from floppiano import VERSION
+import floppiano.bus as bus
+from floppiano.devices.drives import DEVICE_TYPE_REG, DEVICE_TYPE
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup, Tab, TabHeader
 from floppiano.UI.content import (
@@ -13,24 +12,30 @@ from asciimatics.scene import Scene
 from asciimatics.exceptions import ResizeScreenError, StopApplication
 from asciimatics.widgets.utilities import THEMES
 
+from mido import Message
+from mido.ports import BaseInput, BaseOutput
+
 import time
 import logging
 import sys
 import os
 
 
-class FlopPianoGUI(App):
+class FlopPianoApp(App):
 
     def __init__(
             self, 
-            theme: str = 'default',      # The initial asciimatics theme to use
-            handle_resize: bool = False, # Allow resizing (experimental)
-            splash_start: bool = True,   # Start the app with splash screens
-            screen_timeout:float = None, # In seconds and fractions of seconds
-            asset_dir:str = './assets',  # The directory for any app assets
+            synth:DriveSynth,            # The DriveSynth to use
+            #keyboard = None,             #TODO: add keyboard here
+            input_port:BaseInput,
+            output_port:BaseOutput, 
+            theme: str = 'default',        # The initial asciimatics theme to use
+            splash_start: bool = True,     # Start the app with splash screens
+            screen_timeout:float = None,   # In seconds and fractions of seconds
+            asset_dir:str = './assets',    # The directory for any app assets
             ) -> None:
         
-        super().__init__(theme, handle_resize)    
+        super().__init__(theme, handle_resize = False)    
 
         self.logger = logging.getLogger("FlopPiano")
         self._asset_dir = asset_dir
@@ -38,7 +43,14 @@ class FlopPianoGUI(App):
         self._screen_timeout = screen_timeout
 
         # The Synth
-        self._synth = None 
+        self._synth = synth 
+        # The keyboard
+        self._keyboard = None # TODO keyboard 
+        # The MIDI input port
+        self._input_port = input_port
+        # The MIDI output port
+        self._output_port = output_port
+
         # The scene that was active before the screen saver
         self._last_scene = None 
         # The time that the screen was last drawn
@@ -51,13 +63,11 @@ class FlopPianoGUI(App):
 
   
     def run(self):
-        #setup synth
-        # TODO: fix synth setup
-        drive_addrs = [i for i in range(8,18)]
-        self._synth = DriveSynth(drive_addrs)
+        # Run setup
+  
         #self._find_assets()
         #self._config_ports()
-
+        self._synth.reset()
         if self._splash_start:
             #Use asciimatics to play the splash sequence, blocks until done
             Screen.wrapper(splash_screen, catch_interrupt=True)
@@ -78,6 +88,7 @@ class FlopPianoGUI(App):
                 self.reset()
                 raise
         
+        self._synth.reset()
 
 
     def _loop(self):
@@ -87,18 +98,35 @@ class FlopPianoGUI(App):
         while True:            
             # If something requested a redraw and the screen saver is not active
             # force a draw to happen
-            #self._draw()
+            
+            #st = time.time()            
             if self._draw(self._needs_redraw): self._needs_redraw = False
+            #self.screen.print_at(time.time()- st, 0,0)
+            #self._draw()
 
+            incoming:list[Message] = []
+            outgoing:list[Message] = []
 
-            # read the piano keys
-            # add the piano key midi to the incoming stream if the loopback is 
-            # enabled
-            if self._loopback: pass #add the piano key midi to the stream
+            # add the piano key midi to the incoming if the loopback is on
+            if self._loopback: pass # TODO add the piano key midi to the stream
 
-            # add the incoming port midi to the stream if any
-            # let the synth work then get it's output
+            #Get the messages from the input port
+            if(not self._input_port.closed): 
+                input_msg = self._input_port.receive(block=False)
+                #TODO: input when MIDI player?
+                if input_msg is not None: incoming.append(input_msg)
+            else: raise RuntimeError("The MIDI input port closed!")
+
+            # let the synth work
+            outgoing = self._synth.parse(incoming) 
+
             # write the output
+            #TODO: output when MIDI player?
+            if (not self._output_port.closed):
+                for msg in outgoing:
+                    self._output_port.send(msg)
+            else: raise RuntimeError("The MIDI output port closed!")
+            
 
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
         tab_group = TabGroup(screen)
@@ -125,16 +153,7 @@ class FlopPianoGUI(App):
         if resource == 'loopback':
             return self._loopback
         else:
-            return None
-    
-
-    def _find_assets(self):
-        self.logger.debug(f"Verifying asset directory: '{self._asset_dir}'")
-        if not os.path.isdir(self._asset_dir):
-            self.logger.critical(
-                f"Asset directory '{self._asset_dir} not'found. exiting...")
-            raise RuntimeError("Could not find assets")
-        self.logger.debug(f"Found asset directory: '{self._asset_dir}'")
+            return None    
 
     def _draw(self, force: bool = False) -> bool:
         # overridden to handle the screen saver logic
@@ -184,29 +203,3 @@ class FlopPianoGUI(App):
                             clear=True
                         )]
                     )
-
-
-if __name__ == '__main__':  
-
-    # Do we have arguments?
-    if len(sys.argv)>1 and sys.argv[1]!= '':
-        #Remove white space and split
-        args = sys.argv[1].strip().split('-')
-        #remove and duplicates
-        args = set(args)
-        for arg in args:
-            if not arg.isspace():
-                if arg == "debug":        
-                    bus.default_bus(bus.DebugBus())                
-                    TabHeader._FRAME_RATE_DEBUG = True
-                if arg =="altpage":
-                    # Changed for Jorian's windows PC
-                    Tab.NEXT_TAB_KEY = Screen.KEY_F2
-                    Tab.PRIOR_TAB_KEY = Screen.KEY_F1
-    
-    FlopPianoGUI(
-        theme='default',
-        handle_resize=False,
-        splash_start=False, 
-        screen_timeout=30,
-        asset_dir='./assets').run()

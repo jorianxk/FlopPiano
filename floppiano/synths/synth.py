@@ -205,8 +205,6 @@ class Synth(MIDIParser, MIDIListener, ABC):
 
         return False
     
-
-    
     #--------------------------Public Functions--------------------------------#
     
     def reset(self) -> None:

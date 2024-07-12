@@ -39,12 +39,12 @@ def keyboard_event_draw(screen:Screen, force=False, repeat = False) -> bool:
                     effect.delete_count -= 1
                     if effect.delete_count <= 0:
                         scene.remove_effect(effect)
-            drew = True # We did the draw
 
-        screen.refresh()
+            screen.refresh()
+            drew = True # We did the draw
      
-        if 0 < scene.duration <= screen._frame:
-            raise NextScene()
+            if 0 < scene.duration <= screen._frame:
+                raise NextScene()
         
         return drew
     except NextScene as e:
