@@ -3,7 +3,7 @@ from floppiano.midi import MIDIUtil
 from floppiano.devices import Drives
 from floppiano.synths import Synth, PITCH_BEND_RANGES
 #TODO what about bus errors on 'Drives' calls?
-
+#TODO docstrings
 class DriveVoice():
     """
         A DriveVoice is an object that encapsulates one or more floppy drives
@@ -46,7 +46,6 @@ class DriveVoice():
         """
         self._frequency = MIDIUtil.MIDI2Freq(note)
 
-
     def play(self) -> bool:
         """
             Immediately plays the current note on all floppy drives associated 
@@ -83,21 +82,35 @@ class DriveVoice():
         for address in self._addresses:
             Drives.enable(address, not muted)
 
+    def pitch_bend(self, pitch_bend:int, bend_range:float) -> None:
+        """
+            Bends all the notes associated with the DriveVoice
+        Args:
+            pitch_bend (int): The MIDI pitch_wheel value
+            bend_range (float): The number of steps to bend
+        """
+        if pitch_bend == 0:
+            # Pitch bend is zero so ensure that each drive is playing 
+            # their original note/frequency
+            for address in self._addresses:
+                Drives.frequency(address, self._frequency)
+        else:
+            old_n = MIDIUtil.freq2n(self._frequency)
+            #Calculate the offset
+            n_mod = MIDIUtil.integer_map_range(
+                pitch_bend,
+                -8192, # Min midi pitchwheel msg value
+                8191,  # Max midi pitchwheel msg value
+                -bend_range, 
+                bend_range)
+            
+            bent_freq = MIDIUtil.n2freq(old_n+n_mod)
+            for address in self._addresses:
+                Drives.frequency(address, bent_freq)   
+
     def __repr__(self) -> str:
         return f'DriveVoice using addresses {self._addresses}'
     
-    # def __eq__(self, value: object) -> bool:
-    #     if isinstance(value, DriveVoice):
-    #         if self.addresses != value.addresses:
-    #             return False
-    #         if self.source != value.source:
-    #             return False
-    #         if self._frequency != value._frequency:
-    #             return False
-
-    #         return True               
-
-    #     return False
 
 class DriveSynth(Synth):
 
@@ -268,41 +281,15 @@ class DriveSynth(Synth):
         self.logger.info(f'_poly_voices_changed: {poly_voices}')
         if self.polyphonic:
             self.reset()
-    
-    # TODO: this isn't working right - fix it
+
     def _pitch_bend_changed(self, pitch_bend:int) -> None:
         self.logger.info(f'_pitch_bend_changed: {pitch_bend}')
-        # We DON'T change the note since the note is the identifier for
-        # turning on/off drives. We changed the drives' sounding frequency
-
-        # Loop through the active drives and change their pitch based on the
+        bend_range = list(PITCH_BEND_RANGES.values())[self.pitch_bend_range]
+        # Loop through the active voices and change their pitch based on the
         # incoming bend
-        for item in self._active:
-            if pitch_bend == 0:
-                # Pitch bend is zero so ensure that each drive is playing 
-                # their original note
-                Drives.frequency(
-                    item['drive'], MIDIUtil.MIDI2Freq(item['note']))
-            else:
-                # Pitch bend is set so we need to bend the note
+        for voice in self._active:
+            voice.pitch_bend(pitch_bend, bend_range)               
 
-                # The pitch bend range is the index of the value we 
-                # need to bend by in PITCH_BEND_RANGES
-                bend_range = \
-                    list(PITCH_BEND_RANGES.values())[self.pitch_bend_range]
-
-                old_n = MIDIUtil.freq2n(MIDIUtil.MIDI2Freq(item['note']))
-                n_mod = MIDIUtil.integer_map_range(
-                    pitch_bend,
-                    -8192, # Min midi pitchwheel msg value
-                    8191,  # Max midi pitchwheel msg value
-                    -bend_range, 
-                    bend_range)
-
-                #bend the note (based on log)
-                Drives.frequency(
-                    item['drive'], MIDIUtil.n2freq(old_n+n_mod))
-                
     #---------------------------Private Functions------------------------------#
 
     def _gen_voices(self) -> list[DriveVoice]:
@@ -372,7 +359,3 @@ class DriveSynth(Synth):
     @spin.setter
     def spin(self, spin:bool):
         self._spin = bool(spin)
-    
-    def pop(kk):
-        pass
-    

@@ -20,7 +20,6 @@ drive_addrs = [i for i in range(8,18)]
 
 
 synth = DriveSynth(drive_addrs)
-#synth.polyphonic = False
 
 
 print(synth.pitch_bend_range)

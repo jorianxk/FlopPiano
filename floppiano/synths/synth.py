@@ -127,7 +127,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
         output_channel:int = 0,
         output_mode:str = 'rollover',
         sysex_id:int = 123,
-        pitch_bend_range:str = 'half',
+        pitch_bend_range:str = 'octave',
         pitch_bend:int = 0,
         modulation_wave:str = 'sine',
         modulation_rate:int = 1,
