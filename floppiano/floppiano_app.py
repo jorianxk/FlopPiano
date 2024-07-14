@@ -120,7 +120,8 @@ class FlopPianoApp(App):
                     #TODO: input when MIDI player?
                     if input_msg is not None: 
                         # If we have a message parse it
-                        outgoing.extend(self._synth.parse([input_msg]))
+                        outgoing.extend(
+                            self._synth.parse([input_msg], "input_port"))
                 else: raise RuntimeError("The MIDI input port closed!")
 
 
