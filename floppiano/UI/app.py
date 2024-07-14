@@ -96,6 +96,7 @@ class App(ABC):
             # Force the screen to draw
             return keyboard_event_draw(self.screen, True) 
 
+
         else: # A normal draw call
             # Only draw if forced or if a keyboard event occurs
             return keyboard_event_draw(self.screen, force)  

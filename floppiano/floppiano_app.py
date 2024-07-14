@@ -32,13 +32,13 @@ class FlopPianoApp(App):
             theme: str = 'default',        # The initial asciimatics theme to use
             splash_start: bool = True,     # Start the app with splash screens
             screen_timeout:float = None,   # In seconds and fractions of seconds
-            asset_dir:str = './assets',    # The directory for any app assets
             ) -> None:
         
         super().__init__(theme, handle_resize = False)    
 
-        self.logger = logging.getLogger("FlopPiano")
-        self._asset_dir = asset_dir
+        self.logger = logging.getLogger(__name__)
+
+
         self._splash_start = splash_start
         self._screen_timeout = screen_timeout
 
@@ -60,7 +60,6 @@ class FlopPianoApp(App):
         # A flag to allow the piano keys' midi to be injected
         self._loopback = True
 
-
   
     def run(self):
         # Run setup
@@ -76,15 +75,17 @@ class FlopPianoApp(App):
             try:
                 self._loop()
             except KeyboardInterrupt as ki:
+                # Stop the rendering so that print() works
                 self.reset()
                 print("ctrl+c stopped")
                 break
             except ResizeScreenError as sa:
-                # Only occurs if handle_resize = False
+                # Stop the rendering so that print() works
                 self.reset()
                 print("Resize not supported")
                 break
             except Exception as e:
+                # Stop the rendering so that print() works
                 self.reset()
                 raise
         
@@ -104,28 +105,32 @@ class FlopPianoApp(App):
             #self.screen.print_at(time.time()- st, 0,0)
             #self._draw()
 
-            incoming:list[Message] = []
             outgoing:list[Message] = []
 
             # add the piano key midi to the incoming if the loopback is on
-            if self._loopback: pass # TODO add the piano key midi to the stream
+            # TODO add the piano key midi to the stream
+            if self._loopback: 
+                #outgoing.extend(self._synth.parse(keyboard.update()))
+                pass 
+            
+            if self._input_port is not None:
+                #Get the messages from the input port
+                if(not self._input_port.closed): 
+                    input_msg = self._input_port.receive(block=False)
+                    #TODO: input when MIDI player?
+                    if input_msg is not None: 
+                        # If we have a message parse it
+                        outgoing.extend(self._synth.parse([input_msg]))
+                else: raise RuntimeError("The MIDI input port closed!")
 
-            #Get the messages from the input port
-            if(not self._input_port.closed): 
-                input_msg = self._input_port.receive(block=False)
-                #TODO: input when MIDI player?
-                if input_msg is not None: incoming.append(input_msg)
-            else: raise RuntimeError("The MIDI input port closed!")
-
-            # let the synth work
-            outgoing = self._synth.parse(incoming) 
 
             # write the output
             #TODO: output when MIDI player?
-            if (not self._output_port.closed):
-                for msg in outgoing:
-                    self._output_port.send(msg)
-            else: raise RuntimeError("The MIDI output port closed!")
+            if self._output_port is not None:
+                if (not self._output_port.closed):
+                    for msg in outgoing:
+                        self._output_port.send(msg)
+                else: raise RuntimeError("The MIDI output port closed!")
             
 
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
@@ -170,7 +175,7 @@ class FlopPianoApp(App):
                     # Exit the screen saver - a key was pressed
                     # re-init the scenes, ignore the start scene
                     scenes, _ = self._draw_init(self.screen)
-                    # put all the scences back, with the last_scene as the start 
+                    # put all the scenes back, with the last_scene as the start 
                     self.screen.set_scenes(scenes, start_scene=self._last_scene)
                     # disable the screen saver by setting last_scene to None
                     self._last_scene = None
@@ -203,3 +208,5 @@ class FlopPianoApp(App):
                             clear=True
                         )]
                     )
+
+

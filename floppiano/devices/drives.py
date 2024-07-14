@@ -132,8 +132,8 @@ class Drives():
         Drives._check_address(address)
         if not isinstance(rate, int):
             raise ValueError('modulation_rate must be an int')
-        if rate<=0 or rate>255:
-            raise ValueError('modulation_rate must be in the range [0,255]')
+        if rate<0 or rate>255:
+            raise ValueError('modulation_rate must be in the range [1,255]')
         bus.write(address, MOD_RATE_REG, [rate])
         
     
