@@ -19,20 +19,36 @@ A simple python module (floppiano) orchestrates controlling floppy drives, handl
 # Getting Started #
 
 <!-- TOC -->
-   - [Required Materials](#required-materials)
-   - [Harware and Wiring](#harware-and-wiring)
-      - [Flashing the Drive Controllers](#flashing-the-drive-controllers)
-      - [Preparing the Keyboard](#preparing-the-keyboard)
-      - [Configuring the Raspberry Pi](#configuring-the-raspberry-pi)
-         - [A Full Installation with HyperPixel display](#a-full-installation-with-hyperpixel-display)
-         - [A minimal installation No HyperPixel display](#a-minimal-installation-no-hyperpixel-display)
-   - [Configuring Python and floppiano](#configuring-the-software-environment-python)
-   - [See Also](#see-also)
-      - [Python Dependencies](#python-dependencies)
-      - [About MIDI](#about-midi)
+
+- [FlopPiano](#floppiano)
+    - [Why?](#why)
+    - [How?](#how)
+- [Getting Started](#getting-started)
+    - [Required Materials](#required-materials)
+    - [Hardware and Wiring](#hardware-and-wiring)
+        - [Flashing the Drive Controllers](#flashing-the-drive-controllers)
+        - [Preparing the Keyboard](#preparing-the-keyboard)
+        - [Configuring the Raspberry Pi](#configuring-the-raspberry-pi)
+            - [A Full Installation with HyperPixel display](#a-full-installation-with-hyperpixel-display)
+            - [A minimal installation No HyperPixel display](#a-minimal-installation-no-hyperpixel-display)
+    - [Configuring Python and floppiano](#configuring-python-and-floppiano)
+        - [Quick installation Linux only](#quick-installation-linux-only)
+        - [Manual installation](#manual-installation)
+    - [Startup](#startup)
+        - [Full installations With HyperPixel Display](#full-installations-with-hyperpixel-display)
+        - [Minimal installations No HyperPixel Display](#minimal-installations-no-hyperpixel-display)
+        - [Usage Warnings & Usage FAQ](#usage-warnings--usage-faq)
+            - [Running via ssh or in windowed terminal](#running-via-ssh-or-in-windowed-terminal)
+            - [Failing to find floppy drives](#failing-to-find-floppy-drives)
+            - [Failing to find a keyboard](#failing-to-find-a-keyboard)
+            - [Failing to find MIDI Interfaces](#failing-to-find-midi-interfaces)
+            - [I don't want to use a keyboard or MIDI interfaces](#i-dont-want-to-use-a-keyboard-or-midi-interfaces)
+            - [See the CLI help menu for more startup flags](#see-the-cli-help-menu-for-more-startup-flags)
+    - [See Also](#see-also)
+        - [Python Dependencies](#python-dependencies)
+        - [About MIDI](#about-midi)
 
 <!-- /TOC -->
-
 
 ## Required Materials ##
 
@@ -46,7 +62,7 @@ A simple python module (floppiano) orchestrates controlling floppy drives, handl
 6) If running a full installation a display. ([HyperPixel 4 Square](https://learn.pimoroni.com/article/getting-started-with-hyperpixel-4) is recommended)
 
 
-## Harware and Wiring ##
+## Hardware and Wiring ##
 
 **TODO: All wiring and board documentation below is old documentation**
 
@@ -342,7 +358,7 @@ For example:
 #### Failing to find MIDI Interfaces ####
 - If no input/output MIDI interfaces are detected on startup floppiano will prompt to continue without them. If it's your intention not to use the MIDI interface then use the startup argument --noports and floppiano will skip the interface check. 
 
-### I don't want to use a keyboard or MIDI interfaces ###
+#### I don't want to use a keyboard or MIDI interfaces ####
 
 Likely you'd like to just play .mid files or just test drive sound.
 
@@ -374,10 +390,6 @@ OR
 ~/FlopPiano$ source env/bin/activate
 (env):~/FlopPiano$ python -m floppiano.main --help
 ```
-
-
-
-
 
 
 ## See Also ##
