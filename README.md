@@ -147,35 +147,32 @@ Then type the command "help" for more details
 
 # Scratch area
 
+Asciimatics
 
 https://asciimatics.readthedocs.io/en/stable/
 
+Notes & Frequency
 
 https://en.wikipedia.org/wiki/Piano_key_frequencies
 
 
-midi
+MIDI
 
 https://mido.readthedocs.io/
 https://www.cs.cmu.edu/~music/cmsip/readings/davids-midi-spec.htm
 
-config and logging
+Logging
 
-https://docs.python.org/3/library/configparser.html
 https://docs.python.org/3/library/logging.html#logging-levels
 
 
-keys
+Pi Hyperpixel Display
 
-https://python-evdev.readthedocs.io/en/latest/apidoc.html#module-evdev.ecodes
+https://learn.pimoroni.com/article/getting-started-with-hyperpixel-4
+https://github.com/pimoroni/hyperpixel4/issues/177
 
+Setting Headless Font Scale
 
-threading
+sudo dpkg-reconfigure console-setup
+https://youtu.be/Ces1xgEmISI
 
-https://stackoverflow.com/questions/27435284/multiprocessing-vs-multithreading-vs-asyncio
-
-
-
-midi over serial:
-
-https://www.youtube.com/watch?v=RbdNczYovHQ&list=PLdo8Yy3t6I_aRZ5J5XFXvSiB4jupAClke&index=4

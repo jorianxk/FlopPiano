@@ -44,31 +44,47 @@ class Startup():
             drive_addresses = []
             keyboard_address = None
             input_port = None
-            output_port = None
+            output_port = None             
 
             # Are we using the normal I2C bus?
             if not args.debugbus:
-                # Try to find the devices
-                drive_addresses, keyboard_address = self.find_devices()
-                self.print(f'Found keyboard: {str(keyboard_address)}')
-                self.print(f'Found drives: {drive_addresses}')
-                #No keyboard found and we intended to use a keyboard
-                if keyboard_address is None and not args.nokeyboard:
-                    self.print('No keyboard was detected.', Screen.COLOUR_RED)
-                    self.prompt_for_exit()
-                    self.print('Continuing without keyboard.')
-                    # Don't use the keyboard
-                    args.nokeyboard = True
+                try:
+                    #Set the bus up using the bus number
+                    bus.default_bus(bus.SMBusWrapper(args.busnumber))
+                    self.print(f'Using I2C bus number: {args.busnumber}')
+                    # Try to find the devices
+                    drive_addresses, keyboard_address = self.find_devices()
+                    self.print(f'Found keyboard: {str(keyboard_address)}')
+                    self.print(f'Found drives: {drive_addresses}')
 
-                #No drives found
-                if len(drive_addresses) == 0:
-                    self.print('No drives were detected.',
-                                Screen.COLOUR_RED)
+                    #No keyboard found and we intended to use a keyboard
+                    if keyboard_address is None and not args.nokeyboard:
+                        self.print('No keyboard was detected.', Screen.COLOUR_RED)
+                        self.print('Continue without keyboard?')
+                        self.prompt_for_exit()
+                        self.print('Continuing without keyboard.')
+                        # Don't use the keyboard
+                        args.nokeyboard = True
+
+                    #No drives found
+                    if len(drive_addresses) == 0:
+                        self.print('No drives were detected.',
+                                    Screen.COLOUR_RED)
+                        self.print('Continue with the debug bus?')
+                        self.prompt_for_exit()
+                        self.print('Continuing with the debus bus.')
+                        # Use the debug bus
+                        args.debugbus = True
+
+                except FileNotFoundError as f:
+                    # Setting up the bus failed
+                    self.print(f'Encountered issue setting up the bus: {f}',
+                               color=Screen.COLOUR_RED)
+                    self.print('Continue with the debug bus?')
                     self.prompt_for_exit()
                     self.print('Continuing with the debus bus.')
                     # Use the debug bus
                     args.debugbus = True
-
             
             self.print('-' * self._screen.width)
 
@@ -92,7 +108,7 @@ class Startup():
                        True)
             time.sleep(1)
 
-       
+        # Setup logger
         if args.logfile is not None:
             # disable all other loggers
             for name in logging.root.manager.loggerDict:
@@ -100,6 +116,7 @@ class Startup():
             # set up logging
             logging.basicConfig(filename=args.logfile, level = args.loglevel, filemode='w+')
 
+        # Return the app with the settings applied
         return FlopPianoApp(
             DriveSynth(drive_addresses),
             #keyboard= None, # TODO Keyboard(keyboard_addr)
@@ -123,6 +140,13 @@ class Startup():
                             '--debugbus', 
                             help = 'Use the dummy (debug) I2C bus', 
                             action = 'store_true')
+    
+        parser.add_argument('-bn',
+                            '--busnumber', 
+                            help = 'Specifies The I2C Bus number (effective only if -db is not given)', 
+                            type = int,
+                            metavar = 'BUSNUM',
+                            default = 22)
 
         parser.add_argument('-np',
                             '--noports', 
@@ -162,6 +186,9 @@ class Startup():
 
         # parse the args
         args = parser.parse_args()
+
+        # Force the bus number to be positive 
+        args.busnumber = abs(args.busnumber)
 
         # Force the screentimeout to be positive or None (disabled)
         args.screentimeout = abs(args.screentimeout)
@@ -232,6 +259,7 @@ class Startup():
         if input_port is None:
             self.print('No MIDI input interface was detected.'
                        , color = Screen.COLOUR_RED)
+            self.print('Continue without input interface?')
             self.prompt_for_exit()
             self.print('Continuing without input interface.')
             
@@ -239,6 +267,7 @@ class Startup():
         if output_port is None:
             self.print("No MIDI output interface was detected."
                        , color = Screen.COLOUR_RED)
+            self.print('Continue without output interface?')
             self.prompt_for_exit()
             self.print('Continuing without output interface.')
 

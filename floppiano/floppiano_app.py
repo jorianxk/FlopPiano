@@ -1,8 +1,6 @@
 from floppiano import VERSION
-import floppiano.bus as bus
-from floppiano.devices.drives import DEVICE_TYPE_REG, DEVICE_TYPE
 from floppiano.UI.app import App
-from floppiano.UI.tabs import TabGroup, Tab, TabHeader
+from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
     splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
@@ -17,8 +15,6 @@ from mido.ports import BaseInput, BaseOutput
 
 import time
 import logging
-import sys
-import os
 
 
 class FlopPianoApp(App):
@@ -62,15 +58,16 @@ class FlopPianoApp(App):
 
   
     def run(self):
-        # Run setup
-  
-        #self._find_assets()
-        #self._config_ports()
+        # Start with a fresh synth
         self._synth.reset()
+        
+        # Run the splash screens 
         if self._splash_start:
             #Use asciimatics to play the splash sequence, blocks until done
             Screen.wrapper(splash_screen, catch_interrupt=True)
 
+        # This is an outer loop for the control self._loop() to manage exiting
+        # and errors
         while True:
             try:
                 self._loop()
@@ -144,7 +141,7 @@ class FlopPianoApp(App):
         return (tab_group.tabs, None)
      
     def action(self, action: str, args=None):
-        if action == 'theme':
+        if action == 'theme': # TODO is this the right way to set the theme?
             self.theme = args[0]
             self.reset()
             self._needs_redraw =True
@@ -190,7 +187,7 @@ class FlopPianoApp(App):
                 self._last_draw_time = time.time()
                 return super()._draw(force=True)
             
-            # draw only if there is a keyboard event or if the screen resizes
+            # draw only if there is a keyboard event
             if super()._draw(): 
                 self._last_draw_time = time.time()
                 return True #we drew
