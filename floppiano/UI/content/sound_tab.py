@@ -28,7 +28,6 @@ class SoundTab(Tab):
         self.frame.set_theme(self.app.theme)
 
         #--------------------Table Layout and Widgets--------------------------#
-
         #Layout for table 
         table_layout = Layout([22,1,22],fill_frame=False)
         self.frame.add_layout(table_layout) 

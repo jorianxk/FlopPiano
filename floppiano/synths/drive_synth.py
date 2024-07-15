@@ -132,6 +132,11 @@ class DriveSynth(Synth):
         if 'spin' not in self.control_change_map:
             self.control_change_map['spin'] = 81
 
+        if 'modulation_wave' in self.control_change_map:
+            # Drives only support one modulation wave (triangle)
+            # prevent setting property modulation_wave via MIDI
+            self.control_change_map.pop('modulation_wave')
+        
         self.bow = bow
         self.spin = spin
 
@@ -152,6 +157,7 @@ class DriveSynth(Synth):
         self.attach_observer('muted', self._muted_changed)
         self.attach_observer('pitch_bend', self._pitch_bend_changed)
         self.attach_observer('poly_voices', self._poly_voices_changed)
+        self.attach_observer('modulation_wave', self._modulation_wave_changed)
 
     #----------------------Inherited from from Synth---------------------------#
   
@@ -290,6 +296,13 @@ class DriveSynth(Synth):
         # incoming bend
         for voice in self._active:
             voice.pitch_bend(pitch_bend, bend_range)               
+
+    def _modulation_wave_changed(self, modulation_wave:int) -> None:
+        # Drives only support one modulation wave (triangle)
+        # prevent setting property modulation_wave programmatically
+        raise NotImplementedError('DriveSynth only supports one modulation wave'
+                                  ' (triangle). Setting the modulation_wave is '
+                                  'not supported')
 
     #---------------------------Private Functions------------------------------#
 
