@@ -98,9 +98,11 @@ class FlopPianoApp(App):
             # force a draw to happen
             
             #st = time.time()            
-            if self._draw(self._needs_redraw): self._needs_redraw = False
+            if self._draw(self._needs_redraw): 
+                #self.logger.info(f'drew in {time.time()- st}')
+                self._needs_redraw = False
             #self.screen.print_at(time.time()- st, 0,0)
-            #self._draw()
+            #self._draw(True)
 
             outgoing:list[Message] = []
 

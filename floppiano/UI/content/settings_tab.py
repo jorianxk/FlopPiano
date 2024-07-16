@@ -4,7 +4,7 @@ from asciimatics.widgets.utilities import THEMES
 from floppiano.UI.tabs import Tab
 from floppiano.UI.widgets import DynamicFrame, DropDown
 
-from floppiano.synths import OUTPUT_MODES, DriveSynth
+from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
 
 class SettingsTab(Tab):
@@ -26,28 +26,113 @@ class SettingsTab(Tab):
             on_update=self.update_widgets)
         self.frame.set_theme(self.app.theme)     
 
-        #--------------------Table Layout and Widgets--------------------------#
-
-        # Layout for table 
-        table_layout = Layout([22,1,22],fill_frame=False)
+       #--------------------Table Layout and Widgets--------------------------#
+        #Layout for table 
+        table_layout = Layout([1],fill_frame=False)
         self.frame.add_layout(table_layout) 
 
-        #Table header and Horizontal Dividers
-        table_layout.add_widget(Label('Modifier', align='^'),0)
-        table_layout.add_widget(Label("Setting", align='^'),2)
-        table_layout.add_widget(Divider(),0)
-        table_layout.add_widget(Divider(),2)
 
-        # Modifier Labels
-        table_layout.add_widget(Label('Input Channel', align='<'),0)
-        table_layout.add_widget(Label('Output Channel', align='<'),0)
-        table_layout.add_widget(Label('Output Mode', align='<'),0)
-        table_layout.add_widget(Label('Loopback', align='<'),0)
-        table_layout.add_widget(Label('Application Theme', align='<'),0)        
+        #Modifier Labels
+        #TODO fix polyphony
+        #Polyphony DropDown
+        self.polyphony_dd = DropDown(
+            options = (('mono', 0),('poly', 1)),
+            start_index = self.synth.polyphonic,
+            name = 'polyphonies_dd',
+            on_change = self.polyphony_changed,
+            fit = True,
+            label="Polyphony:"
+        )  
+        table_layout.add_widget(self.polyphony_dd)
 
-        table_layout.add_widget(VerticalDivider(height=7),1)
-        
-        # Input / Output Channels
+
+
+
+        #Spin DropDown
+        self.spin_dd = DropDown(
+            options = (('off', 0), ('on', 1)),
+            start_index = self.synth.spin,
+            name = 'drive_spin_dd',
+            on_change = self.spin_changed,
+            fit = True,
+            label = 'Spin'
+        )  
+        table_layout.add_widget(self.spin_dd)
+
+
+        #Bow DropDown  
+        self.bow_dd = DropDown(
+            options = (('off', 0),('on', 1)),
+            start_index = self.synth.bow,
+            name = 'bow_dd',
+            on_change = self.bow_changed,
+            fit = True,
+            label = 'Bow'
+        )       
+        table_layout.add_widget(self.bow_dd)
+
+
+        #Pitch Bend Range DropDown 
+        self.pitch_bend_range_dd = DropDown(
+            options = DropDown.list2options(list(PITCH_BEND_RANGES.keys())),
+            start_index = self.synth.pitch_bend_range,
+            name = 'pitch_bend_range_dd',
+            on_change = self.pitch_bend_range_changed,
+            fit = True,
+            label = 'Pitch Bend Range'
+        )  
+        table_layout.add_widget(self.pitch_bend_range_dd)  
+
+
+        #TODO limit the rates to the actual available rates
+        modulation_rates = []
+        for rate in range(0,128):
+            modulation_rates.append((str(rate),rate))
+        self.modulation_rate_dd = DropDown(
+            options = modulation_rates, 
+            start_index = self.synth.modulation_rate,
+            on_change = self.modulation_rate_changed,
+            fit = True,
+            label = 'Modulation Rate')
+        table_layout.add_widget(self.modulation_rate_dd)
+
+
+
+        table_layout.add_widget(Button('Mute',None ,label="Mute"))
+
+
+        table_layout.add_widget(Button('Reset',None, label = 'Reset'))
+
+
+
+        self.mono_voices_dd = DropDown(
+            options = modulation_rates,  #TODO
+            start_index = self.synth.mono_voices,
+            on_change = self.modulation_rate_changed,
+            fit = True,
+            label = 'Mono Voices')
+        table_layout.add_widget(self.mono_voices_dd)
+
+
+        self.poly_voices_dd = DropDown(
+            options = modulation_rates,  #TODO
+            start_index = self.synth.poly_voices,
+            on_change = self.modulation_rate_changed,
+            fit = True,
+                        label = 'Poly Voices')
+        table_layout.add_widget(self.poly_voices_dd)
+
+
+        self.loopback_dd = DropDown(
+            options = (('off', False),('on', True)),
+            start_index= self.app.resource('loopback'),
+            on_change = self.loopback_changed,
+            fit = True,
+            label = 'Loopback'
+        )  
+        table_layout.add_widget(self.loopback_dd)
+
+
         channels = []
         for channel in range(0,16):
             channels.append((str(channel),channel))
@@ -56,66 +141,33 @@ class SettingsTab(Tab):
             options = channels, 
             start_index = self.synth.input_channel,
             on_change = self.input_channel_changed,
-            fit = False)
-        table_layout.add_widget(self.input_channel_dd,2)
+            fit = True,
+            label = 'Input Channel')
+        table_layout.add_widget(self.input_channel_dd)
+
+
 
         self.output_channel_dd = DropDown(
             options = channels, 
             start_index = self.synth.output_channel,
             on_change = self.output_channel_changed,
-            fit = False)
-        table_layout.add_widget(self.output_channel_dd,2)
+            fit = True,
+            label = 'Output Channel')
+        table_layout.add_widget(self.output_channel_dd)
 
-        # Output Mode
+
+
         self.output_mode_dd = DropDown(
             options = DropDown.list2options(OUTPUT_MODES),
             start_index = self.synth.output_mode,
             on_change = self.output_mode_changed,
-            fit = False
-        )  
-        table_layout.add_widget(self.output_mode_dd, 2)   
+            fit = True,
+            label = 'Output Mode')
+        table_layout.add_widget(self.output_mode_dd)   
 
-        # Loopback
-        self.loopback_dd = DropDown(
-            options = (('off', False),('on', True)),
-            start_index= self.app.resource('loopback'),
-            on_change = self.loopback_changed,
-            fit = False
-        )  
-        table_layout.add_widget(self.loopback_dd, 2)
+       
 
-        #Application theme
-        themes =[]    
-        for index, name in enumerate(THEMES.keys()):
-            themes.append((name,name))
-        self.theme_dd = DropDown(
-            options = themes,
-            start_index = self.app.theme,
-            on_change = self.theme_changed,
-            fit = False
-        )  
-        table_layout.add_widget(self.theme_dd, 2)
 
-        table_layout.add_widget(Divider(),0)
-        table_layout.add_widget(Divider(),1)
-        table_layout.add_widget(Divider(),2)
-
-        #-----------------------------Test button-----------------------------#
-        test_layout = Layout([1,1,1],fill_frame=False)
-        self.frame.add_layout(test_layout)
-
-        test_layout.add_widget(Divider(False),0)
-        self.test_button = Button(
-                'Test Drives',
-                on_click=self.test_clicked,
-                add_box=True)
-        test_layout.add_widget(self.test_button, 1)
-        
-        test_layout.add_widget(Divider(False),2)
-        
-        test_layout.add_widget(Divider(),0)
-        test_layout.add_widget(Divider(),1)
-        test_layout.add_widget(Divider(),2)
 
 
         #----------------------------Synth Log---------------------------------#
@@ -135,11 +187,34 @@ class SettingsTab(Tab):
         self.add_effect(self.frame, reset=False)
 
     def update_widgets(self):
+        self.bow_dd.value = self.synth.bow
+        self.spin_dd.value = self.synth.spin
+        self.pitch_bend_range_dd.value = self.synth.pitch_bend_range
+        self.modulation_rate_dd.value = self.synth.modulation_rate
         self.input_channel_dd.value = self.synth.input_channel
         self.output_channel_dd.value = self.synth.output_channel
         self.output_mode_dd.value = self.synth.output_mode
         self.loopback_dd.value = self.app.resource('loopback')
-        self.theme_dd.value = self.app.theme    
+
+        # Drives only have one modulation wave
+        #self.modulation_wave_dd.value = self.synth.modulation_wave
+        #self.polyphony_dd.value = self.synth.polyphonic
+
+    def bow_changed(self):
+        self.synth.bow = self.bow_dd.value    
+    def spin_changed(self):
+        self.synth.spin = self.spin_dd.value
+    def pitch_bend_range_changed(self):
+        self.synth.pitch_bend_range = self.pitch_bend_range_dd.value
+    def modulation_rate_changed(self):
+        self.synth.modulation_rate = self.modulation_rate_dd.value
+    # Drives only have one modulation wave
+    # def modulation_wave_changed (self):
+    #     self.synth.modulation_wave = self.modulation_wave_dd.value
+
+    def polyphony_changed (self):
+        #self.synth.polyphonic = self.polyphony_dd.value
+        pass
 
     def input_channel_changed(self):
         self.synth.input_channel = self.input_channel_dd.value
@@ -152,10 +227,3 @@ class SettingsTab(Tab):
 
     def loopback_changed(self):
         self.app.action('loopback', self.loopback_dd.value)
-
-    def theme_changed(self):
-        self.app.action('theme', (self.theme_dd.value, self))
-
-    def test_clicked(self):
-        pass
-       

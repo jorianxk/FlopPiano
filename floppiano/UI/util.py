@@ -23,7 +23,7 @@ def keyboard_event_draw(screen:Screen, force=False, repeat = False) -> bool:
     # bypass effect event handling so that all effects will get events
     #returns true if a draw actually occured
     try:
-        drew = False # Did we draw things or not?
+  
         scene = screen._scenes[screen._scene_index]
         event = screen.get_event()
         # Only update on keyboard events or if we force an update
@@ -41,12 +41,13 @@ def keyboard_event_draw(screen:Screen, force=False, repeat = False) -> bool:
                         scene.remove_effect(effect)
 
             screen.refresh()
-            drew = True # We did the draw
+
      
             if 0 < scene.duration <= screen._frame:
                 raise NextScene()
+            return True
         
-        return drew
+        return False
     except NextScene as e:
         # Tidy up the current scene.
         scene.exit()
