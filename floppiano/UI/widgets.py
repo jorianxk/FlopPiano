@@ -1,4 +1,8 @@
 from asciimatics.widgets import Frame, DropdownList, TextBox
+from asciimatics.widgets.utilities import _enforce_width
+from asciimatics.event import KeyboardEvent
+from asciimatics.screen import Screen
+from wcwidth import wcswidth
 import logging
 
 
@@ -40,12 +44,36 @@ class DropDown(DropdownList):
             self._line = index
             self._value = option[1]  
 
-    def revert(self):
-        for i, [_, value] in enumerate(self._options):
-            if value == self._old_value:
-                self._line = i
-                self._value = self._old_value
-                break
+    # def revert(self):
+    #     for i, [_, value] in enumerate(self._options):
+    #         if value == self._old_value:
+    #             self._line = i
+    #             self._value = self._old_value
+    #             break
+
+
+    def update(self, frame_no):
+        self._draw_label()
+
+        # This widget only ever needs display the current selection - the separate Frame does all
+        # the clever stuff when it has the focus.
+        text = "" if self._line is None else self._options[self._line][0]
+        (colour, attr, background) = self._pick_colours("field", selected=self._has_focus)
+        if self._fit:
+            width = min(max(map(lambda x: wcswidth(x[0]), self._options)) + 1, self.width - 3)
+        else:
+            width = self.width - 3
+
+        # For unicode output, we need to adjust for any double width characters.
+        output = _enforce_width(text, width, self._frame.canvas.unicode_aware)
+        output_tweak = wcswidth(output) - len(output)
+
+        self._frame.canvas.print_at(
+            f"  {output:{width - output_tweak}} ",
+            self._x + self._offset,
+            self._y,
+            colour, attr, background)
+
 
     @DropdownList.value.setter
     def value(self, new_value):
@@ -95,3 +123,6 @@ class LoggerText(TextBox, logging.StreamHandler):
         except AttributeError as ae:
             pass
             # raise AppException("LoggerText got AttributeError on update()") from ae
+
+
+

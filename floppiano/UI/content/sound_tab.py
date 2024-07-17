@@ -29,17 +29,17 @@ class SoundTab(Tab):
 
         #--------------------Table Layout and Widgets--------------------------#
         #Layout for table 
-        table_layout = Layout([22,1,22],fill_frame=False)
+        table_layout = Layout([17,1,11,10],fill_frame=False)
         self.frame.add_layout(table_layout) 
 
-        #Table header and Horizontal Dividers
-        table_layout.add_widget(Label('Modifier', align='^'),0)
-        table_layout.add_widget(Label("Setting", align='^'),2)
-        table_layout.add_widget(Divider(),0)
-        table_layout.add_widget(Divider(),2)
+        # #Table header and Horizontal Dividers
+        # table_layout.add_widget(Label('Modifier', align='^'),0)
+        # table_layout.add_widget(Label("Setting", align='^'),2)
+        # table_layout.add_widget(Divider(),0)
+        # table_layout.add_widget(Divider(),2)
 
         #Modifier Labels
-        table_layout.add_widget(Label('Polyphony', align='<'),0)
+        table_layout.add_widget(Label('Polyphony', align='>'),0)
         #TODO fix polyphony
         #Polyphony DropDown
         self.polyphony_dd = DropDown(
@@ -53,7 +53,7 @@ class SoundTab(Tab):
 
 
 
-        table_layout.add_widget(Label('Spin', align='<'),0)
+        table_layout.add_widget(Label('Spin', align='>'),0)
         #Spin DropDown
         self.spin_dd = DropDown(
             options = (('off', 0), ('on', 1)),
@@ -65,7 +65,7 @@ class SoundTab(Tab):
         table_layout.add_widget(self.spin_dd, 2)
 
 
-        table_layout.add_widget(Label('Bow', align='<'),0)
+        table_layout.add_widget(Label('Bow', align='>'),0)
         #Bow DropDown  
         self.bow_dd = DropDown(
             options = (('off', 0),('on', 1)),
@@ -77,7 +77,7 @@ class SoundTab(Tab):
         table_layout.add_widget(self.bow_dd, 2)
 
 
-        table_layout.add_widget(Label('Pitch Bend Range', align='<'),0)
+        table_layout.add_widget(Label('Pitch Bend Range', align='>'),0)
         #Pitch Bend Range DropDown 
         self.pitch_bend_range_dd = DropDown(
             options = DropDown.list2options(list(PITCH_BEND_RANGES.keys())),
@@ -88,7 +88,7 @@ class SoundTab(Tab):
         )  
         table_layout.add_widget(self.pitch_bend_range_dd, 2)  
 
-        table_layout.add_widget(Label('Modulation Rate', align='<'),0)
+        table_layout.add_widget(Label('Modulation Rate', align='>'),0)
         #TODO limit the rates to the actual available rates
         modulation_rates = []
         for rate in range(0,128):
@@ -101,14 +101,14 @@ class SoundTab(Tab):
         table_layout.add_widget(self.modulation_rate_dd,2)
 
 
-        table_layout.add_widget(Label('Mute', align='<'),0)
+        table_layout.add_widget(Label('Mute', align='>'),0)
         table_layout.add_widget(Button('Mute',None),2)
 
-        table_layout.add_widget(Label('Reset', align='<'),0)
+        table_layout.add_widget(Label('Reset', align='>'),0)
         table_layout.add_widget(Button('Reset',None),2)
 
 
-        table_layout.add_widget(Label('Monophonic Voices', align='<'),0)
+        table_layout.add_widget(Label('Monophonic Voices', align='>'),0)
         self.mono_voices_dd = DropDown(
             options = modulation_rates,  #TODO
             start_index = self.synth.mono_voices,
@@ -116,7 +116,7 @@ class SoundTab(Tab):
             fit = False)
         table_layout.add_widget(self.mono_voices_dd,2)
 
-        table_layout.add_widget(Label('Polyphonic Voices', align='<'),0)
+        table_layout.add_widget(Label('Polyphonic Voices', align='>'),0)
         self.poly_voices_dd = DropDown(
             options = modulation_rates,  #TODO
             start_index = self.synth.poly_voices,
@@ -124,7 +124,7 @@ class SoundTab(Tab):
             fit = False)
         table_layout.add_widget(self.poly_voices_dd,2)
 
-        table_layout.add_widget(Label('Loopback', align='<'),0)
+        table_layout.add_widget(Label('Loopback', align='>'),0)
         self.loopback_dd = DropDown(
             options = (('off', False),('on', True)),
             start_index= self.app.resource('loopback'),
@@ -138,7 +138,7 @@ class SoundTab(Tab):
         for channel in range(0,16):
             channels.append((str(channel),channel))
 
-        table_layout.add_widget(Label('Input Channel', align='<'),0)
+        table_layout.add_widget(Label('Input Channel', align='>'),0)
         self.input_channel_dd = DropDown(
             options = channels, 
             start_index = self.synth.input_channel,
@@ -147,7 +147,7 @@ class SoundTab(Tab):
         table_layout.add_widget(self.input_channel_dd,2)
 
 
-        table_layout.add_widget(Label('Output Channel', align='<'),0)
+        table_layout.add_widget(Label('Output Channel', align='>'),0)
         self.output_channel_dd = DropDown(
             options = channels, 
             start_index = self.synth.output_channel,
@@ -156,7 +156,7 @@ class SoundTab(Tab):
         table_layout.add_widget(self.output_channel_dd,2)
 
 
-        table_layout.add_widget(Label('Output Mode', align='<'),0)
+        table_layout.add_widget(Label('Output Mode', align='>'),0)
         self.output_mode_dd = DropDown(
             options = DropDown.list2options(OUTPUT_MODES),
             start_index = self.synth.output_mode,
@@ -167,7 +167,7 @@ class SoundTab(Tab):
 
        
 
-        table_layout.add_widget(VerticalDivider(height=15),1)
+        #table_layout.add_widget(VerticalDivider(height=15),1)
 
 
 

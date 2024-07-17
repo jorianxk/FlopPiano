@@ -2,7 +2,7 @@ from floppiano import VERSION
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
-    splash_screen, FloppySaver, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
+    splash_screen, FloppySaver, MainTab, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
 
 from asciimatics.screen import Screen
@@ -135,6 +135,7 @@ class FlopPianoApp(App):
 
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
         tab_group = TabGroup(screen)
+        tab_group.add_tab(MainTab(self, 'Main'))
         tab_group.add_tab(SoundTab(self, 'Sound'))
         tab_group.add_tab(SettingsTab(self, 'Settings'))
         tab_group.add_tab(MIDIPlayerTab(self, "MIDI Player"))
