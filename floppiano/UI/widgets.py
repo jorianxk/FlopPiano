@@ -1,7 +1,6 @@
-from asciimatics.widgets import Frame, DropdownList, TextBox
-from asciimatics.widgets.utilities import _enforce_width
-from asciimatics.event import KeyboardEvent
 from asciimatics.screen import Screen
+from asciimatics.widgets import Widget, Frame, DropdownList, TextBox
+from asciimatics.widgets.utilities import _enforce_width
 from wcwidth import wcswidth
 import logging
 
@@ -74,7 +73,6 @@ class DropDown(DropdownList):
             self._y,
             colour, attr, background)
 
-
     @DropdownList.value.setter
     def value(self, new_value):
         # Only trigger change notification after we've changed selection
@@ -124,5 +122,65 @@ class LoggerText(TextBox, logging.StreamHandler):
             pass
             # raise AppException("LoggerText got AttributeError on update()") from ae
 
+class FloppieWidget(Widget):
 
+    def __init__(self, name=None):
+        super().__init__(name, False, False, None, None)
+
+        # self._image = (
+        #     '┌─┬──~─────~──┬─┐',
+        #     '│■│  @     @  │ │',
+        #     '│ │     <     │ │',
+        #     '│ │  \_____/  │ │',
+        #     '│ └───────────┘ │',
+        #     '│ ┌─────────┐   │',
+        #     '│ │    ┌──┐ │   │',
+        #     '│ │    |  | │   │',
+        #     '╰─┴────┘──└─┴───┘'
+        # )
+
+        self._image = (
+            '╔═══════════════════════════════════════════╗',
+            '║ ┌─┬──~─────~──┬─┐ ┌                     ┐ ║',
+            '║ │■│  @     @  │ │                         ║',
+            '║ │ │     >     │ │                         ║',
+            '║ │ │  \_____/  │ │                         ║',
+            '║ │ └───────────┘ │                         ║',
+            '║ │ ┌─────────┐   │ └                     ┘ ║',
+            '╚═╧═╧═════════╧═══╧═════════════════════════╝'           
+        )
+
+    def reset(self):
+        pass
+
+    def update(self, frame_no):
+        
+        frame:Frame = self._frame
+        (colour, attr, background) = self._pick_colours("label", selected=self._has_focus)
+        y = self._y
+        for line in self._image:
+            frame.canvas.print_at(
+                line,
+                self._x,
+                y,
+                colour=colour,
+                bg = background,
+            )
+            y+=1
+        frame.canvas.print_at("Eat A dick!", self._x+22, self._y+2, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at("I'm not floppy 4 u", self._x+22, self._y+3, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at("Hello12345678234567", self._x+22, self._y+4, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at("Hello12345678234567", self._x+22, self._y+5, colour=colour, attr=attr, bg = background)
+    def process_event(self, event):
+        return event
+    
+    @property
+    def value(self):
+        return None
+
+    def required_height(self, offset, width):
+        return 8
+
+
+    pass
 

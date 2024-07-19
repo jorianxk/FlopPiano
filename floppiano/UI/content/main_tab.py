@@ -1,7 +1,10 @@
-from asciimatics.widgets import Layout, Label, Button, Divider, VerticalDivider
+from asciimatics.widgets import Layout, Label, Button, TextBox
+from asciimatics.effects import Print
+from asciimatics.renderers import StaticRenderer
+from asciimatics.screen import Screen
 
 from floppiano.UI.tabs import Tab
-from floppiano.UI.widgets import DynamicFrame, DropDown
+from floppiano.UI.widgets import DynamicFrame, DropDown, FloppieWidget
 
 from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
@@ -16,10 +19,12 @@ class Setting():
                  options, 
                  on_update, 
                  on_change, 
-                 frame:DynamicFrame) -> None:
+                 frame:DynamicFrame,
+                 tool_tip = '') -> None:
     
         self._on_update = on_update
         self._on_change = on_change
+        self.tool_tip = tool_tip
 
         layout = Layout([3,9,1,9],fill_frame=False)
         frame.add_layout(layout) 
@@ -54,6 +59,10 @@ class Setting():
     
     def _changed(self):
         self._on_change(self._dd.value)
+    
+    @property
+    def selected(self) -> bool:
+        return self._dd._has_focus
 
 
 class MainTab(Tab):
@@ -68,13 +77,12 @@ class MainTab(Tab):
             self.app.screen.height-2,
             self.app.screen.width,
             y=2,
-            has_border=True,
-            title="Settings",
+            has_border=False,
             can_scroll=False,
             on_update=self.update_settings)
         self.frame.set_theme(self.app.theme)
         
-        self.settings = []
+        self.settings:list[Setting] = []
 
         self.settings.append(
             Setting(
@@ -82,7 +90,8 @@ class MainTab(Tab):
                 ['off', 'on'], 
                 lambda: self.synth.__getattribute__('spin'), 
                 lambda x: self.synth.__setattr__('spin', x),
-                self.frame)
+                self.frame,
+                'Sets the spin state')
         )
 
         self.settings.append(
@@ -93,6 +102,17 @@ class MainTab(Tab):
                 lambda x: self.synth.__setattr__('bow', x),
                 self.frame)
         )
+
+
+        self.settings.append(
+            Setting(
+                'Polyphony', 
+                ['monophonic', 'polyphonic'], 
+                lambda: self.synth.__getattribute__('polyphonic'), 
+                lambda x: x, # TODO
+                self.frame)
+        )
+
 
         self.settings.append(
             Setting(
@@ -173,11 +193,21 @@ class MainTab(Tab):
         layout.add_widget(Button('Reset', on_click=None),1)
         #layout.add_widget(Divider())
 
+        layout = Layout([1], False)
+        self.frame.add_layout(layout)
 
+        layout.add_widget(FloppieWidget())
+        # about_text = TextBox(8,readonly=True,line_wrap=True, disabled=True)
+        # layout.add_widget(about_text,1)
 
+        # about_text.value = ['This is some about text about us', 'Jorian Hates asciimattics','Farts']
+        
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
 
     def update_settings(self):
-        pass
+        for setting in self.settings:
+            if setting.selected:
+                pass
+                #self.app.screen.print_at(setting.tool_tip ,0,20, colour= Screen.COLOUR_RED)
 

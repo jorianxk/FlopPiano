@@ -22,7 +22,7 @@ class SoundTab(Tab):
             self.app.screen.height-2,
             self.app.screen.width,
             y=2,
-            has_border=False,
+            has_border=True,
             can_scroll=False,
             on_update=self.update_widgets)
         self.frame.set_theme(self.app.theme)
