@@ -1,5 +1,6 @@
 import math
-from mido import Message
+import time
+from mido import Message, MetaMessage, MidiFile
 
 class MIDIUtil():
     """
@@ -459,3 +460,83 @@ class MIDIParser():
                 self.listener.on_sysex(msg, source)
             case _:
                 pass
+
+class MIDIPlayer():
+    '''
+        A simple class to play .mid files in a single thread in a non-blocking
+        way
+    '''
+
+    # TODO: doc strings
+    def __init__(self, on_stop=None) -> None:
+        """_summary_
+
+        Args:
+            on_stop (callable): A a callback function that gets called when 
+            the MIDIPlayer stops playing. Defaults to None.
+        """
+        self._on_stop = on_stop
+        self._playing = False
+        self._messages = None
+        self._next_time = 0.0
+        self._index = 0
+        self._start_time = None
+
+    def update(self) -> Message:
+        if not self.playing: return None
+        
+        elapsed_time = time.time() - self._start_time
+
+        if elapsed_time > self._next_time:
+            # It's time to play a message
+            msg_to_play = self._messages[self._index]
+            
+            self._index +=1  
+            if self._index > (len(self._messages) -1):
+                # Reached the end of the messages so stop playing
+                self.stop()
+            else:
+                # When should we play the next message?
+                self._next_time += self._messages[self._index].time
+            
+            return msg_to_play
+        
+        return None
+                    
+    def play(self, file_path:str, redirect:int = -1, transpose:int = 0):
+        if self.playing:
+            raise RuntimeError("MIDI player is already playing")
+
+        mid_file = MidiFile(file_path)
+
+        #Prepare the messages
+        self._messages = []
+        for msg in mid_file:
+            # ignore all MetaMessages 
+            if not isinstance(msg, MetaMessage):
+                # Redirect if needed
+                if redirect!=-1 and MIDIUtil.hasChannel(msg):
+                    msg.channel = redirect    
+                # Transpose if needed
+                if (msg.type == "note_on" or msg.type =="note_off"):
+                    msg.note = msg.note + transpose        
+                self._messages.append(msg)
+
+        self._playing = True
+        self._next_time = 0.0
+        self._index = 0
+        self._start_time = time.time()
+    
+    def stop(self):
+        self._playing = False
+        self._messages = None
+        self._next_time = 0.0
+        self._index = 0
+        self._start_time = None
+        
+        if self._on_stop is not None:
+            self._on_stop()
+
+    @property
+    def playing(self) -> bool:
+        return self._playing

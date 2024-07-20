@@ -4,7 +4,7 @@ import logging
 import time
 from floppiano.midi import MIDIUtil
 
-transpose = 0
+transpose = -12
 
 #test_midi_file = 'assets/MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'assets/MIDI/bloody.mid'
@@ -15,9 +15,9 @@ transpose = 0
 #test_midi_file = 'assets/MIDI/gerudo.mid'
 #test_midi_file = 'assets/MIDI/Happy_Birthday_MIDI.mid'
 #test_midi_file = 'assets/MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
-test_midi_file = 'assets/MIDI/level1.mid'
+#test_midi_file = 'assets/MIDI/level1.mid'
 #test_midi_file = 'assets/MIDI/metallica-one.mid'
-#test_midi_file = 'assets/MIDI/Sarias_Song_piano.mid'
+test_midi_file = 'assets/MIDI/Sarias_Song_piano.mid'
 #test_midi_file = 'assets/MIDI/The-Entertainer.mid'
 #test_midi_file = 'assets/MIDI/zelda_deep.mid'
 
@@ -38,10 +38,14 @@ test_midi_file = 'assets/MIDI/level1.mid'
 logging.basicConfig(level=logging.DEBUG)
 
 
+
 drive_addrs = [i for i in range(8,18)]
 
 synth = DriveSynth(drive_addrs)
-#synth.bow  = True
+
+synth.reset()
+
+synth.bow  = False
 #synth.polyphonic = False
 
 print(f'Playing {test_midi_file} in 2 second [ctrl+c to stop]')

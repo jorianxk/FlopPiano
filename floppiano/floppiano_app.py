@@ -4,6 +4,7 @@ from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
     splash_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
+from floppiano.midi import MIDIPlayer
 
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
@@ -55,6 +56,8 @@ class FlopPianoApp(App):
         self._needs_redraw = False
         # A flag to allow the piano keys' midi to be injected
         self._loopback = True
+
+        self._midi_player = MIDIPlayer(on_stop=self._synth.reset)
 
   
     def run(self):
@@ -112,6 +115,12 @@ class FlopPianoApp(App):
                 #outgoing.extend(self._synth.parse(keyboard.update()))
                 pass 
             
+            if self._midi_player.playing:
+                msg = self._midi_player.update()
+                if msg is not None:
+                    outgoing.extend(self._synth.parse([msg], "midi_player"))
+    
+
             if self._input_port is not None:
                 #Get the messages from the input port
                 if(not self._input_port.closed): 
@@ -148,6 +157,8 @@ class FlopPianoApp(App):
             return self._synth
         if resource == 'loopback':
             return self._loopback
+        if resource == 'midi_player':
+            return self._midi_player
         else:
             return None    
 
