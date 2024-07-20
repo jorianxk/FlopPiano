@@ -1,11 +1,6 @@
-from asciimatics.widgets import Layout, Label, Button, TextBox
-from asciimatics.effects import Print
-from asciimatics.renderers import StaticRenderer
-from asciimatics.screen import Screen
-
+from asciimatics.widgets import Layout, Label, Button
 from floppiano.UI.tabs import Tab
 from floppiano.UI.widgets import DynamicFrame, DropDown, FloppieWidget
-
 from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
 
@@ -79,28 +74,29 @@ class MainTab(Tab):
             y=2,
             has_border=False,
             can_scroll=False,
-            on_update=self.update_settings)
+            on_update=self.update_widgets)
         self.frame.set_theme(self.app.theme)
         
         self.settings:list[Setting] = []
 
         self.settings.append(
             Setting(
-                'Spin', 
-                ['off', 'on'], 
-                lambda: self.synth.__getattribute__('spin'), 
-                lambda x: self.synth.__setattr__('spin', x),
-                self.frame,
-                'Sets the spin state')
+                label_text = 'Spin', 
+                options = ['off', 'on'], 
+                on_update = lambda: self.synth.__getattribute__('spin'), 
+                on_change = lambda x: self.synth.__setattr__('spin', x),
+                frame = self.frame,
+                tool_tip = "Controls the floppy drive platters. 'On' means the platters will spin!")
         )
 
         self.settings.append(
             Setting(
-                'Bow', 
-                ['off', 'on'], 
-                lambda: self.synth.__getattribute__('bow'), 
-                lambda x: self.synth.__setattr__('bow', x),
-                self.frame)
+                label_text = 'Bow', 
+                options = ['off', 'on'], 
+                on_update = lambda: self.synth.__getattribute__('bow'), 
+                on_change = lambda x: self.synth.__setattr__('bow', x),
+                frame = self.frame,
+                tool_tip = "How the floppy drive heads move. 'On' -> heads move to and fro'")
         )
 
 
@@ -188,26 +184,21 @@ class MainTab(Tab):
 
         layout = Layout([1,1],False)
         self.frame.add_layout(layout)
-
         layout.add_widget(Button('Mute', on_click=None),0)
         layout.add_widget(Button('Reset', on_click=None),1)
-        #layout.add_widget(Divider())
+        
 
         layout = Layout([1], False)
         self.frame.add_layout(layout)
-
-        layout.add_widget(FloppieWidget())
-        # about_text = TextBox(8,readonly=True,line_wrap=True, disabled=True)
-        # layout.add_widget(about_text,1)
-
-        # about_text.value = ['This is some about text about us', 'Jorian Hates asciimattics','Farts']
+        self.floppie = FloppieWidget()
+        layout.add_widget(self.floppie)
         
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
 
-    def update_settings(self):
+    def update_widgets(self):
         for setting in self.settings:
+            setting.update()
             if setting.selected:
-                pass
-                #self.app.screen.print_at(setting.tool_tip ,0,20, colour= Screen.COLOUR_RED)
+                self.floppie.value = setting.tool_tip
 

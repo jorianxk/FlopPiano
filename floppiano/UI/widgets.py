@@ -1,7 +1,7 @@
-from asciimatics.screen import Screen
 from asciimatics.widgets import Widget, Frame, DropdownList, TextBox
 from asciimatics.widgets.utilities import _enforce_width
 from wcwidth import wcswidth
+import textwrap
 import logging
 
 
@@ -24,8 +24,6 @@ class DynamicFrame(Frame):
         if self._on_update:
             self._on_update()
         return super()._update(frame_no)
-
-
 
 
 class DropDown(DropdownList):
@@ -124,31 +122,18 @@ class LoggerText(TextBox, logging.StreamHandler):
 
 class FloppieWidget(Widget):
 
-    def __init__(self, name=None):
+    # Image must be 45 columns X 45 lines!
+    IMAGE_PATH = 'assets/floppie_widget.txt'
+   
+    def __init__(self, name=None, value = '', animate = True):
         super().__init__(name, False, False, None, None)
 
-        # self._image = (
-        #     '┌─┬──~─────~──┬─┐',
-        #     '│■│  @     @  │ │',
-        #     '│ │     <     │ │',
-        #     '│ │  \_____/  │ │',
-        #     '│ └───────────┘ │',
-        #     '│ ┌─────────┐   │',
-        #     '│ │    ┌──┐ │   │',
-        #     '│ │    |  | │   │',
-        #     '╰─┴────┘──└─┴───┘'
-        # )
+        self._image = None
+        with open(FloppieWidget.IMAGE_PATH, encoding="utf8") as file:
+            self._image = [line for line in file]
 
-        self._image = (
-            '╔═══════════════════════════════════════════╗',
-            '║ ┌─┬──~─────~──┬─┐ ┌                     ┐ ║',
-            '║ │■│  @     @  │ │                         ║',
-            '║ │ │     >     │ │                         ║',
-            '║ │ │  \_____/  │ │                         ║',
-            '║ │ └───────────┘ │                         ║',
-            '║ │ ┌─────────┐   │ └                     ┘ ║',
-            '╚═╧═╧═════════╧═══╧═════════════════════════╝'           
-        )
+        self.value = value
+        self.animate = animate
 
     def reset(self):
         pass
@@ -157,6 +142,9 @@ class FloppieWidget(Widget):
         
         frame:Frame = self._frame
         (colour, attr, background) = self._pick_colours("label", selected=self._has_focus)
+
+        
+        #Draw Floppie
         y = self._y
         for line in self._image:
             frame.canvas.print_at(
@@ -167,16 +155,46 @@ class FloppieWidget(Widget):
                 bg = background,
             )
             y+=1
-        frame.canvas.print_at("Eat A dick!", self._x+22, self._y+2, colour=colour, attr=attr, bg = background)
-        frame.canvas.print_at("I'm not floppy 4 u", self._x+22, self._y+3, colour=colour, attr=attr, bg = background)
-        frame.canvas.print_at("Hello12345678234567", self._x+22, self._y+4, colour=colour, attr=attr, bg = background)
-        frame.canvas.print_at("Hello12345678234567", self._x+22, self._y+5, colour=colour, attr=attr, bg = background)
+
+        #Draw the text frame
+        frame.canvas.print_at('┌', self._x+20, self._y+1, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at('┐', self._x+42, self._y+1, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at('└', self._x+20, self._y+6, colour=colour, attr=attr, bg = background)
+        frame.canvas.print_at('┘', self._x+42, self._y+6, colour=colour, attr=attr, bg = background)
+
+        # Draw the text/value
+        y = self._y + 2
+        for line in self._value:
+            frame.canvas.print_at(line, self._x+22, y, colour=colour, attr=attr, bg = background)
+            y+=1
+
+        #Draw the eyebrows
+        if self.animate and frame_no % 2:
+            frame.canvas.print_at('^', self._x+7, self._y+1, colour=colour, attr=attr, bg = background)
+            frame.canvas.print_at('^', self._x+13, self._y+1, colour=colour, attr=attr, bg = background)
+
     def process_event(self, event):
         return event
     
     @property
-    def value(self):
-        return None
+    def value(self) -> list[str]:
+        return self._value
+
+    @value.setter
+    def value(self, value:str):
+        # Wrap the string into chunks of length 19
+        self._value = textwrap.wrap(value, 19)
+
+        # If we have more then four chunks
+        if len(self._value) > 4:
+            # Force the list only to be four chunks
+            self._value = self._value[0:4]
+            # The last chunk should be "..."ed to let the user know the value 
+            # was shortened
+            self._value[-1] = textwrap.shorten(
+                self._value[-1] + "more words to make the line be shortened",
+                width = 19,
+                placeholder = '...')
 
     def required_height(self, offset, width):
         return 8
