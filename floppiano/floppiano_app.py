@@ -2,7 +2,7 @@ from floppiano import VERSION
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
-    splash_screen, FloppySaver, MainTab, SoundTab, SettingsTab, MIDIPlayerTab ,AboutTab)
+    splash_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
 from floppiano.synths import DriveSynth
 
 from asciimatics.screen import Screen
@@ -22,12 +22,12 @@ class FlopPianoApp(App):
     def __init__(
             self, 
             synth:DriveSynth,            # The DriveSynth to use
-            #keyboard = None,             #TODO: add keyboard here
+            #keyboard = None,            # TODO: add keyboard here
             input_port:BaseInput,
             output_port:BaseOutput, 
-            theme: str = 'default',        # The initial asciimatics theme to use
-            splash_start: bool = True,     # Start the app with splash screens
-            screen_timeout:float = None,   # In seconds and fractions of seconds
+            theme: str = 'default',      # The initial asciimatics theme to use
+            splash_start: bool = True,   # Start the app with splash screens
+            screen_timeout:float = None, # In seconds and fractions of seconds
             ) -> None:
         
         super().__init__(theme, handle_resize = False)    
@@ -132,16 +132,6 @@ class FlopPianoApp(App):
                         self._output_port.send(msg)
                 else: raise RuntimeError("The MIDI output port closed!")
             
-
-    def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
-        tab_group = TabGroup(screen)
-        tab_group.add_tab(MainTab(self, 'Main'))
-        tab_group.add_tab(SoundTab(self, 'Sound'))
-        tab_group.add_tab(SettingsTab(self, 'Settings'))
-        tab_group.add_tab(MIDIPlayerTab(self, "MIDI Player"))
-        tab_group.add_tab(AboutTab(self, 'About'))
-        tab_group.fix()        
-        return (tab_group.tabs, None)
      
     def action(self, action: str, args=None):
         if action == 'theme': # TODO is this the right way to set the theme?
@@ -160,6 +150,14 @@ class FlopPianoApp(App):
             return self._loopback
         else:
             return None    
+
+    def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
+        tab_group = TabGroup(screen)
+        tab_group.add_tab(MainTab(self, 'Main'))
+        tab_group.add_tab(MIDIPlayerTab(self, "MIDI Player"))
+        tab_group.add_tab(AboutTab(self, 'About'))
+        tab_group.fix()        
+        return (tab_group.tabs, None)
 
     def _draw(self, force: bool = False) -> bool:
         # overridden to handle the screen saver logic

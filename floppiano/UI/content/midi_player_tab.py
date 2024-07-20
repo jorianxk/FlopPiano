@@ -37,14 +37,14 @@ class MIDIPlayerTab(Tab):
 
         layout.add_widget(Label("MIDI File:", align='^'))
         self.file_browser = FileBrowser(Widget.FILL_FRAME,
-                            os.path.abspath("."),
+                            os.path.abspath("./assets/MIDI/"),
                             name="mc_list",
                             on_select=self.play,
                             on_change=None,
                             file_filter=".*.mid$")
         layout.add_widget(self.file_browser)
         
-        #Frames must be the last one added to have input focus
+
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
     

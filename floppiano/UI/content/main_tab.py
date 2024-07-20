@@ -3,12 +3,11 @@ from floppiano.UI.tabs import Tab
 from floppiano.UI.widgets import DynamicFrame, DropDown, FloppieWidget
 from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
-
-# self.add_effect(
-# PopUpDialog(self.app.screen, 'Polyphony changing is not yet supported', ["OK"]))
-
 class Setting():
-
+    '''
+        A helper class to manage the layout an behavior of a Dropdown
+        representing a synth or application setting
+    '''
     def __init__(self, 
                  label_text:str, 
                  options, 
@@ -47,158 +46,200 @@ class Setting():
             fit = False,
         )  
         layout.add_widget(self._dd,3)
-
     
     def update(self):
-        self._dd.value = self._on_update()
+        if self._on_update is not None:
+            self._dd.value = self._on_update()
     
     def _changed(self):
-        self._on_change(self._dd.value)
+        if self._on_change is not None:
+            self._on_change(self._dd.value)
     
     @property
     def selected(self) -> bool:
         return self._dd._has_focus
 
-
 class MainTab(Tab):
     def __init__(self, app, name: str):
         super().__init__(app, name)
 
-        self.synth:DriveSynth = self.app.resource('synth')
+        self._synth:DriveSynth = self.app.resource('synth')
 
-        #Frame Setup
-        self.frame = DynamicFrame(
+        self._frame = DynamicFrame(
             self.app.screen,
             self.app.screen.height-2,
             self.app.screen.width,
             y=2,
             has_border=False,
             can_scroll=False,
-            on_update=self.update_widgets)
-        self.frame.set_theme(self.app.theme)
+            on_update=self._update_widgets)
+        self._frame.set_theme(self.app.theme)
         
-        self.settings:list[Setting] = []
+        self._settings:list[Setting] = []
 
-        self.settings.append(
+        self._settings.append(
             Setting(
                 label_text = 'Spin', 
                 options = ['off', 'on'], 
-                on_update = lambda: self.synth.__getattribute__('spin'), 
-                on_change = lambda x: self.synth.__setattr__('spin', x),
-                frame = self.frame,
-                tool_tip = "Controls the floppy drive platters. 'On' means the platters will spin!")
+                on_update = lambda: self._synth.__getattribute__('spin'), 
+                on_change = lambda x: self._synth.__setattr__('spin', x),
+                frame = self._frame,
+                tool_tip = "Controls the floppy drive platters. 'on' = the platters will spin!")
         )
 
-        self.settings.append(
+        self._settings.append(
             Setting(
                 label_text = 'Bow', 
                 options = ['off', 'on'], 
-                on_update = lambda: self.synth.__getattribute__('bow'), 
-                on_change = lambda x: self.synth.__setattr__('bow', x),
-                frame = self.frame,
-                tool_tip = "How the floppy drive heads move. 'On' -> heads move to and fro'")
+                on_update = lambda: self._synth.__getattribute__('bow'), 
+                on_change = lambda x: self._synth.__setattr__('bow', x),
+                frame = self._frame,
+                tool_tip = "How the floppy drive heads move. 'on' = heads move to-and-fro!")
         )
 
-
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Polyphony', 
-                ['monophonic', 'polyphonic'], 
-                lambda: self.synth.__getattribute__('polyphonic'), 
-                lambda x: x, # TODO
-                self.frame)
+                label_text = 'Polyphony', 
+                options = ['monophonic', 'polyphonic'], 
+                on_update = lambda: self._synth.__getattribute__('polyphonic'), 
+                on_change = self._polyphony_changed,
+                frame = self._frame,
+                tool_tip = "Sets the polyphony.") 
         )
 
-
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Pitch bend Range', 
-                list(PITCH_BEND_RANGES.keys()), 
-                lambda: self.synth.__getattribute__('pitch_bend_range'), 
-                lambda x: self.synth.__setattr__('pitch_bend_range', x),
-                self.frame)
+                label_text = 'Pitch bend Range', 
+                options = list(PITCH_BEND_RANGES.keys()), 
+                on_update = lambda: self._synth.__getattribute__('pitch_bend_range'), 
+                on_change = lambda x: self._synth.__setattr__('pitch_bend_range', x),
+                frame = self._frame,
+                tool_tip = "Changes how far the pitchwheel will bend a note at it's extreme position.")
         )
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Modulation Rate', 
-                range(0,128), 
-                lambda: self.synth.__getattribute__('modulation_rate'), 
-                lambda x: self.synth.__setattr__('modulation_rate', x),
-                self.frame)
+                label_text = 'Modulation Rate', 
+                options = range(0,128), 
+                on_update = lambda: self._synth.__getattribute__('modulation_rate'), 
+                on_change = lambda x: self._synth.__setattr__('modulation_rate', x),
+                frame = self._frame,
+                tool_tip = "The amount in Hz to add to a note when modulating. A.K.A. modulation attack.")
         )
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Monophonic Voices', 
-                range(0,128), 
-                lambda: self.synth.__getattribute__('mono_voices'), 
-                lambda x: x,  #self.synth.__setattr__('modulation_rate', x), #TODO
-                self.frame)
+                label_text = 'Monophonic Voices', 
+                options = range(0,128), 
+                on_update = lambda: self._synth.__getattribute__('mono_voices'),
+                # _mono_voices is a private variable only edit if you know what you're doing
+                on_change = lambda x: self._synth.__setattr__('_mono_voices', x), 
+                frame = self._frame,
+                tool_tip = "The number of voices to use when monophonic. '0' = max voices")
         )
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Polyphonic Voices', 
-                range(0,128), 
-                lambda: self.synth.__getattribute__('poly_voices'), 
-                lambda x: self.synth.__setattr__('poly_voices', x),
-                self.frame)
+                label_text = 'Polyphonic Voices', 
+                options = range(0,128), 
+                on_update = lambda: self._synth.__getattribute__('poly_voices'), 
+                on_change = lambda x: self._synth.__setattr__('poly_voices', x),
+                frame = self._frame,
+                tool_tip = "The number of voices to use when polyphonic. '0' = max voices")
         )   
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Loopback', 
-                ['off', 'on'], 
-                lambda: self.app.resource('loopback'), 
-                lambda x: self.app.action('loopback', x),
-                self.frame)
+                label_text = 'Loopback', 
+                options = ['off', 'on'], 
+                on_update = lambda: self.app.resource('loopback'), 
+                on_change = lambda x: self.app.action('loopback', x),
+                frame = self._frame,
+                tool_tip = "When 'on' the MIDI notes generated by the keyboard will be played.")
         )   
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Input Channel', 
-                range(0,16), 
-                lambda: self.synth.__getattribute__('input_channel'), 
-                lambda x: self.synth.__setattr__('input_channel', x),
-                self.frame)
+                label_text = 'Input Channel', 
+                options = range(0,16), 
+                on_update = lambda: self._synth.__getattribute__('input_channel'), 
+                on_change = lambda x: self._synth.__setattr__('input_channel', x),
+                frame = self._frame,
+                tool_tip = "The incoming MIDI channel.")
         ) 
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Output Channel', 
-                range(0,16), 
-                lambda: self.synth.__getattribute__('output_channel'), 
-                lambda x: self.synth.__setattr__('output_channel', x),
-                self.frame)
+                label_text = 'Output Channel', 
+                options = range(0,16), 
+                on_update = lambda: self._synth.__getattribute__('output_channel'), 
+                on_change = lambda x: self._synth.__setattr__('output_channel', x),
+                frame = self._frame,
+                tool_tip = "The outgoing MIDI channel.")
         ) 
 
-        self.settings.append(
+        self._settings.append(
             Setting(
-                'Output Mode', 
-                OUTPUT_MODES, 
-                lambda: self.synth.__getattribute__('output_mode'), 
-                lambda x: self.synth.__setattr__('output_mode', x),
-                self.frame)
+                label_text = 'Output Mode', 
+                options = OUTPUT_MODES, 
+                on_update = lambda: self._synth.__getattribute__('output_mode'), 
+                on_change = lambda x: self._synth.__setattr__('output_mode', x),
+                frame = self._frame,
+                tool_tip = "What MIDI gets output. 'rollover' = MIDI that could not be played.")
         ) 
 
         layout = Layout([1,1],False)
-        self.frame.add_layout(layout)
-        layout.add_widget(Button('Mute', on_click=None),0)
-        layout.add_widget(Button('Reset', on_click=None),1)
-        
+        self._frame.add_layout(layout)
 
+        self._mute_button = Button('Mute', on_click=self._mute_clicked)
+        layout.add_widget(self._mute_button,0)
+
+        self._reset_button = Button('Reset', on_click=self._reset_clicked)
+        layout.add_widget(self._reset_button,1)
+        
         layout = Layout([1], False)
-        self.frame.add_layout(layout)
-        self.floppie = FloppieWidget()
-        layout.add_widget(self.floppie)
+        self._frame.add_layout(layout)
+        self._floppie = FloppieWidget()
+        layout.add_widget(self._floppie)
         
-        self.frame.fix()
-        self.add_effect(self.frame, reset=False)
+        self._frame.fix()
+        self.add_effect(self._frame, reset=False)
 
-    def update_widgets(self):
-        for setting in self.settings:
+    def _update_widgets(self):        
+        # Update the settings (DropDowns) and update the tool tip is necessary
+        for setting in self._settings:
             setting.update()
             if setting.selected:
-                self.floppie.value = setting.tool_tip
+                self._floppie.value = setting.tool_tip
+    
+        if self._mute_button._has_focus:
+            self._floppie.value = "Mutes all sounding voices."
+        
+        if self._reset_button._has_focus:
+            self._floppie.value = "Resets all sounding voices and un-mutes."
+
+        # TODO: make the keyboard mute led match the synth mute state?
+
+    def _mute_clicked(self):
+        # Mute the synth
+        self._synth.mute()
+        # TODO: TUrn on the keyboard mute LED?
+
+    def _reset_clicked(self):
+        # Reset the synth
+        self._synth.reset()
+        # TODO: Enure that the keyboard mute LED is off?
+    
+    def _polyphony_changed(self, polyphonic:bool):
+        if polyphonic:
+            #uses synth property poly_voices to become polyphonic
+            self._synth.poly_mode()
+        else:
+            # _mono_voices is a private variable which is set by the Monophonic
+            # Voices setting. tldr: this is a hacky work around because MIDI cc
+            # 126 sets how many voices to use when monophonic
+            self._synth.mono_mode(self._synth._mono_voices)
+
+
+
 
