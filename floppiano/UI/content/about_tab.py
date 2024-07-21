@@ -1,8 +1,8 @@
-from asciimatics.widgets import Layout, Label, TextBox
-from asciimatics.widgets.utilities import THEMES
-
+from asciimatics.widgets import Layout, Label
+from floppiano import VERSION
 from floppiano.UI.tabs import Tab
-from floppiano.UI.widgets import DynamicFrame
+from floppiano.UI.widgets import DynamicFrame, ReadOnlyText
+import textwrap
 
 class AboutTab(Tab):
 
@@ -16,28 +16,34 @@ class AboutTab(Tab):
             self.app.screen.width,
             y=2,
             has_border=False,
-            can_scroll=False,
-            on_update=self.update_widgets)
+            can_scroll=True)
         self.frame.set_theme(self.app.theme)   
+
+        layout = Layout([99,1],False)
+        self.frame.add_layout(layout)
+
+        layout.add_widget(Label(f'FlopPiano version {VERSION}', align='^'),0)
+        
+        # Phantom Text to add a tabstop at the top of the page
+        header = ReadOnlyText()
+        header.value = ""
+        layout.add_widget(header,1)
 
         layout = Layout([1],True)
         self.frame.add_layout(layout)
 
-        layout.add_widget(Label('About The FlopPiano:', align='^'))
-        about_text = TextBox(10,readonly=True,line_wrap=True)
-        layout.add_widget(about_text)
-        about_text.value = ['This is some about text about us', 'Jorian Hates asciimattics','Farts']
+        layout.add_widget(Label('Jacob Brooks & Jorian Khan', align='^'))
 
-
-        # layout.add_widget(Label("Application Log:", align='^'))
-        # loggerText = LoggerText(height=4)
-        # if logger is not None:
-        #     logger.addHandler(loggerText)
-        # layout.add_widget(loggerText)
-
+        with open('assets/about.txt', encoding="utf8") as file:
+            for line in file:
+                layout.add_widget(Label(''))
+                chunks = textwrap.wrap(line,43, initial_indent='    ')
+                for chunk in chunks:
+                    text = ReadOnlyText()
+                    text.value = chunk
+                    layout.add_widget(text)
+                
 
         self.frame.fix()
         self.add_effect(self.frame, reset=False)
     
-    def update_widgets(self):
-        pass

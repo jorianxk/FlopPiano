@@ -1,4 +1,4 @@
-from asciimatics.widgets import Widget, Frame, DropdownList, TextBox
+from asciimatics.widgets import Widget, Frame, DropdownList, TextBox, Text
 from asciimatics.widgets.utilities import _enforce_width
 from wcwidth import wcswidth
 import textwrap
@@ -21,10 +21,9 @@ class DynamicFrame(Frame):
         self._on_update = on_update
         
     def _update(self, frame_no):
-        if self._on_update:
+        if self._on_update is not None:
             self._on_update()
         return super()._update(frame_no)
-
 
 class DropDown(DropdownList):
     def __init__(self, options, start_index=None ,**kwargs):
@@ -40,14 +39,6 @@ class DropDown(DropdownList):
 
             self._line = index
             self._value = option[1]  
-
-    # def revert(self):
-    #     for i, [_, value] in enumerate(self._options):
-    #         if value == self._old_value:
-    #             self._line = i
-    #             self._value = self._old_value
-    #             break
-
 
     def update(self, frame_no):
         self._draw_label()
@@ -199,6 +190,13 @@ class FloppieWidget(Widget):
     def required_height(self, offset, width):
         return 8
 
+class ReadOnlyText(Text):
 
-    pass
-
+    def __init__(self,  **kwargs):        
+        super().__init__(label=None, name=None, on_change=None, validator=None, 
+                         hide_char=None, max_length=None, readonly=False, 
+                         **kwargs)
+ 
+    def _pick_colours(self, palette_name, selected=False):
+        # overloaded to fix color
+        return super()._pick_colours("edit_text")

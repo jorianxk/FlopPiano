@@ -206,7 +206,7 @@ class MainTab(Tab):
         self.add_effect(self._frame, reset=False)
 
     def _update_widgets(self):        
-        # Update the settings (DropDowns) and update the tool tip is necessary
+        # Update the settings (DropDowns) and update the tool tip as necessary
         for setting in self._settings:
             setting.update()
             if setting.selected:
@@ -239,7 +239,4 @@ class MainTab(Tab):
             # Voices setting. tldr: this is a hacky work around because MIDI cc
             # 126 sets how many voices to use when monophonic
             self._synth.mono_mode(self._synth._mono_voices)
-
-
-
 
