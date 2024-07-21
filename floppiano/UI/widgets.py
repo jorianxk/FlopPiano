@@ -1,8 +1,10 @@
-from asciimatics.widgets import Widget, Frame, DropdownList, TextBox, Text
+from asciimatics.widgets import (
+    Widget, Frame, DropdownList, Text , Layout, Label)
+
 from asciimatics.widgets.utilities import _enforce_width
 from wcwidth import wcswidth
 import textwrap
-import logging
+
 
 
 class DynamicFrame(Frame):
@@ -83,33 +85,6 @@ class DropDown(DropdownList):
     @staticmethod
     def list2options(items:list[str]) -> tuple[str, int]:
         return [(name, index) for  index, name in enumerate(items)]
-
-class LoggerText(TextBox, logging.StreamHandler):
-
-    def __init__(self, height, history_length:int = 100, label=None, name=None,  **kwargs):
-        TextBox.__init__(self,height, label, name, as_string=False, line_wrap=True, parser=None, on_change=None, readonly=True, **kwargs)
-        logging.StreamHandler.__init__(self)
-
-        self._logged_lines = []
-        self._history_length = history_length
-       
-
-    def emit(self, record):
-        if len(self._logged_lines) >=self._history_length:
-            self._logged_lines = []
-        
-        #TODO format this
-        self._logged_lines.append(f'{record.getMessage()}')
-        self.value = self._logged_lines
-        self.reset()
-
-
-    def update(self, frame_no):
-        try:
-            super().update(frame_no)
-        except AttributeError as ae:
-            pass
-            # raise AppException("LoggerText got AttributeError on update()") from ae
 
 class FloppieWidget(Widget):
 
@@ -194,9 +169,69 @@ class ReadOnlyText(Text):
 
     def __init__(self,  **kwargs):        
         super().__init__(label=None, name=None, on_change=None, validator=None, 
-                         hide_char=None, max_length=None, readonly=False, 
+                         hide_char=None, max_length=None, readonly=True, 
                          **kwargs)
  
     def _pick_colours(self, palette_name, selected=False):
         # overloaded to fix color
         return super()._pick_colours("edit_text")
+
+class Setting():
+    '''
+        A helper class to manage the layout an behavior of a Dropdown
+        representing a synth or application setting
+    '''
+    def __init__(self, 
+                 label_text:str, 
+                 options, 
+                 on_update, 
+                 on_change, 
+                 frame:DynamicFrame,
+                 tool_tip = '') -> None:
+    
+        self._on_update = on_update
+        self._on_change = on_change
+        self.tool_tip = tool_tip
+
+        layout = Layout([3,9,1,9],fill_frame=False)
+        frame.add_layout(layout) 
+
+
+        layout.add_widget(Label(label_text, align='<'),1)
+        layout.add_widget(Label(':', align='^'),2)
+
+        dd_options = []
+        if isinstance(options, list):
+            for index, value in enumerate(options):
+                dd_options.append((value, index))       
+        elif isinstance(options, range):
+            for value in options:
+                dd_options.append((str(value), value))
+        else:
+            raise ValueError("Options must be a list or a range")
+
+        dd_options = tuple(dd_options)
+
+        self._dd = DropDown(
+            options = dd_options,
+            start_index = None if self._on_update is None else self._on_update(),
+            on_change = self._changed,
+            fit = False,
+        )  
+        layout.add_widget(self._dd,3)
+    
+    def update(self):
+        if self._on_update is not None:
+            self._dd.value = self._on_update()
+    
+    def _changed(self):
+        if self._on_change is not None:
+            self._on_change(self._dd.value)
+    
+    @property
+    def value(self):
+        return self._dd.value
+    
+    @property
+    def selected(self) -> bool:
+        return self._dd._has_focus

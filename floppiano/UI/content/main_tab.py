@@ -1,63 +1,9 @@
-from asciimatics.widgets import Layout, Label, Button
+from asciimatics.widgets import Layout, Button
 from floppiano.UI.tabs import Tab
-from floppiano.UI.widgets import DynamicFrame, DropDown, FloppieWidget
+from floppiano.UI.widgets import DynamicFrame, FloppieWidget, Setting
 from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
-class Setting():
-    '''
-        A helper class to manage the layout an behavior of a Dropdown
-        representing a synth or application setting
-    '''
-    def __init__(self, 
-                 label_text:str, 
-                 options, 
-                 on_update, 
-                 on_change, 
-                 frame:DynamicFrame,
-                 tool_tip = '') -> None:
-    
-        self._on_update = on_update
-        self._on_change = on_change
-        self.tool_tip = tool_tip
 
-        layout = Layout([3,9,1,9],fill_frame=False)
-        frame.add_layout(layout) 
-
-
-        layout.add_widget(Label(label_text, align='<'),1)
-        layout.add_widget(Label(':', align='^'),2)
-
-        dd_options = []
-        if isinstance(options, list):
-            for index, value in enumerate(options):
-                dd_options.append((value, index))       
-        elif isinstance(options, range):
-            for value in options:
-                dd_options.append((str(value), value))
-        else:
-            raise ValueError("Options must be a list or a range")
-
-        dd_options = tuple(dd_options)
-
-        self._dd = DropDown(
-            options = dd_options,
-            start_index = self._on_update(),
-            on_change = self._changed,
-            fit = False,
-        )  
-        layout.add_widget(self._dd,3)
-    
-    def update(self):
-        if self._on_update is not None:
-            self._dd.value = self._on_update()
-    
-    def _changed(self):
-        if self._on_change is not None:
-            self._on_change(self._dd.value)
-    
-    @property
-    def selected(self) -> bool:
-        return self._dd._has_focus
 
 class MainTab(Tab):
     def __init__(self, app, name: str):

@@ -481,6 +481,7 @@ class MIDIPlayer():
         self._next_time = 0.0
         self._index = 0
         self._start_time = None
+        self._file_path = None
 
     def update(self) -> Message:
         if not self.playing: return None
@@ -526,6 +527,7 @@ class MIDIPlayer():
         self._next_time = 0.0
         self._index = 0
         self._start_time = time.time()
+        self._file_path = file_path
     
     def stop(self):
         self._playing = False
@@ -533,6 +535,7 @@ class MIDIPlayer():
         self._next_time = 0.0
         self._index = 0
         self._start_time = None
+        self._file_path = None
         
         if self._on_stop is not None:
             self._on_stop()
@@ -540,3 +543,7 @@ class MIDIPlayer():
     @property
     def playing(self) -> bool:
         return self._playing
+    
+    @property
+    def file_path(self) -> str:
+        return self._file_path

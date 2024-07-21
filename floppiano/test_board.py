@@ -3,43 +3,45 @@ import floppiano.bus  as bus
 from floppiano.midi import MIDIUtil
 
 class Keys(IntEnum):
-        KEY_1       = 0
-        KEY_2       = 1
-        KEY_3       = 2
-        KEY_4       = 3
-        KEY_5       = 4
-        KEY_6       = 5
-        KEY_7       = 6
-        KEY_8       = 7
-        KEY_9       = 8
-        KEY_10      = 9
-        KEY_11      = 10
-        KEY_12      = 11
-        KEY_13      = 12
-        KEY_14      = 13
-        KEY_15      = 14
-        KEY_16      = 15
-        KEY_17      = 16
-        KEY_18      = 17
-        KEY_19      = 18
-        KEY_20      = 19
-        KEY_21      = 20
-        KEY_22      = 21
-        KEY_23      = 22
-        KEY_24      = 23
-        KEY_25      = 24
-        KEY_26      = 25
-        KEY_27      = 26
-        KEY_28      = 27
-        KEY_29      = 28
-        KEY_30      = 29
-        KEY_31      = 30
-        KEY_32      = 31
-        KEY_33      = 32
-        MUTE        = 33
-        OCTAVE_UP   = 34
-        OCTAVE_DOWN = 35
-        UNUSED      = 36
+        UNUSED      = 0
+        KEY_1       = 1
+        KEY_2       = 2
+        KEY_3       = 3
+        KEY_4       = 4
+        KEY_5       = 5
+        KEY_6       = 6
+        KEY_7       = 7
+        KEY_8       = 8
+        KEY_9       = 9
+        KEY_10      = 10
+        KEY_11      = 11
+        KEY_12      = 12
+        KEY_13      = 13
+        KEY_14      = 14
+        KEY_15      = 15
+        KEY_16      = 16
+        KEY_17      = 17
+        KEY_18      = 18
+        KEY_19      = 19
+        KEY_20      = 20
+        KEY_21      = 21
+        KEY_22      = 22
+        KEY_23      = 23
+        KEY_24      = 24
+        KEY_25      = 25
+        KEY_26      = 26
+        KEY_27      = 27
+        KEY_28      = 28
+        KEY_29      = 29
+        KEY_30      = 30
+        KEY_31      = 31
+        KEY_32      = 32
+        KEY_33      = 33
+        KEY_34      = 34
+        KEY_35      = 35
+        MUTE        = 36
+        OCTAVE_UP   = 37
+        OCTAVE_DOWN = 38
 
 class KeyboardListener():
 
@@ -80,52 +82,52 @@ class KeyboardListener():
 class Keyboard():
     KEY_BYTE_MAP = (
         (
-            Keys.KEY_1, 
-            Keys.KEY_2, 
             Keys.KEY_3, 
             Keys.KEY_4, 
             Keys.KEY_5, 
-            Keys.KEY_6,
-            Keys.KEY_7,
+            Keys.KEY_6, 
+            Keys.KEY_7, 
             Keys.KEY_8,
+            Keys.KEY_9,
+            Keys.KEY_10,
         ),
         (
-            Keys.KEY_9, 
-            Keys.KEY_10, 
             Keys.KEY_11, 
             Keys.KEY_12, 
             Keys.KEY_13, 
-            Keys.KEY_14,
-            Keys.KEY_15,
+            Keys.KEY_14, 
+            Keys.KEY_15, 
             Keys.KEY_16,
+            Keys.KEY_17,
+            Keys.KEY_18,
         ),
         (
-            Keys.KEY_17, 
-            Keys.KEY_18, 
             Keys.KEY_19, 
             Keys.KEY_20, 
             Keys.KEY_21, 
-            Keys.KEY_22,
-            Keys.KEY_23,
+            Keys.KEY_22, 
+            Keys.KEY_23, 
             Keys.KEY_24,
+            Keys.KEY_25,
+            Keys.KEY_26,
         ),
         (
-            Keys.KEY_25, 
-            Keys.KEY_26, 
             Keys.KEY_27, 
             Keys.KEY_28, 
             Keys.KEY_29, 
-            Keys.KEY_30,
-            Keys.KEY_31,
+            Keys.KEY_30, 
+            Keys.KEY_31, 
             Keys.KEY_32,
+            Keys.KEY_33,
+            Keys.KEY_34,
         ),
         (
-            Keys.KEY_33, 
+            Keys.KEY_35, 
             Keys.MUTE, 
             Keys.OCTAVE_UP, 
             Keys.OCTAVE_DOWN, 
-            Keys.UNUSED, 
-            Keys.UNUSED,
+            Keys.KEY_1, 
+            Keys.KEY_2,
             Keys.UNUSED,
             Keys.UNUSED,
         )
@@ -155,9 +157,9 @@ class Keyboard():
 
     def update(self) -> None:
         # Update the ctrl register 
-        ctrl = (self.mute_led << 5)
-        ctrl = ctrl | (self.octave_up_led << 4)
-        ctrl = ctrl | (self.octave_down_led << 3)
+        ctrl = (self.octave_up_led << 5)
+        ctrl = ctrl | (self.octave_down_led << 4)
+        ctrl = ctrl | (self.mute_led << 3)
         ctrl = ctrl | self.octave
 
         # Update the ctrl register and read the states from the nano

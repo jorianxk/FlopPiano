@@ -38,6 +38,7 @@ class FlopPianoApp(App):
 
         self._splash_start = splash_start
         self._screen_timeout = screen_timeout
+        #self._old_screen_timeout = screen_timeout
 
         # The Synth
         self._synth = synth 
@@ -149,8 +150,7 @@ class FlopPianoApp(App):
             self._needs_redraw =True
         if action == 'loopback':
             self._loopback = args
-        else:
-            pass
+        
     
     def resource(self, resource: str, args=None):
         if resource == 'synth':
@@ -159,8 +159,9 @@ class FlopPianoApp(App):
             return self._loopback
         if resource == 'midi_player':
             return self._midi_player
-        else:
-            return None    
+
+        return None 
+
 
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
         tab_group = TabGroup(screen)
