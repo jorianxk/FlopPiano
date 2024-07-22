@@ -284,10 +284,10 @@ class Synth(MIDIParser, MIDIListener, ABC):
             if callable(attr):
                 try: #if the function takes an argument pass it 
                     attr(value)
-                    self.logger.info(f'{attr}({value}): success')
+                    self.logger.info(f'{attr_name}({value}): success')
                 except TypeError: #if the function does not take an argument
                     attr()
-                    self.logger.info(f'{attr}(): success')
+                    self.logger.info(f'{attr_name}(): success')
             else:
                 # set the property
                 self.__setattr__(attr_name, value)

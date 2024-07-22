@@ -90,13 +90,13 @@ class MIDIPlayerTab(Tab):
         if bool(self._redirect_setting.value):
             # Redirect all the MIDI to the synth's input channel
             self._midi_player.play(
-                file = file, 
+                file, 
                 redirect = self._synth.input_channel, 
                 transpose = self._transpose_setting.value)
         else:
             # Don't redirect
             self._midi_player.play(
-                file = file, 
+                file, 
                 transpose = self._transpose_setting.value)
 
     def stop(self):

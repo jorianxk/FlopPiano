@@ -3,6 +3,8 @@ from asciimatics.effects import Effect
 from asciimatics.exceptions import StopApplication
 from asciimatics.event import KeyboardEvent
 
+from floppiano.synths.drive_synth import DriveSynth, DriveVoice
+
 from random import randint
 from operator import add
 

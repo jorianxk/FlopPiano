@@ -100,7 +100,7 @@ class FlopPianoApp(App):
         while True:            
             # If something requested a redraw and the screen saver is not active
             # force a draw to happen
-            
+
             #st = time.time()            
             if self._draw(self._needs_redraw): 
                 #self.logger.info(f'drew in {time.time()- st}')
@@ -214,7 +214,7 @@ class FlopPianoApp(App):
                     #Force the screen to have only the screen saver as a scene
                     self.screen.set_scenes(
                         [Scene(
-                            [FloppySaver(self.screen, VERSION)],
+                            [FloppySaver(self.screen, VERSION)],#[FloppySaver(self.screen, VERSION)],
                             -1,
                             clear=True
                         )]
