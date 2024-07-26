@@ -1,8 +1,8 @@
 /*
  * FlopPiano - Keyboard input controller sketch.
- * Version 0.9
+ * Version 1.0
  * 
- * 2024-06-014
+ * 2024-07-26
  * Jacob Brooks, Jorian Khan
  * 
  *                      
@@ -15,12 +15,20 @@
  
 #include <Wire.h>
 
-//#define SERIAL_DEBUG // if defined, debug information will be printed to serial
-//#define HANG_DEBUG   // if defined, loop() will hang after one loop() cycle - for debug 
-//#define TEST_PATTERN   // if defined key_states will not read, rather a test pattern will be ouput
 
+#define I2C_ADDR 0x77  // The I2C for this device
+#define DEVICE_TYPE 55 // The Device Type 
 
-#define I2C_ADDR 0x77 //The I2C for this device, RPi expects to get keyboard data on 
+#define CTRL_REG 0 
+#define INPUT_REG 1
+#define DEVICE_TYPE_REG 4
+
+#define POT_HYSTERESIS  25  // A threshold value for detecting changes in wheels
+#define PITCH_MAX       215 // Max analog read for pitch wheel
+#define PITCH_MIN       800 // Min analog read for pitch wheel
+#define PITCH_DEAD_ZONE 30  // The half-width of the pitch wheel dead zone
+#define MOD_MAX         215 // Max analog read for mod wheel
+#define MOD_MIN         800 // Min analog read for mod wheel
 
 // Input pin assignments
 #define MUX_0_ENA_PIN  2 // enable pin for multiplexer 0 (active LOW)
@@ -36,9 +44,9 @@
 
 
 // Output pin assignments
-#define MUTE_LED_PIN         10 // Pin for Mute button backlight
-#define OCTIVE_UP_LED_PIN    11 // Pin for Octave up button backlight
-#define OCTIVE_DOWN_LED_PIN  12 // Pin for Octave down button backlight
+#define MUTE_LED_PIN         11 // Pin for Mute button backlight
+#define OCTIVE_UP_LED_PIN    12 // Pin for Octave up button backlight
+#define OCTIVE_DOWN_LED_PIN  10 // Pin for Octave down button backlight
 #define OCTAVE_LED_SH_CP_PIN 13 // Pin for Octave LED shift register clock
 #define OCTAVE_LED_ST_CP_PIN A2 // Pin for Octave LED shift register latch
 #define OCTAVE_LED_DS_PIN    A3 // Pin for Octave LED shift register data serial input
@@ -52,25 +60,24 @@ void readInputStates();
 // Reads all states of a 16 channel multiplexer and stores them in mux_buffer
 unsigned int readMux(int);
 
-// Writes all LED states according to ctrl
+// Writes all LED states according to the CTRL register/byte
 void writeOutputStates();
 
-#ifdef TEST_PATTERN
-  void testPattern();
-  bool toggle_pattern = false;
-#endif
+// The register which the Pi wants to read/write from/to
+byte reg = 0;
 
-
-
-
-// An array to hold the incoming CTRL byte
+// The incoming CTRL byte
 byte ctrl = 0; 
 
 //array to to hold all input states
-byte input_states[9] = {1, 0, 1, 0, 1, 0, 1, 0, 1};  
+byte input_states[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};  
 
 // a buffer to hold the multiplexer states
 byte mux_buffer[2] = {0,0}; 
+
+// buffers for detecting wheel changes
+unsigned int last_pitch = 0;
+unsigned int last_mod = 0;
 
 void setup() {
   // Setup Multiplexer pins (Input)
@@ -101,77 +108,89 @@ void setup() {
   Wire.begin(I2C_ADDR);        // Join i2c bus with address I2C_ADDR   
   Wire.onReceive(recieveEvent);// Register recieveEvent 
   Wire.onRequest(requestEvent);// Register recieveEvent 
-  
-  // Start Serial if we're debuging
-  #ifdef SERIAL_DEBUG
-    Serial.begin(115200);
-    Serial.println("Serial starting...");
-  #endif
 
 }
 
 void loop() {
-  #ifdef SERIAL_DEBUG
-    Serial.println("------------------------ NEW LOOP TIME -------------------------");
-    Serial.println("=^..^=   =^..^=   =^..^=    =^..^=    =^..^=    =^..^=    =^..^=");
-    Serial.println("----------------------------------------------------------------");
-  #endif
-
   // Read all the input (button & wheels) states and store them in input_states  
-  #ifdef TEST_PATTERN
-    testPattern();
-  #else
-    readInputStates();
-  #endif
-  
+  readInputStates();  
   // Write all the LED states
   writeOutputStates();
-
-
-
-  #ifdef SERIAL_DEBUG
-    Serial.print("Latest CTRL: "); Serial.println(ctrl, BIN);
-    
-    Serial.println("Latest Input States: ***************************************************");
-    for (int i=0; i<9; i++){
-      Serial.println(input_states[i], BIN);
-    }
-  #endif 
-  
-
-  #ifdef HANG_DEBUG
-    while(1);
-  #endif
-
 }
 
 
-void recieveEvent(){ctrl = Wire.read();}
-void requestEvent(){Wire.write(input_states,9);}
+void recieveEvent(){
+  // What register does the Pi want to read/write?
+  reg = Wire.read();
+
+  if (reg == CTRL_REG){
+    // There should only be one byte if writing to the CTRL Register
+    if(Wire.read() ==1){
+      // Update the LED states with the new values
+      ctrl = Wire.read();
+    }
+  }
+  
+  // If there are any remaining bytes just read them and do nothing.
+  while (Wire.available()){Wire.read();}
+}
+void requestEvent(){
+  // reg was set during a recieveEvent()
+  
+  if (reg == INPUT_REG){
+    // The Pi wants the input states
+    Wire.write(input_states,9);   
+  }else if (reg == DEVICE_TYPE_REG){
+    // The Pi wants the device type
+    Wire.write(DEVICE_TYPE);
+  }else{
+    // Do Nothing
+  }
+
+}
 
 void readInputStates(){
   // Read key states
   readMux(MUX_0_ENA_PIN);
-  input_states[0] = mux_buffer[0]; // KEY_1 - KEY_8
-  input_states[1] = mux_buffer[1]; // KEY_9 - KEY_16
+  input_states[0] = mux_buffer[0]; // KEY_3 - KEY_10
+  input_states[1] = mux_buffer[1]; // KEY_11 - KEY_18
 
   readMux(MUX_1_ENA_PIN);
-  input_states[2] = mux_buffer[0]; // KEY_17 - KEY_24
-  input_states[3] = mux_buffer[1]; // KEY_25 - KEY_32
+  input_states[2] = mux_buffer[0]; // KEY_19 - KEY_26
+  input_states[3] = mux_buffer[1]; // KEY_27 - KEY_34
 
   readMux(MUX_2_ENA_PIN);
-  input_states[4] = mux_buffer[0]; // KEY_33, MUTE, OCTAVE_UP, OCTAVE_DOWN, ..., ..., ..., ...
+  // KEY_35, MUTE, OCTAVE_UP, OCTAVE_DOWN, KEY_1, KEY_2, KEY_UNUSED, KEY_UNUSED
+  input_states[4] = mux_buffer[0]; 
   //mux_buffer[1] We don't use the second 8 channels on the third multipexer
 
   // Read pitch wheel
-  unsigned int pitch = analogRead(PITCH_PIN);
-  input_states[5] = (pitch >> 8); // PITCH upper byte
-  input_states[6] = pitch;        // PITCH lower byte
-  
+  // Force the analog read to be in the normal 10-bit range
+  unsigned int pitch = map(analogRead(PITCH_PIN), PITCH_MIN, PITCH_MAX, 0, 1023);
+
+  // Clamp the reading if it's in the deadzone
+  if (pitch >= (511 - PITCH_DEAD_ZONE) && pitch <= (511 + PITCH_DEAD_ZONE)){
+    pitch = 511;
+  }
+
+  // Avoid jitter
+  if(abs(pitch - last_pitch) > POT_HYSTERESIS){
+    last_pitch = pitch;
+    input_states[5] = (pitch >> 8); // PITCH upper byte
+    input_states[6] = pitch;        // PITCH lower byte   
+  }
+
+
   // Read modulation wheel
-  unsigned int mod = analogRead(MOD_PIN);
-  input_states[7] = (mod >> 8); // MOD upper byte
-  input_states[8] = mod;        // MOD lower byte
+  // Force the analog read to be in the normal 10-bit range
+  unsigned int mod = map(analogRead(MOD_PIN), MOD_MIN, MOD_MAX, 0, 1023);
+  // Avoid Jitter
+  if(abs(mod - last_mod) > POT_HYSTERESIS){
+    last_mod = mod;
+    input_states[7] = (mod >> 8); // MOD upper byte
+    input_states[8] = mod;        // MOD lower byte    
+  }
+
 
 }
 
@@ -179,10 +198,6 @@ void readInputStates(){
 // mux_buffer[0] will contain key states from mux addresses 0-7
 // mux_buffer[1] will contain key states from mux addresses 8-15
 unsigned int readMux(int mux_pin){
-  #ifdef SERIAL_DEBUG 
-    Serial.println("************************************");
-    Serial.print("Reading multiplexor on pin "); Serial.println(mux_pin);
-  #endif
   digitalWrite(mux_pin, LOW); // Enable the multiplexer
 
   // Outer loop 'banks' the mux's addresses into low/high range
@@ -200,80 +215,29 @@ unsigned int readMux(int mux_pin){
 
       bool key_state  = !digitalRead(MUX_INPUT_PIN);
       mux_buffer[bank] = (mux_buffer[bank] << 1) | key_state; 
-      
-      #ifdef SERIAL_DEBUG
-        Serial.print("Address: "); Serial.print(address);
-        Serial.print(", bin: ");
-        Serial.print((0b00000001 & address) >> 0, BIN);
-        Serial.print((0b00000010 & address) >> 1, BIN);
-        Serial.print((0b00000100 & address) >> 2, BIN);
-        Serial.print((0b00001000 & address) >> 3, BIN);
-        Serial.print(", key_state: "); Serial.println(key_state);
-       #endif
+
     }
  
   }
-
-  #ifdef SERIAL_DEBUG
-    Serial.print("mux_buffer[0]: "); Serial.println(mux_buffer[0], BIN);
-    Serial.print("mux_buffer[1]: "); Serial.println(mux_buffer[1], BIN);
-  #endif
 
   digitalWrite(mux_pin, HIGH); // Disable the multiplexer
 }
 
 void writeOutputStates(){
   // Update simple LEDs
-  digitalWrite(MUTE_LED_PIN,        (0b00100000 & ctrl) >> 5);
-  digitalWrite(OCTIVE_UP_LED_PIN,   (0b00010000 & ctrl) >> 4);
-  digitalWrite(OCTIVE_DOWN_LED_PIN, (0b00001000 & ctrl) >> 3);
+  digitalWrite(OCTIVE_UP_LED_PIN,   (0b00100000 & ctrl) >> 5);
+  digitalWrite(OCTIVE_DOWN_LED_PIN, (0b00010000 & ctrl) >> 4);
+  digitalWrite(MUTE_LED_PIN,        (0b00001000 & ctrl) >> 3);
 
 
   // Update Octave number indicator LEDs
-  //Pull the latch pin low, so LED's don't change while shifting
+  // Pull the latch pin low, so LED's don't change while shifting
   digitalWrite(OCTAVE_LED_ST_CP_PIN, LOW);
-  //octave number   ->(0b00000111 & ctrl)  
-  //number to shift -> (1 << octave number)  
+  // octave number   ->(0b00000111 & ctrl)  
+  // number to shift -> (1 << octave number)  
   // shift out the bits:  
   shiftOut(OCTAVE_LED_DS_PIN, OCTAVE_LED_SH_CP_PIN, MSBFIRST, 1 << (0b00000111 & ctrl));
-  //Pull the latch pin high, so LED's will light  
+  // Pull the latch pin high, so LED's will light  
   digitalWrite(OCTAVE_LED_ST_CP_PIN, HIGH);  
 }
 
-
-#ifdef TEST_PATTERN
-void testPattern(){
-    if (toggle_pattern){
-      input_states[0] = 0b11110000;
-      input_states[1] = 0b00001111;
-      
-      input_states[2] = 0b10101010;
-      input_states[3] = 0b01010101;
-      
-      input_states[4] = 0b11000011;
-      
-      input_states[5] = 0b00110011;
-      input_states[6] = 0b11001100;
-      
-      input_states[7] = 0b01111110;      
-      input_states[8] = 0b10000001;
-
-    }
-    else{
-      input_states[0] = 0b00001111;
-      input_states[1] = 0b11110000;
-      
-      input_states[2] = 0b01010101;
-      input_states[3] = 0b10101010;
-      
-      input_states[4] = 0b00111100;
-      
-      input_states[5] = 0b11001100;      
-      input_states[6] = 0b00110011;
-      
-      input_states[7] = 0b10000001;
-      input_states[8] = 0b01111110;
-    }
-    toggle_pattern = !toggle_pattern;
-}
-#endif
