@@ -334,6 +334,8 @@ class MIDIKeyboard(KeyboardListener):
         # A list of all the MIDI messages created on an update() call
         self._output:list[Message] = []
 
+        self._last_pitch = 510
+
     def update(self) -> list[Message]:
         # Call the keyboard update to pump all key/state callbacks and to set 
         # the LED states
@@ -345,7 +347,7 @@ class MIDIKeyboard(KeyboardListener):
 
         return output_buffer
 
-    def _mute(self, muted:bool):        
+    def _mute(self, muted:bool):
         self._keyboard.mute_led = self._muted = muted
     
     def _input_channel(self, input_channel:int):
@@ -392,24 +394,27 @@ class MIDIKeyboard(KeyboardListener):
             pass
     
     def _octave_up_key(self, pressed: bool) -> None:
-        if self._keyboard.octave == 7:
-            self._keyboard.octave = 0
-        else: 
-            self._keyboard.octave += 1
+        if pressed:
+            if self._keyboard.octave == 7:
+                self._keyboard.octave = 0
+            else: 
+                self._keyboard.octave += 1
     
     def _octave_down_key(self, pressed: bool) -> None:
-        if self._keyboard.octave == 0:
-            self._keyboard.octave = 7
-        else: 
-            self._keyboard.octave -= 1
+        if pressed:
+            if self._keyboard.octave == 0:
+                self._keyboard.octave = 7
+            else: 
+                self._keyboard.octave -= 1
     
     def _pitch_spin(self, pitch: int) -> None:
         # map the pitch to a valid midi pitch range
         # from arduino analog read (10 bit) range
+
         pitch = MIDIUtil.integer_map_range(
             pitch,
-            0,
-            1023,
+            220,
+            800,
             -8192,
             8191
         )  
@@ -421,6 +426,7 @@ class MIDIKeyboard(KeyboardListener):
         ))
     
     def _modulation_spin(self, modulation: int) -> None:
+        return
         # map the mod to a valid control change value range 
         # from arduino analog read (10 bit) range
         mod = MIDIUtil.integer_map_range(
