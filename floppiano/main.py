@@ -7,6 +7,7 @@ from mido.ports import BaseInput, BaseOutput
 import floppiano.bus as bus
 from floppiano import VERSION, FlopPianoApp
 from floppiano.devices import DeviceDiscovery
+from floppiano.devices import MIDIKeyboard
 from floppiano.synths import DriveSynth
 
 from asciimatics.screen import Screen, ManagedScreen
@@ -117,9 +118,13 @@ class Startup():
             logging.basicConfig(filename=args.logfile, level = args.loglevel, filemode='w+')
 
         # Return the app with the settings applied
+
+        synth = DriveSynth(drive_addresses)
+        keyboard = None if args.nokeyboard else MIDIKeyboard(keyboard_address, synth)
+
         return FlopPianoApp(
-            DriveSynth(drive_addresses),
-            #keyboard= None, # TODO Keyboard(keyboard_addr)
+            synth,
+            keyboard = keyboard,
             input_port = input_port,
             output_port = output_port,
             theme = args.theme,

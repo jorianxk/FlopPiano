@@ -1,6 +1,9 @@
 from threading import Thread, Event
 import floppiano.bus as bus
-from floppiano.devices.drives import DEVICE_TYPE, DEVICE_TYPE_REG
+
+#TODO fix device reg constants?
+import floppiano.devices.drives as drive
+import floppiano.devices.keyboards as keyboard
 
 class DeviceDiscovery(Thread):
     """
@@ -20,11 +23,11 @@ class DeviceDiscovery(Thread):
         for address in range(0x8, 0x77+1):
             if self._stop_event.is_set(): break
             try:
-                response = bus.read(address, DEVICE_TYPE_REG, 1)[0]
-                if response == DEVICE_TYPE: 
+                response = bus.read(address, drive.DEVICE_TYPE_REG, 1)[0]
+                if response == drive.DEVICE_TYPE: 
                     self._drive_addresses.append(address)
-                # if response == 55: #TODO fix this to match keyboard 
-                #     self._keyboard_address = address
+                if response == keyboard.DEVICE_TYPE: 
+                    self._keyboard_address = address
             except Exception:
                 # Don't let any exceptions happen. Either due to the bus
                 # otherwise.

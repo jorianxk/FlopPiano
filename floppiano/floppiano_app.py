@@ -3,7 +3,9 @@ from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
     splash_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
+
 from floppiano.synths import DriveSynth
+from floppiano.devices import MIDIKeyboard
 from floppiano.midi import MIDIPlayer
 
 from asciimatics.screen import Screen
@@ -23,7 +25,7 @@ class FlopPianoApp(App):
     def __init__(
             self, 
             synth:DriveSynth,            # The DriveSynth to use
-            #keyboard = None,            # TODO: add keyboard here
+            keyboard:MIDIKeyboard,            # TODO: add keyboard here
             input_port:BaseInput,
             output_port:BaseOutput, 
             theme: str = 'default',      # The initial asciimatics theme to use
@@ -43,7 +45,7 @@ class FlopPianoApp(App):
         # The Synth
         self._synth = synth 
         # The keyboard
-        self._keyboard = None # TODO keyboard 
+        self._keyboard = keyboard 
         # The MIDI input port
         self._input_port = input_port
         # The MIDI output port
@@ -112,9 +114,9 @@ class FlopPianoApp(App):
 
             # add the piano key midi to the incoming if the loopback is on
             # TODO add the piano key midi to the stream
-            if self._loopback: 
-                #outgoing.extend(self._synth.parse(keyboard.update()))
-                pass 
+            if self._loopback and self._keyboard is not None:
+                outgoing.extend(
+                    self._synth.parse(self._keyboard.update(),'keyboard')) 
             
             if self._midi_player.playing:
                 msg = self._midi_player.update()

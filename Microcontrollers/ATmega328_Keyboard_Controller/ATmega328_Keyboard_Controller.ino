@@ -44,8 +44,8 @@
 
 
 // Output pin assignments
-#define MUTE_LED_PIN         11 // Pin for Mute button backlight
-#define OCTIVE_UP_LED_PIN    12 // Pin for Octave up button backlight
+#define MUTE_LED_PIN         12 // Pin for Mute button backlight
+#define OCTIVE_UP_LED_PIN    11 // Pin for Octave up button backlight
 #define OCTIVE_DOWN_LED_PIN  10 // Pin for Octave down button backlight
 #define OCTAVE_LED_SH_CP_PIN 13 // Pin for Octave LED shift register clock
 #define OCTAVE_LED_ST_CP_PIN A2 // Pin for Octave LED shift register latch

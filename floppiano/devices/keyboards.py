@@ -6,6 +6,13 @@ import floppiano.bus  as bus
 from floppiano.midi import MIDIUtil
 from floppiano.synths import Synth
 
+
+#Constants
+DEVICE_TYPE = 55
+DEVICE_TYPE_REG = 4
+CTRL_REG = 0
+INPUT_REG = 1
+
 class Keys(IntEnum):
         UNUSED      = 0
         KEY_1       = 1
@@ -216,9 +223,10 @@ class Keyboard():
         ctrl = ctrl | (self.octave_down_led << 4)
         ctrl = ctrl | (self.mute_led << 3)
         ctrl = ctrl | self.octave
+        bus.write(self.address, CTRL_REG, [ctrl])
 
         # Update the ctrl register and read the states from the nano
-        new_state = bus.read(self.address, ctrl, 9)
+        new_state = bus.read(self.address, INPUT_REG, 9)
 
         # for b in new_state:    
         #     print("{:08b}".format(b))
@@ -274,6 +282,10 @@ class Keyboard():
     def _mod(self, new_mod_states:list[int]) -> None:
         # combine the modulation upper and lower bytes
         mod = (new_mod_states[0] << 8) | new_mod_states[1]
+        
+        # TODO Mod analog read int wraps when in lowest wheel position
+        if mod > 1023: mod = 0
+
         if self.listener is not None:
             self.listener._modulation_spin(mod)
 
@@ -399,6 +411,14 @@ class MIDIKeyboard(KeyboardListener):
                 self._keyboard.octave = 0
             else: 
                 self._keyboard.octave += 1
+            # Send a reset to kill all active notes in the previous octave
+            self._output.append(Message(
+                type='control_change',
+                control = self._reset_cc,
+                value = 0,
+                channel = self._channel)
+            )
+            
     
     def _octave_down_key(self, pressed: bool) -> None:
         if pressed:
@@ -406,19 +426,31 @@ class MIDIKeyboard(KeyboardListener):
                 self._keyboard.octave = 7
             else: 
                 self._keyboard.octave -= 1
+            # Send a reset to kill all active notes in the previous octave
+            self._output.append(Message(
+                type='control_change',
+                control = self._reset_cc,
+                value = 0,
+                channel = self._channel)
+            )
     
     def _pitch_spin(self, pitch: int) -> None:
         # map the pitch to a valid midi pitch range
         # from arduino analog read (10 bit) range
-
+        pp  = pitch
         pitch = MIDIUtil.integer_map_range(
             pitch,
-            220,
-            800,
+            0,
+            1023,
             -8192,
             8191
-        )  
-        
+        )
+
+        # Enforce the wheel dead zone (It's done in firmware but it's done here
+        # to ensure that the dead zone sticks if the potentiometer drifts)
+        if pitch>= -10 and pitch<= 10:
+            pitch  = 0
+         
         self._output.append(Message(
             type='pitchwheel',
             pitch = pitch,
@@ -426,7 +458,7 @@ class MIDIKeyboard(KeyboardListener):
         ))
     
     def _modulation_spin(self, modulation: int) -> None:
-        return
+
         # map the mod to a valid control change value range 
         # from arduino analog read (10 bit) range
         mod = MIDIUtil.integer_map_range(
@@ -436,7 +468,7 @@ class MIDIKeyboard(KeyboardListener):
             0,
             127
         )
-
+        
         self._output.append(Message(
             type='control_change',
             control = self._modulation_cc,
