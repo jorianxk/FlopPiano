@@ -118,8 +118,12 @@ class CommandMap(dict):
                 names.append(item)
         return names
 
-# TODO: Docstrings
 class Synth(MIDIParser, MIDIListener, ABC):
+    """
+        An abstract MIDI Synthesizer. Parses MIDI messages and sets the
+        Synth's attributes accordingly. Relies on inheritance for sounding
+        implementation. 
+    """
 
     def __init__(
         self,
@@ -137,7 +141,45 @@ class Synth(MIDIParser, MIDIListener, ABC):
         poly_voices:int = 0, 
         control_change_map:CommandMap = None,
         sysex_map:CommandMap = None) -> None:
-        
+
+        """
+            Creates a Synth with initial specified properties attributes. 
+        Args:
+            input_channel (int, optional): The MIDI Channel which the Synth
+                is should listen to. Defaults to 0.
+            output_channel (int, optional): The MIDI CHannel in which outgoing 
+                Synth Messages should be sent on. Defaults to 0.
+            output_mode (str, optional): The output mode for the Synth. 
+                Must be a member of OUTPUT_MODES. Defaults to 'rollover'.
+            sysex_id (int, optional): A unique ID in the range [0-127]. to
+                distinguish the Synth from other Synths during MIDI sysex 
+                messages. Defaults to 123.
+            pitch_bend_range (str, optional): Must be a member of 
+                PITCH_BEND_RANGES. Sets the pitch bend wheel's range.
+                Defaults to 'octave'.
+            pitch_bend (int, optional): The amount of pitch bend the synth
+             has on start up.  Defaults to 0.
+            modulation_wave (str, optional): The modulation wave type of the 
+                Synth. Defaults to 'sine'.
+            modulation_rate (int, optional): The modulation attack or 
+                rate in Hz. Defaults to 1.
+            modulation (int, optional): The initial modulation value of the 
+                Synth on startup. Defaults to 0.
+            muted (bool, optional): The initial mute state of the Synth. 
+                Defaults to False (un-muted).
+            polyphonic (bool, optional): The inital polyphony state of the
+                Synth. Defaults to True.
+            poly_voices (int, optional): The number of voices to use when 
+                polyphonic. Defaults to 0 (Max).
+            control_change_map (CommandMap, optional): The two-way map that is 
+                used to map MIDI Control Changes to Synth properties. 
+                Defaults to None (Default Map).
+            sysex_map (CommandMap, optional): The two-way map that is used to 
+                map MIDI sysex messages to Synth properties. Defaults to None.
+                (Default Map)
+        """
+
+
         #Set up this before so that inherited properties work with observers        
         self._attr_observers:dict[str, list[callable]] = {}
         self.logger = logging.getLogger(__name__) 
@@ -197,17 +239,18 @@ class Synth(MIDIParser, MIDIListener, ABC):
 
     @abstractmethod
     def note_on(self, note:int, velocity:int, source) -> bool:
-
         return False
 
     @abstractmethod
     def note_off(self, note:int, velocity:int, source) -> bool:
-
         return False
     
     #--------------------------Public Functions--------------------------------#
     
     def reset(self) -> None:
+        """
+        Forces the synth to be un-muted
+        """
         #On a reset all things should be set back to default. In MIDI there is 
         # no 'unmute'. On reset make sure the Synth is not muted
         self.muted = False
@@ -219,6 +262,16 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self.muted = True
 
     def mono_mode(self, mono_voices:int=0) -> None:
+        """
+            Puts the synth into monophonic mode using a number of voices equal
+            to mono_voices
+        Args:
+            mono_voices (int, optional): The number of voices to use 
+                when monophonic. Defaults to 0.
+
+        Raises:
+            ValueError: If mono_voices is not in the range [0,127]
+        """
         if mono_voices<0 or mono_voices>127:
             raise ValueError('mono_voices must be [0,127]')
         # disable polyphony (make monophonic)
@@ -226,16 +279,46 @@ class Synth(MIDIParser, MIDIListener, ABC):
         self._mono_voices = mono_voices
     
     def poly_mode(self) -> None:
+        """
+            Puts the synth in polyphonic mode using a number of voices equal 
+            to Synth.poly_voices. 
+        """
         # enable polyphony (make polyphonic)
         self._polyphonic = True 
 
     def parse(self, messages:list[Message], source = None) -> list[Message]:
+        """
+            Forces the synth to consume then act on the specified MIDI. returns
+            the resultant MIDI depending on the Synth's output mode.
+        Args:
+            messages (list[Message]): The MIDI messages to parse
+            source (_type_, optional): The source of the MIDI messages
+                Defaults to None.
+
+        Returns:
+            list[Message]: A list of MIDI messages that occurred or should be
+            passed on as a result of the Synth processing the messages in the 
+            message parameter. For example, notes that could not be played, 
+            sysex messages, etc. If the Synths output_mode is 'off' the 
+            list returned will be empty.
+        """
         # process all the messages from the messages
         for msg in messages: MIDIParser.parse(self, msg, source)        
         # Flush the output and return any rolled over messages
         return self._flush_output()
     
     def attach_observer(self, attr_name:str, observer:Callable) -> None:
+        """
+            Attaches the specified callback to the specified property of the
+            Synth. When the specified property is changed, the specified 
+            callable will be invoked. The callable should expect a single 
+            of attr_name's type which will be the new set value of the attribute
+        Args:
+            attr_name (str): The name of the Synth's attribute to attach an 
+                observer to.
+            observer (Callable): A callback function to receive the new 
+                attribute value whn the attribute changes.
+        """
         if attr_name in self._attr_observers.keys():
             # Already in the dict. Add a the observer to the list
             self._attr_observers[attr_name].append(observer)
@@ -244,12 +327,21 @@ class Synth(MIDIParser, MIDIListener, ABC):
             self._attr_observers[attr_name] = [observer]
     
     def detach_observer(self, attr_name:str, observer:Callable) -> None:
+        """
+            Removes an already attached attribute observer. 
+        Args:
+            attr_name (str): The name of the attribute in which the observer
+                is attached
+            observer (Callable): The observer that should be removed from the
+                attribute's observers
+        """
         # Remove the observer for the the attribute
         self._attr_observers[attr_name].remove(observer)
    
     #-------------------------Private Functions--------------------------------#
 
     def _flush_output(self) -> list[Message]:
+        #Preps the output of the synth
         # Ready the outputs
         output_buffer:list[Message] = [] 
         if self.output_mode == OUTPUT_MODES.index('off'):
@@ -270,6 +362,8 @@ class Synth(MIDIParser, MIDIListener, ABC):
         return output_buffer
 
     def __setattr__(self, name:str, value:Any) -> None:
+        # Overridden to invoke any attached attribute observers on
+        # a successful attribute change.
         # Set the attribute
         object.__setattr__(self, name,value)
         #If an observer exists for the attribute, then call it
@@ -278,6 +372,15 @@ class Synth(MIDIParser, MIDIListener, ABC):
                 observer(value)
 
     def _map_attr(self, attr_name:str, value:Any = None) -> None:
+        """
+            Sets/Calls a Synth attribute by it's (str) name with parameter
+            value. Used to map MIDI messages to functional changes in the 
+            Synth. 
+        Args:
+            attr_name (str): The attribute to be invoked/set
+            value (Any, optional): The value or parameter to set/call the 
+                attribute with/to. Defaults to None.
+        """
         try:
             attr = self.__getattribute__(attr_name)
             # Setting a property or calling a function?
@@ -304,6 +407,8 @@ class Synth(MIDIParser, MIDIListener, ABC):
             self.logger.error(f'Error while mapping {attr_name}: {e}')    
 
     #------------Overridden from MIDIListener MIDI Handling--------------------#
+    # Below methods/ functions are invoked on a Synth.parse() call via the
+    # super classes MIDIListener and MIDIParser
 
     def on_note_on(self, msg: Message, source) -> None:
         # If the note_on function did not handle the message, pass the message

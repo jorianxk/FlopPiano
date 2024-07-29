@@ -15,6 +15,17 @@ from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 import logging
 
+"""
+
+The main entry point for the FlopPiano application. 
+
+Handles all of the startup checks and setup.
+
+"""
+
+
+
+
 class Startup():
     """
     A class to create FlopPianoApp with appropriate settings from command-

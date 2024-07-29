@@ -464,13 +464,12 @@ class MIDIParser():
 class MIDIPlayer():
     '''
         A simple class to play .mid files in a single thread in a non-blocking
-        way
+        way via regular update() calls
     '''
 
-    # TODO: doc strings
     def __init__(self, on_stop=None) -> None:
-        """_summary_
-
+        """
+            Creates a MIDI Player
         Args:
             on_stop (callable): A a callback function that gets called when 
             the MIDIPlayer stops playing. Defaults to None.
@@ -484,6 +483,13 @@ class MIDIPlayer():
         self._file_path = None
 
     def update(self) -> Message:
+        """
+            Should be called regularly (small time steps), returns a MIDI 
+            message at the appropriate time. 
+        Returns:
+            Message: None if a message is not yet available or a Message if 
+            a message is available.
+        """
         if not self.playing: return None
         
         elapsed_time = time.time() - self._start_time
@@ -505,6 +511,20 @@ class MIDIPlayer():
         return None
                     
     def play(self, file_path:str, redirect:int = -1, transpose:int = 0):
+        """
+            Preps the MIDIPlayer to generate messages on update() calls.
+        Args:
+            file_path (str): The file path to the .mid file to be played.
+            redirect (int, optional): If set to a valid MIDI channel all 
+                MIDI read from the .mid will be redirected to the specified 
+                channel. Defaults to -1 (No redirect).
+            transpose (int, optional): A number of MIDI notes to transpose when
+                a note_on or note_off is read. Defaults to 0.
+
+        Raises:
+            RuntimeError: If the MIDIPlayer is already in the process of playing
+        """
+
         if self.playing:
             raise RuntimeError("MIDI player is already playing")
 
@@ -530,6 +550,9 @@ class MIDIPlayer():
         self._file_path = file_path
     
     def stop(self):
+        """
+            Stops and resets the MIDIPlayer
+        """
         self._playing = False
         self._messages = None
         self._next_time = 0.0

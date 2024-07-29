@@ -1,9 +1,7 @@
-from typing import Any
 from floppiano.midi import MIDIUtil
 from floppiano.devices import Drives
 from floppiano.synths import Synth, PITCH_BEND_RANGES
-#TODO what about bus errors on 'Drives' calls?
-#TODO docstrings
+
 
 class DriveVoice():
     """
@@ -111,9 +109,12 @@ class DriveVoice():
 
     def __repr__(self) -> str:
         return f'DriveVoice using addresses {self._addresses}'
-    
 
 class DriveSynth(Synth):
+    """
+        A DriveSynth is an implementation of Synth that plays notes 
+        (from MIDI or programmatically) on Floppy drives.
+    """
 
     def __init__(
         self,
@@ -121,7 +122,16 @@ class DriveSynth(Synth):
         bow:bool = False,
         spin:bool = False,   
         **kwargs) -> None:
-
+        """
+            Constructs a DriveSynth. Accepts Synth arguments via **kwargs 
+        Args:
+            drive_addresses (tuple[int]): An iterable of int where each int is
+                an I2C address of a floppy drive
+            bow (bool, optional): The initial bow state of the DriveSynth.
+                Defaults to False.
+            spin (bool, optional): The initial spin state of the DriveSynth. 
+                Defaults to False.
+        """
         super().__init__(**kwargs)
         
         # Add support for crash mode and spin (Custom). Both spin and bow use 
@@ -162,6 +172,20 @@ class DriveSynth(Synth):
     #----------------------Inherited from from Synth---------------------------#
   
     def note_on(self, note: int, velocity: int, source) -> bool:
+        """
+            Plays a given MIDI Note. Velocity is ignored. If called directly 
+            (not via MIDI) the note on will not be rolled if there are no 
+            available voices.
+        Args:
+            note (int): A valid MIDI Note number
+            velocity (int): Ignored
+            source (_type_): The source of the incoming MIDI note. Can be None.
+            used to turn off a given note with the same source. 
+
+        Returns:
+            bool: True if the note was handled, False if the note could not be
+            played (There were no available voices.)
+        """
         try:
             #Get an available voice throws IndexError if not possible
             voice = self._available.pop()
@@ -189,6 +213,19 @@ class DriveSynth(Synth):
         return True
     
     def note_off(self, note: int, velocity: int, source) -> bool:
+        """
+            Stops a MIDI note from being played (if the note is actively being 
+            played) If called directly (not via MIDI) the note off will not be 
+            rolled if the note is not being played.
+        Args:
+            note (int): The MIDI note to halt
+            velocity (int): Ignored
+            source (_type_): The source from which the note was played
+
+        Returns:
+            bool: True if the note was halted, false if the note was not halted
+            (The note is not active)
+        """
         # Test to see if that note is playing
         for index, voice in enumerate(self._active):
             if voice.source == source and voice.note == note:
@@ -212,6 +249,9 @@ class DriveSynth(Synth):
         return True
 
     def reset(self) -> None:
+        """
+            Resets all voices and force un-mutes the DriveSynth
+        """
         # Stop all drives from sounding
         Drives.enable(0,False)
         #clear the active stack
@@ -244,6 +284,12 @@ class DriveSynth(Synth):
         self.reset()
 
     def poly_mode(self) -> None:
+        """
+            Puts the DriveSynth in polyphonic mode using a number of voices
+            equal to DriveSynth.poly_voices. If poly_voices is zero or greater
+            than the number of available drives, all available drives will be 
+            used. 
+        """
         # Call super to do the actual work. Overridden because a DriveSynth must
         # be reset when it's polyphony is changed
         super().poly_mode()

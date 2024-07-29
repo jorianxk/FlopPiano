@@ -1,9 +1,8 @@
 from threading import Thread, Event
 import floppiano.bus as bus
-
-#TODO fix device reg constants?
 import floppiano.devices.drives as drive
 import floppiano.devices.keyboards as keyboard
+from floppiano.devices import DEVICE_TYPE_REG
 
 class DeviceDiscovery(Thread):
     """
@@ -19,11 +18,11 @@ class DeviceDiscovery(Thread):
     
     def run(self) -> None:
         # ping all i2c devices from from 0x8 to 0x77 and get their device type, 
-        # if the type is correct add it to the list
+        # if the type is correct add it to the list/update the devices
         for address in range(0x8, 0x77+1):
             if self._stop_event.is_set(): break
             try:
-                response = bus.read(address, drive.DEVICE_TYPE_REG, 1)[0]
+                response = bus.read(address, DEVICE_TYPE_REG, 1)[0]
                 if response == drive.DEVICE_TYPE: 
                     self._drive_addresses.append(address)
                 if response == keyboard.DEVICE_TYPE: 
@@ -34,6 +33,9 @@ class DeviceDiscovery(Thread):
                 pass
 
     def quit(self):
+        """
+            Sets the stop event to halt the DeviceDiscovery
+        """
         self._stop_event.set()
 
     def get_devices(self) -> tuple[list[int], int]:
