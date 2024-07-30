@@ -7,8 +7,16 @@ from random import randint
 
 from floppiano.UI.util import time2frames
 
+"""
+    A collection of functions that assist in the splash screens of the 
+    FlopPiano App 
+"""
 
-def jb_splash(screen:Screen) -> Scene:    
+
+def jb_splash(screen:Screen) -> Scene: 
+    """
+        Generates Jacob's Splash Screen as a Scene
+    """   
     # Color of the jb_logo
     logo_color = Screen.COLOUR_WHITE 
     # The time in second the logo should be displayed before the bombardment
@@ -86,13 +94,27 @@ def jb_splash(screen:Screen) -> Scene:
     return Scene(effects=effects,duration=duration, name="jb_splash")
 
 def jxk_splash(screen:Screen, duration:int) -> Scene:
+    # TODO: Make this splash screen
     pass
 
 def floppiano_splash(screen:Screen, duration:int, txt_file:str) -> Scene:
+    """
+        Generates the FlopPiano's splash screen as a Scene
+    Args:
+        screen (Screen): The Screen that will render the Scene
+        duration (int):  The duration in number of frames
+        txt_file (str): The path the the FlopPiano logo
+
+    Returns:
+        Scene: The FlopPiano splach screen as a Scene
+    """
+
+    # Read the logo
     floppiano_logo = "FlopPiano Splash Screen"
     with open(txt_file) as file:
         floppiano_logo = file.read()
 
+    # Simple Effect to do the rendering 
     effects = [
         Print(
             screen, 
@@ -108,7 +130,19 @@ def floppiano_splash(screen:Screen, duration:int, txt_file:str) -> Scene:
     return floppiano_scene
 
 def splash_screen(screen:Screen):
+    """
+        Uses the Screen to render a set of splash screen Scenes using 
+        native asciimatics.
+    Args:
+        screen (Screen): The Screen used to render the splash screens
+    """
+    # A list of all the splash screen scenes
     scenes = []
+    # Add the FlopPiano Splash
     scenes.append(floppiano_splash(screen,50,"assets/logo3.txt"))
+    # Add Jacob's Splash
     scenes.append(jb_splash(screen))
+    # Add Jorian's Splash
+    # TODO:
+    # Play the Scenes
     screen.play(scenes, repeat=False)

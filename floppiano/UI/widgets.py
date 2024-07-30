@@ -1,15 +1,18 @@
 from asciimatics.widgets import (
     Widget, Frame, DropdownList, Text , Layout, Label)
-
 from asciimatics.widgets.utilities import _enforce_width
 from wcwidth import wcswidth
 import textwrap
 
-
+"""
+    A collection of custom (and sloppy) asciimatics widgets.
+"""
 
 class DynamicFrame(Frame):
     """
-        overridden to add on_update
+        Essentially a standard asciimatics Frame but overridden to add 
+        an on_update() callback that is called when the Frame will be rendered.
+        This allows for a more responsive event-driven UI
     """
     def __init__(self, screen, height, width, data=None, on_load=None, 
             has_border=True, hover_focus=False, name=None, title=None, 
@@ -23,11 +26,17 @@ class DynamicFrame(Frame):
         self._on_update = on_update
         
     def _update(self, frame_no):
+        # If we have an on_update call back call it
         if self._on_update is not None:
             self._on_update()
         return super()._update(frame_no)
 
 class DropDown(DropdownList):
+    """
+        Essentially an asciimatics DropDownList but modified to accept a 
+        starting index to specify which element in the list should be displayed
+        on startup. 
+    """
     def __init__(self, options, start_index=None ,**kwargs):
         super().__init__(options, **kwargs)
 
@@ -43,6 +52,7 @@ class DropDown(DropdownList):
             self._value = option[1]  
 
     def update(self, frame_no):
+        # Copied and slightly modified from standard asciimatics
         self._draw_label()
 
         # This widget only ever needs display the current selection - the separate Frame does all
@@ -84,9 +94,22 @@ class DropDown(DropdownList):
     
     @staticmethod
     def list2options(items:list[str]) -> tuple[str, int]:
+        """
+            A helper method to convert a standard list to a form that the 
+            asciimatics DropDownList wants
+        Args:
+            items (list[str]): The list to convert
+
+        Returns:
+            tuple[str, int]: The set of options for a DropDownList
+        """
         return [(name, index) for  index, name in enumerate(items)]
 
 class FloppieWidget(Widget):
+    """
+        A silly Clippie like guy (Widget) to show various text bubbles and tool-
+        tips
+    """
 
     # Image must be 45 columns X 45 lines!
     IMAGE_PATH = 'assets/floppie_widget.txt'
@@ -104,13 +127,14 @@ class FloppieWidget(Widget):
     def reset(self):
         pass
 
-    def update(self, frame_no):
-        
+    def update(self, frame_no):        
+        # A new reference to our frame for code auto-completion
         frame:Frame = self._frame
-        (colour, attr, background) = self._pick_colours("label", selected=self._has_focus)
-
         
-        #Draw Floppie
+        # Get the theme colors
+        (colour, attr, background) = self._pick_colours("label", selected=self._has_focus)
+       
+        #Draw Floppie (The Image)
         y = self._y
         for line in self._image:
             frame.canvas.print_at(
@@ -122,24 +146,25 @@ class FloppieWidget(Widget):
             )
             y+=1
 
-        #Draw the text frame
+        #Draw the text frame ( The corners of the speech bubble)
         frame.canvas.print_at('┌', self._x+20, self._y+1, colour=colour, attr=attr, bg = background)
         frame.canvas.print_at('┐', self._x+42, self._y+1, colour=colour, attr=attr, bg = background)
         frame.canvas.print_at('└', self._x+20, self._y+6, colour=colour, attr=attr, bg = background)
         frame.canvas.print_at('┘', self._x+42, self._y+6, colour=colour, attr=attr, bg = background)
 
-        # Draw the text/value
+        # Draw the text/value (The text Floppie is saying)
         y = self._y + 2
         for line in self._value:
             frame.canvas.print_at(line, self._x+22, y, colour=colour, attr=attr, bg = background)
             y+=1
 
-        #Draw the eyebrows
+        #Draw the eyebrows/ overwrite Floppie's eyebrows (animated every-other frame)
         if self.animate and frame_no % 2:
             frame.canvas.print_at('^', self._x+7, self._y+1, colour=colour, attr=attr, bg = background)
             frame.canvas.print_at('^', self._x+13, self._y+1, colour=colour, attr=attr, bg = background)
 
     def process_event(self, event):
+        # Noting to do here
         return event
     
     @property
@@ -148,6 +173,8 @@ class FloppieWidget(Widget):
 
     @value.setter
     def value(self, value:str):
+        # Sets Floppie's speech text which is only 4 lines by 19 columns
+
         # Wrap the string into chunks of length 19
         self._value = textwrap.wrap(value, 19)
 
@@ -166,7 +193,10 @@ class FloppieWidget(Widget):
         return 8
 
 class ReadOnlyText(Text):
-
+    """
+        Just a disabled & readonly asciimatics Text widget modified to 
+        render with a normal (non-disabled) color scheme 
+    """
     def __init__(self,  **kwargs):        
         super().__init__(label=None, name=None, on_change=None, validator=None, 
                          hide_char=None, max_length=None, readonly=True, 
@@ -179,7 +209,8 @@ class ReadOnlyText(Text):
 class Setting():
     '''
         A helper class to manage the layout an behavior of a Dropdown
-        representing a synth or application setting
+        representing a synth or application setting. Encapsulates a layout,
+        a Dropdown and a tool-tip string. 
     '''
     def __init__(self, 
                  label_text:str, 
@@ -188,6 +219,22 @@ class Setting():
                  on_change, 
                  frame:DynamicFrame,
                  tool_tip = '') -> None:
+        """
+            Creates a Layout, Label, and DropDown and adds them to the specified
+            frame. 
+        Args:
+            label_text (str): The label test to use for the Setting
+            options (_type_): The options to use in the DropDown
+            on_update (_type_): A callback to update the DropDown's option on 
+                an update
+            on_change (_type_): A callback to preform some action when the 
+                DropDown's value is changed
+            frame (DynamicFrame): The Frame which will house the setting
+            tool_tip (str, optional): The help text for the setting. Defaults to ''.
+
+        Raises:
+            ValueError: If the specified options are not a list or a range
+        """
     
         self._on_update = on_update
         self._on_change = on_change
@@ -214,7 +261,7 @@ class Setting():
 
         self._dd = DropDown(
             options = dd_options,
-            start_index = None if self._on_update is None else self._on_update(),
+            start_index = None if self._on_update is None else self._on_update(), # Call the on_update once to get the start value
             on_change = self._changed,
             fit = False,
         )  

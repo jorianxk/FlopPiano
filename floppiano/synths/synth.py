@@ -311,7 +311,7 @@ class Synth(MIDIParser, MIDIListener, ABC):
         """
             Attaches the specified callback to the specified property of the
             Synth. When the specified property is changed, the specified 
-            callable will be invoked. The callable should expect a single 
+            callable will be invoked. The callable should expect a parameter 
             of attr_name's type which will be the new set value of the attribute
         Args:
             attr_name (str): The name of the Synth's attribute to attach an 

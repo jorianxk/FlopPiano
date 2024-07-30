@@ -3,20 +3,26 @@ from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.exceptions import ResizeScreenError
-from asciimatics.event import KeyboardEvent
-from floppiano.UI.util import keyboard_event_draw, draw_now
+from floppiano.UI.util import keyboard_event_draw
 
 
-
-#TODO Docstrings
 class App(ABC):
-    """_summary_
-        An abstract class to do app stuff
+    """
+        An abstract class to handle simple App attributes, logic, and 
+        bastardized asciimatics rendering in a single threaded way.
     """
     def __init__(
             self,
             theme:str = 'default',
             handle_resize:bool = False) -> None:
+        """
+            Insatiate an App
+        Args:
+            theme (str, optional):The asciimatics theme the app will use.
+                Defaults to 'default'.
+            handle_resize (bool, optional): If the app should attempt to handle
+                window resizing. (Experimental) Defaults to False.
+        """
         
         self._screen:Screen = None
         self.theme = theme
@@ -24,7 +30,7 @@ class App(ABC):
 
     @property
     def screen(self) -> Screen:
-        #No setter for screen on purpose, screen is initialized on first draw
+        # No setter for screen on purpose, screen is initialized on first draw
         return self._screen
     
     @property
@@ -32,7 +38,13 @@ class App(ABC):
         return self._theme
 
     @theme.setter
-    def theme(self, theme) -> None:
+    def theme(self, theme:str) -> None:
+        """
+            Sets the App theme.
+        Args:
+            theme (str): If the theme is not a valid ascii theme the default
+                theme will be used 
+        """
         if theme in THEMES:
             self._theme = theme
         else:
@@ -41,30 +53,58 @@ class App(ABC):
     @abstractmethod
     def run(self):
         """
+            Should be called to start the app
         """
 
     @abstractmethod
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
         """
+            Will be called by the draw routine. Expects a return value 
+            of tuple[list[Scene], Scene]. Where the list of Scenes is a set
+            of the Scenes to be rendered and the singular Scene is the starting
+            Scene
         """
 
     @abstractmethod
     def action(self, action:str, args=None):
         """
+            Used by other UI Elements to perform some user defined App-wide 
+            action/function.
         """
     
     @abstractmethod
     def resource(self, resource:str, args=None):
         """
+            Used by other UI Elements to get some user defined App-wide 
+            resource/object.
         """
     
     def reset(self):
+        """
+            Forces the App's screen to clear then close so that it may be
+            restarted on the next draw() call.
+        """
         self.screen.clear()
         self.screen.close()
         self._screen = None
  
-    def _draw(self, force:bool = False) -> bool:
-        #returns true if a draw actually occured
+    def draw(self, force:bool = False) -> bool:
+        """
+            Renders the Scenes obtained via a _draw_init() call only on keyboard
+            events or if forced.
+        Args:
+            force (bool, optional): If true, forces the asciimatics Screen to 
+                render regardless of if a keyboard event occured. Defaults to 
+                False.
+        Raises:
+            ResizeScreenError: If the App's attribute handle_resize was not set
+                during instantiation a ScreenResizeError will be raised upon 
+                screen resizes.
+
+        Returns:
+            bool: True if the screen actually drew, false otherwise.
+        """
+        #returns true if a draw actually occurred
         if self.screen is None: #The the first draw call
             # Open the screen
             self._screen = Screen.open(catch_interrupt=False)

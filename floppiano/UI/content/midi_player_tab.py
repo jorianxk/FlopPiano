@@ -8,13 +8,18 @@ from floppiano.UI.widgets import DynamicFrame, Setting, ReadOnlyText
 import os
 
 class MIDIPlayerTab(Tab):
+    """
+        A tab for displaying, playing and stopping .mid files
+    """
 
     def __init__(self, app, name: str):
         super().__init__(app, name)
 
+        # Get the Synth and MIDI Player
         self._synth = self.app.resource('synth')
         self._midi_player = self.app.resource('midi_player')
 
+        # Set up the Frame
         self._frame = DynamicFrame(
             self.app.screen,
             self.app.screen.height-2,
@@ -25,6 +30,7 @@ class MIDIPlayerTab(Tab):
             on_update = self._update_widgets)
         self._frame.set_theme(self.app.theme)
 
+        # A setting to control the .mid playback transpose
         self._transpose_setting = Setting(
             label_text = 'Transpose', 
             options = range(-12,13), 
@@ -32,6 +38,7 @@ class MIDIPlayerTab(Tab):
             on_change = None,
             frame = self._frame)
         
+        # A setting to control the .mid MIDI channel redirect
         self._redirect_setting = Setting(
             label_text = 'Redirect', 
             options = ['off', 'on'], 
@@ -43,7 +50,8 @@ class MIDIPlayerTab(Tab):
         layout = Layout([1],fill_frame=False)
         self._frame.add_layout(layout)
         layout.add_widget(Divider())
-        #layout.add_widget(Label("MIDI File:", align='^'))
+
+        # File Browser
         self._file_browser = FileBrowser(
                             height = 15,#height = Widget.FILL_FRAME,
                             root = os.path.abspath("./assets/MIDI/"),
@@ -58,10 +66,12 @@ class MIDIPlayerTab(Tab):
         layout = Layout([80,20])
         self._frame.add_layout(layout)
 
+        # What's playing text
         self._details_text = ReadOnlyText(tab_stop = False)
         self._details_text.value = ' '
         layout.add_widget(self._details_text, 0)
         
+        # A button to stop playback
         self._stop_button = Button(text="Stop", on_click= self.stop)
         layout.add_widget(self._stop_button,1)
 
@@ -70,10 +80,10 @@ class MIDIPlayerTab(Tab):
         self.add_effect(self._frame, reset=False)
 
     def _update_widgets(self):  
+        # If playing, enable the stop button and update the now playing text
         if self._midi_player.playing:
             self._stop_button.disabled = False
-            file_display_text = self._midi_player.file_path.split("/")[-1]   
-            #length = MidiFile(file).length
+            file_display_text = self._midi_player.file_path.split("/")[-1]
             self._details_text.value = f"'{file_display_text}'"
         else:
             self._stop_button.disabled = True

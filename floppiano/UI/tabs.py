@@ -4,12 +4,16 @@ from asciimatics.effects import Effect
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import KeyboardEvent
 from asciimatics.exceptions import NextScene
-
 from floppiano.UI.app import App
 
-#TODO update docstrings for Tab and TabHeader for App() changes
+
 class TabHeader(Effect):
-    _FRAME_RATE_DEBUG = False
+    """
+        A simple effect used in a tab to render a header listing out all
+        tabs in a TabGroup
+    """
+    # Class wide switch for rendering a debug frame counter
+    _FRAME_RATE_DEBUG = False 
     def __init__(
             self, 
             screen:Screen, 
@@ -131,7 +135,7 @@ class Tab(Scene):
             name=name)        
         """_summary_
             A Tab is a Scene in a set of Scenes (TabGroup) with a a single
-             default effect the TabHeader. A Tab is a Scene so that it may 
+             default effect - the TabHeader. A Tab is a Scene so that it may 
              render many effects (like Frames and animations). Best used in a 
              TabGroup 
         Args:
@@ -153,7 +157,7 @@ class Tab(Scene):
     def page(self) -> bool:
         """_summary_
             A property for determining if the Tab is able to switch to the 
-            prior or next tab aka 'page'
+            prior or next tab  - aka 'page'
         Returns:
             bool: True if the Tab can switch Tabs, False otherwise
         """

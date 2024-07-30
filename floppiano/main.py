@@ -358,11 +358,3 @@ if __name__ == '__main__':
     THEMES.pop('tlj256')
     Startup().get_app().run()
 
-# TODO: Find assets?
-# def _find_assets(self):
-#     self.logger.debug(f"Verifying asset directory: '{self._asset_dir}'")
-#     if not os.path.isdir(self._asset_dir):
-#         self.logger.critical(
-#             f"Asset directory '{self._asset_dir} not'found. exiting...")
-#         raise RuntimeError("Could not find assets")
-#     self.logger.debug(f"Found asset directory: '{self._asset_dir}'")

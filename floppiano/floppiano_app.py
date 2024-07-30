@@ -97,14 +97,14 @@ class FlopPianoApp(App):
 
     def _loop(self):
         #forcibly Draw the screen once
-        self._draw(force=True)
+        self.draw(force=True)
 
         while True:            
             # If something requested a redraw and the screen saver is not active
             # force a draw to happen
 
             #st = time.time()            
-            if self._draw(self._needs_redraw): 
+            if self.draw(self._needs_redraw): 
                 #self.logger.info(f'drew in {time.time()- st}')
                 self._needs_redraw = False
             #self.screen.print_at(time.time()- st, 0,0)
@@ -173,7 +173,7 @@ class FlopPianoApp(App):
         tab_group.fix()        
         return (tab_group.tabs, None)
 
-    def _draw(self, force: bool = False) -> bool:
+    def draw(self, force: bool = False) -> bool:
         # overridden to handle the screen saver logic
         # force drawing only works if the screen saver is not active
 
@@ -183,7 +183,7 @@ class FlopPianoApp(App):
             if time.time() - self._last_draw_time >=1:
                 try:
                     self._last_draw_time = time.time()
-                    return super()._draw(True)
+                    return super().draw(True)
                 except StopApplication:
                     # Exit the screen saver - a key was pressed
                     # re-init the scenes, ignore the start scene
@@ -194,16 +194,16 @@ class FlopPianoApp(App):
                     self._last_scene = None
                     #force the screen to draw once
                     self._last_draw_time = time.time()
-                    return super()._draw(True)
+                    return super().draw(True)
                 
         else: #Screen saver is not active
             #Draw if forced
             if force: 
                 self._last_draw_time = time.time()
-                return super()._draw(force=True)
+                return super().draw(force=True)
             
             # draw only if there is a keyboard event
-            if super()._draw(): 
+            if super().draw(): 
                 self._last_draw_time = time.time()
                 return True #we drew
 

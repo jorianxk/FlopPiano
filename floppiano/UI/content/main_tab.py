@@ -6,11 +6,17 @@ from floppiano.synths import (PITCH_BEND_RANGES, OUTPUT_MODES, DriveSynth)
 
 
 class MainTab(Tab):
+    """
+        A tab for showing/setting Synth and application settings.
+    """
+
     def __init__(self, app, name: str):
         super().__init__(app, name)
 
+        # Get the App's Synth
         self._synth:DriveSynth = self.app.resource('synth')
 
+        #Setup the Frame
         self._frame = DynamicFrame(
             self.app.screen,
             self.app.screen.height-2,
@@ -21,14 +27,17 @@ class MainTab(Tab):
             on_update=self._update_widgets)
         self._frame.set_theme(self.app.theme)
         
+        # A list of all the settings on the page
         self._settings:list[Setting] = []
+
+        # Create all the settings' UI elements
 
         self._settings.append(
             Setting(
                 label_text = 'Spin', 
                 options = ['off', 'on'], 
-                on_update = lambda: self._synth.__getattribute__('spin'), 
-                on_change = lambda x: self._synth.__setattr__('spin', x),
+                on_update = lambda: self._synth.__getattribute__('spin'), # On update just read the synth's attribute and match it
+                on_change = lambda x: self._synth.__setattr__('spin', x), # Make the synth change
                 frame = self._frame,
                 tool_tip = "Controls the floppy drive platters. 'on' = the platters will spin!")
         )
@@ -134,6 +143,8 @@ class MainTab(Tab):
                 tool_tip = "What MIDI gets output. 'rollover' = MIDI that could not be played.")
         ) 
 
+        # Mute and Reset Buttons 
+
         layout = Layout([1,1],False)
         self._frame.add_layout(layout)
 
@@ -157,24 +168,21 @@ class MainTab(Tab):
             setting.update()
             if setting.selected:
                 self._floppie.value = setting.tool_tip
-    
+        
+        # Handle button (non-setting tool-tips)
         if self._mute_button._has_focus:
             self._floppie.value = "Mutes all sounding voices."
         
         if self._reset_button._has_focus:
             self._floppie.value = "Resets all sounding voices and un-mutes."
 
-        # TODO: make the keyboard mute led match the synth mute state?
-
     def _mute_clicked(self):
         # Mute the synth
         self._synth.mute()
-        # TODO: TUrn on the keyboard mute LED?
 
     def _reset_clicked(self):
         # Reset the synth
         self._synth.reset()
-        # TODO: Enure that the keyboard mute LED is off?
     
     def _polyphony_changed(self, polyphonic:bool):
         if polyphonic:

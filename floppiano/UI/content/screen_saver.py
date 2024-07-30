@@ -8,6 +8,9 @@ from floppiano.synths.drive_synth import DriveSynth, DriveVoice
 from random import randint
 from operator import add
 
+# TODO: Revise the screen saver to so a visualizer
+
+
 class FloppySaver(Effect):
 
     def __init__(self, screen, version:float):

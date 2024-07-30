@@ -5,6 +5,9 @@ from floppiano.UI.widgets import DynamicFrame, ReadOnlyText
 import textwrap
 
 class AboutTab(Tab):
+    """
+        A tab for displaying information about the FlopPiano
+    """
 
     def __init__(self, app, name: str):
         super().__init__(app, name)
@@ -34,9 +37,12 @@ class AboutTab(Tab):
 
         layout.add_widget(Label('Jacob Brooks & Jorian Khan', align='^'))
 
+        # Read the text
         with open('assets/about.txt', encoding="utf8") as file:
             for line in file:
+                # Add a blank label at each line break
                 layout.add_widget(Label(''))
+                # Make the text wrap 
                 chunks = textwrap.wrap(line,43, initial_indent='    ')
                 for chunk in chunks:
                     text = ReadOnlyText()
