@@ -24,8 +24,6 @@ Handles all of the startup checks and setup.
 """
 
 
-
-
 class Startup():
     """
     A class to create FlopPianoApp with appropriate settings from command-
@@ -114,10 +112,17 @@ class Startup():
                 # Find them
                 input_port, output_port = self.find_ports()
                 self.print('-' * self._screen.width)
-            
+
+            # Do a screen check to warn the user about the optimal resolution
+            if self._screen.height != 22 or self._screen.width!= 45:
+                self.print('WARNING: The FlopPiano app is optimized for a 45 column X 22 line display', 
+                           color= Screen.COLOUR_YELLOW)
+
             self.print(f'Starting FlopPiano v{VERSION}...', 
                        Screen.COLOUR_GREEN,
                        True)
+
+            # Hang for a second to let the user read any warnings
             time.sleep(1)
 
         # Setup logger
