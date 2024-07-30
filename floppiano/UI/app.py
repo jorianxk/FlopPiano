@@ -94,7 +94,7 @@ class App(ABC):
             events or if forced.
         Args:
             force (bool, optional): If true, forces the asciimatics Screen to 
-                render regardless of if a keyboard event occured. Defaults to 
+                render regardless of if a keyboard event occurred. Defaults to 
                 False.
         Raises:
             ResizeScreenError: If the App's attribute handle_resize was not set
@@ -120,7 +120,7 @@ class App(ABC):
         elif self.screen.has_resized(): #The screen resized
             # Don't handle the resize if it's not enabled
             if not self._handle_resize: 
-                raise ResizeScreenError("Screen Resized")
+                raise ResizeScreenError("Screen resize not enabled")
             # save the last scene
             last_scene = self.screen._scenes[self.screen._scene_index] 
             # Close the screen

@@ -2,7 +2,7 @@ from floppiano import VERSION
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
-    splash_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
+    splash_screen, dead_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
 
 from floppiano.synths import DriveSynth
 from floppiano.devices import MIDIKeyboard
@@ -10,7 +10,7 @@ from floppiano.midi import MIDIPlayer
 
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
-from asciimatics.exceptions import ResizeScreenError, StopApplication
+from asciimatics.exceptions import StopApplication
 from asciimatics.widgets.utilities import THEMES
 
 from mido import Message
@@ -20,17 +20,18 @@ import time
 import logging
 
 
+
 class FlopPianoApp(App):
 
     def __init__(
             self, 
-            synth:DriveSynth,            # The DriveSynth to use
-            keyboard:MIDIKeyboard,            # TODO: add keyboard here
+            synth:DriveSynth,
+            keyboard:MIDIKeyboard,
             input_port:BaseInput,
-            output_port:BaseOutput, 
-            theme: str = 'default',      # The initial asciimatics theme to use
-            splash_start: bool = True,   # Start the app with splash screens
-            screen_timeout:float = None, # In seconds and fractions of seconds
+            output_port:BaseOutput,
+            theme: str = 'default',
+            splash_start: bool = True,
+            screen_timeout:float = None,
             ) -> None:
         
         super().__init__(theme, handle_resize = False)    
@@ -40,7 +41,6 @@ class FlopPianoApp(App):
 
         self._splash_start = splash_start
         self._screen_timeout = screen_timeout
-        #self._old_screen_timeout = screen_timeout
 
         # The Synth
         self._synth = synth 
@@ -72,58 +72,44 @@ class FlopPianoApp(App):
             #Use asciimatics to play the splash sequence, blocks until done
             Screen.wrapper(splash_screen, catch_interrupt=True)
 
-        # This is an outer loop for the control self._loop() to manage exiting
+        # This is an outer loop for to handle to manage exiting from _loop()
         # and errors
-        while True:
-            try:
-                self._loop()
-            except KeyboardInterrupt as ki:
-                # Stop the rendering so that print() works
-                self.reset()
-                print("ctrl+c stopped")
-                break
-            except ResizeScreenError as sa:
-                # Stop the rendering so that print() works
-                self.reset()
-                print("Resize not supported")
-                break
-            except Exception as e:
-                # Stop the rendering so that print() works
-                self.reset()
-                raise
-        
-        self._synth.reset()
+ 
+        try:
+            self._loop()
+        except KeyboardInterrupt as ki:
+            #self.reset()
+            dead_screen(self.screen)            
+        except Exception as e:
+            # Stop the rendering so that print() works
+            self.reset()
+            dead_screen(self.screen)
+        finally:                
+            # Force the synth to be quiet
+            self.reset()
+            self._synth.reset()
 
 
     def _loop(self):
-        #forcibly Draw the screen once
+        #forcibly draw the screen once before looping
         self.draw(force=True)
 
         while True:            
-            # If something requested a redraw and the screen saver is not active
-            # force a draw to happen
-
-            #st = time.time()            
-            if self.draw(self._needs_redraw): 
-                #self.logger.info(f'drew in {time.time()- st}')
-                self._needs_redraw = False
-            #self.screen.print_at(time.time()- st, 0,0)
-            #self._draw(True)
-
+            # Any output from the synth goes in this list
             outgoing:list[Message] = []
 
-            # add the piano key midi to the incoming if the loopback is on
-            # TODO add the piano key midi to the stream
+            # Let the synth handle the MIDIKeyboard messages
             if self._loopback and self._keyboard is not None:
                 outgoing.extend(
                     self._synth.parse(self._keyboard.update(),'keyboard')) 
             
+            # If playing a .mid, let the synth handle the messages
             if self._midi_player.playing:
                 msg = self._midi_player.update()
                 if msg is not None:
                     outgoing.extend(self._synth.parse([msg], "midi_player"))
-    
 
+            # Handle any incoming MIDI from the input port
             if self._input_port is not None:
                 #Get the messages from the input port
                 if(not self._input_port.closed): 
@@ -135,24 +121,23 @@ class FlopPianoApp(App):
                             self._synth.parse([input_msg], "input_port"))
                 else: raise RuntimeError("The MIDI input port closed!")
 
-
             # write the output
-            #TODO: output when MIDI player?
             if self._output_port is not None:
                 if (not self._output_port.closed):
                     for msg in outgoing:
                         self._output_port.send(msg)
                 else: raise RuntimeError("The MIDI output port closed!")
             
+            # If something requested a redraw force a draw to happen 
+            if self.draw(self._needs_redraw): self._needs_redraw = False            
      
     def action(self, action: str, args=None):
-        if action == 'theme': # TODO is this the right way to set the theme?
+        if action == 'theme':
             self.theme = args[0]
             self.reset()
             self._needs_redraw =True
         if action == 'loopback':
             self._loopback = args
-        
     
     def resource(self, resource: str, args=None):
         if resource == 'synth':
@@ -161,7 +146,6 @@ class FlopPianoApp(App):
             return self._loopback
         if resource == 'midi_player':
             return self._midi_player
-
         return None 
 
 

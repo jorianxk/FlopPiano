@@ -1,7 +1,7 @@
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.renderers import StaticRenderer
-from asciimatics.effects import Print
+from asciimatics.effects import Print, Snow
 from asciimatics.particles import ShootScreen, Explosion
 from random import randint
 
@@ -106,7 +106,7 @@ def floppiano_splash(screen:Screen, duration:int, txt_file:str) -> Scene:
         txt_file (str): The path the the FlopPiano logo
 
     Returns:
-        Scene: The FlopPiano splach screen as a Scene
+        Scene: The FlopPiano splash screen as a Scene
     """
 
     # Read the logo
@@ -146,3 +146,35 @@ def splash_screen(screen:Screen):
     # TODO:
     # Play the Scenes
     screen.play(scenes, repeat=False)
+
+
+def dead_screen(screen:Screen, error_msg:str = None):
+
+    # Read the logo
+    sad_floppie = None
+    with open('assets/floppie_sad.txt') as file:
+        sad_floppie = file.read()
+
+    # Simple Effect to do the rendering 
+
+    renderer = StaticRenderer([sad_floppie])
+
+    effects = [
+        Print(
+            screen, 
+            renderer,
+            (screen.height) - (renderer.max_height),
+            (screen.width // 2) - (renderer.max_width//2),
+            colour=Screen.COLOUR_WHITE
+        ),
+        Snow(screen),
+        Print(
+            screen, 
+            StaticRenderer(['Sexy floppy']),
+            0,
+            (screen.width // 2) - (renderer.max_width//2),
+            colour=Screen.COLOUR_WHITE
+        )
+    ]
+
+    screen.play([Scene(effects, time2frames(30),clear=True)], repeat=True)
