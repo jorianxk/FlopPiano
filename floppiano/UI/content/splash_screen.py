@@ -1,7 +1,7 @@
 from asciimatics.screen import Screen
 from asciimatics.scene import Scene
 from asciimatics.renderers import StaticRenderer
-from asciimatics.effects import Print, Snow
+from asciimatics.effects import Print
 from asciimatics.particles import ShootScreen, Explosion
 from random import randint
 
@@ -111,7 +111,7 @@ def floppiano_splash(screen:Screen, duration:int, txt_file:str) -> Scene:
 
     # Read the logo
     floppiano_logo = "FlopPiano Splash Screen"
-    with open(txt_file) as file:
+    with open(txt_file, encoding="utf8") as file:
         floppiano_logo = file.read()
 
     # Simple Effect to do the rendering 
@@ -149,32 +149,35 @@ def splash_screen(screen:Screen):
 
 
 def dead_screen(screen:Screen, error_msg:str = None):
+    # Simple Effect to do the rendering 
+    if error_msg is None: error_msg = ''
+    
+    error_msg = 'Error: ' + error_msg
+
 
     # Read the logo
     sad_floppie = None
-    with open('assets/floppie_sad.txt') as file:
+    with open('assets/floppie_sad.txt', encoding="utf8") as file:
         sad_floppie = file.read()
 
-    # Simple Effect to do the rendering 
-
-    renderer = StaticRenderer([sad_floppie])
+    error_renderer = StaticRenderer([error_msg])
+    floppie_renderer = StaticRenderer([sad_floppie])
 
     effects = [
         Print(
             screen, 
-            renderer,
-            (screen.height) - (renderer.max_height),
-            (screen.width // 2) - (renderer.max_width//2),
+            floppie_renderer,
+            (screen.height) - (floppie_renderer.max_height),
+            (screen.width // 2) - (floppie_renderer.max_width//2),
             colour=Screen.COLOUR_WHITE
         ),
-        Snow(screen),
         Print(
             screen, 
-            StaticRenderer(['Sexy floppy']),
+            error_renderer,
             0,
-            (screen.width // 2) - (renderer.max_width//2),
+            0,#(screen.width // 2) - (error_renderer.max_width//2),
             colour=Screen.COLOUR_WHITE
-        )
+        )        
     ]
 
-    screen.play([Scene(effects, time2frames(30),clear=True)], repeat=True)
+    screen.play([Scene(effects,clear=True)], repeat=False)

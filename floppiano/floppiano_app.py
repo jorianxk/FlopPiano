@@ -79,11 +79,11 @@ class FlopPianoApp(App):
             self._loop()
         except KeyboardInterrupt as ki:
             #self.reset()
-            dead_screen(self.screen)            
+            dead_screen(self.screen, "ctrl+c stopped")            
         except Exception as e:
             # Stop the rendering so that print() works
-            self.reset()
-            dead_screen(self.screen)
+            #self.reset()
+            dead_screen(self.screen, str(e))
         finally:                
             # Force the synth to be quiet
             self.reset()
@@ -96,6 +96,7 @@ class FlopPianoApp(App):
 
         while True:            
             # Any output from the synth goes in this list
+            raise Exception("sheeeet")
             outgoing:list[Message] = []
 
             # Let the synth handle the MIDIKeyboard messages
