@@ -84,6 +84,8 @@ class FlopPianoApp(App):
                 "Uh-oh! an error occurred. Press 'enter' to restart. "
                 f'Error: {str(e)}'
             ))
+            #Do not reset the synth incase a BusException caused the crash
+            #ie. NO self._synth.reset() call
             self.reset() # Kill the screen
             return True # Return True to restart the app
 
