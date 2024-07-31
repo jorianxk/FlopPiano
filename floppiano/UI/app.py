@@ -50,11 +50,14 @@ class App(ABC):
         else:
             self._theme = 'default'
     
-    @abstractmethod
-    def run(self):
+    def run(self) -> bool:
         """
-            Should be called to start the app
+            Should be called to start the app and block execution
+
+        Returns:
+            bool: Returns True if the app should be restarted, False otherwise
         """
+        return False
 
     @abstractmethod
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
@@ -84,9 +87,10 @@ class App(ABC):
             Forces the App's screen to clear then close so that it may be
             restarted on the next draw() call.
         """
-        self.screen.clear()
-        self.screen.close()
-        self._screen = None
+        if self._screen is not None:
+            self.screen.clear()
+            self.screen.close()
+            self._screen = None
  
     def draw(self, force:bool = False) -> bool:
         """

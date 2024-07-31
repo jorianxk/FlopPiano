@@ -20,7 +20,6 @@ import time
 import logging
 
 
-
 class FlopPianoApp(App):
 
     def __init__(
@@ -61,42 +60,40 @@ class FlopPianoApp(App):
         self._loopback = True
 
         self._midi_player = MIDIPlayer(on_stop=self._synth.reset)
-
   
-    def run(self):
-        # Start with a fresh synth
-        self._synth.reset()
-        
+    def run(self) -> bool:
         # Run the splash screens 
         if self._splash_start:
             #Use asciimatics to play the splash sequence, blocks until done
             Screen.wrapper(splash_screen, catch_interrupt=True)
 
-        # This is an outer loop for to handle to manage exiting from _loop()
-        # and errors
- 
+        # Start with a fresh synth
+        self._synth.reset()
+
+        # Handle errors and application exit
         try:
             self._loop()
         except KeyboardInterrupt as ki:
-            #self.reset()
-            dead_screen(self.screen, "ctrl+c stopped")            
+            self.reset() # Reset the Screen so print() works
+            self._synth.reset() # Stop any synth activity
+            print("ctrl+c stopped.")
+            return False # Return false to quit the app
         except Exception as e:
-            # Stop the rendering so that print() works
-            #self.reset()
-            dead_screen(self.screen, str(e))
-        finally:                
-            # Force the synth to be quiet
-            self.reset()
-            self._synth.reset()
+            # Show the dead screen error message
+            dead_screen(self.screen, error_msg=(
+                "Uh-oh! an error occurred. Press 'enter' to restart. "
+                f'Error: {str(e)}'
+            ))
+            self.reset() # Kill the screen
+            return True # Return True to restart the app
 
 
     def _loop(self):
-        #forcibly draw the screen once before looping
+        # forcibly draw the screen once before looping
         self.draw(force=True)
 
         while True:            
             # Any output from the synth goes in this list
-            raise Exception("sheeeet")
             outgoing:list[Message] = []
 
             # Let the synth handle the MIDIKeyboard messages
@@ -148,7 +145,6 @@ class FlopPianoApp(App):
         if resource == 'midi_player':
             return self._midi_player
         return None 
-
 
     def _draw_init(self, screen:Screen) -> tuple[list[Scene], Scene]:
         tab_group = TabGroup(screen)

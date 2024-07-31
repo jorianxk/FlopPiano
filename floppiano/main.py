@@ -5,6 +5,7 @@ import mido
 from mido.ports import BaseInput, BaseOutput
 
 import floppiano.bus as bus
+from floppiano.UI.content import dead_screen
 from floppiano import VERSION, FlopPianoApp
 from floppiano.devices import DeviceDiscovery
 from floppiano.devices import MIDIKeyboard
@@ -331,7 +332,13 @@ class Startup():
         """
         self.print('Press <enter> to continue or any other key to quit:',
                    color= Screen.COLOUR_YELLOW)
-        if not self.wait_for_key(ord('\n')): exit(0)
+        if not self.wait_for_key(ord('\n')): 
+            #TODO: Handle power cycling
+            dead_screen(
+                self._screen, 
+                ("Dead on startup. Press 'enter' to drop to bash prompt or "
+                 "power cycle the FlopPiano"))
+            exit(0)
 
     def print(self, obj, color:int = 7, bold = False):
         """
@@ -361,5 +368,7 @@ class Startup():
 if __name__ == '__main__': 
     #Remove this theme.. it does not work on Raspberry Pi (headless)
     THEMES.pop('tlj256')
-    Startup().get_app().run()
+
+    # Run until the app self terminates
+    while Startup().get_app().run(): pass
 

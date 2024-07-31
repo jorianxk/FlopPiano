@@ -147,37 +147,3 @@ def splash_screen(screen:Screen):
     # Play the Scenes
     screen.play(scenes, repeat=False)
 
-
-def dead_screen(screen:Screen, error_msg:str = None):
-    # Simple Effect to do the rendering 
-    if error_msg is None: error_msg = ''
-    
-    error_msg = 'Error: ' + error_msg
-
-
-    # Read the logo
-    sad_floppie = None
-    with open('assets/floppie_sad.txt', encoding="utf8") as file:
-        sad_floppie = file.read()
-
-    error_renderer = StaticRenderer([error_msg])
-    floppie_renderer = StaticRenderer([sad_floppie])
-
-    effects = [
-        Print(
-            screen, 
-            floppie_renderer,
-            (screen.height) - (floppie_renderer.max_height),
-            (screen.width // 2) - (floppie_renderer.max_width//2),
-            colour=Screen.COLOUR_WHITE
-        ),
-        Print(
-            screen, 
-            error_renderer,
-            0,
-            0,#(screen.width // 2) - (error_renderer.max_width//2),
-            colour=Screen.COLOUR_WHITE
-        )        
-    ]
-
-    screen.play([Scene(effects,clear=True)], repeat=False)
