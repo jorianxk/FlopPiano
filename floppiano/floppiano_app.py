@@ -18,6 +18,7 @@ from mido.ports import BaseInput, BaseOutput
 
 import time
 import logging
+from threading import Thread
 
 
 class FlopPianoApp(App):
@@ -65,7 +66,10 @@ class FlopPianoApp(App):
         # Run the splash screens 
         if self._splash_start:
             #Use asciimatics to play the splash sequence, blocks until done
-            Screen.wrapper(splash_screen, catch_interrupt=True)
+            Screen.wrapper(
+                splash_screen, 
+                catch_interrupt=True, 
+                arguments=[self._synth])
 
         # Start with a fresh synth
         self._synth.reset()

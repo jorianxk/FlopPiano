@@ -570,3 +570,29 @@ class MIDIPlayer():
     @property
     def file_path(self) -> str:
         return self._file_path
+
+    @staticmethod
+    def blocking_play(synth, 
+                      mid_file:str, 
+                      transpose:int = 0, 
+                      redirect:bool = True):
+        """
+            Plays a given .mid with the given Synth in blocking manner
+        Args:
+            synth (_type_): The Synth that will play the .mid file
+            mid_file (str): The path to the .mid file to be played
+            transpose (int, optional): A number of MIDI notes to transpose. 
+                Defaults to 0.
+            redirect (bool, optional): If true redirects all MIDI to the 
+                Synth's input channel. Defaults to True.
+        """
+        synth.reset() # Reset the Synth Before Playing
+        for msg in MidiFile(mid_file).play():
+            if redirect and MIDIUtil.hasChannel(msg):
+                msg.channel = synth.input_channel
+
+            if (msg.type == "note_on" or msg.type =="note_off"):
+                msg.note = msg.note + transpose
+            
+            synth.parse([msg])
+        synth.reset() # Reset the Synth after Playing
