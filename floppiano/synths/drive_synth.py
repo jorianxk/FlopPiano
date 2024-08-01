@@ -147,6 +147,9 @@ class DriveSynth(Synth):
             # prevent setting property modulation_wave via MIDI
             self.control_change_map.pop('modulation_wave')
         
+        if 'hardware_reset' not in self.sysex_map:
+            self.sysex_map['hardware_reset'] = 3
+        
         self.bow = bow
         self.spin = spin
 
@@ -168,6 +171,9 @@ class DriveSynth(Synth):
         self.attach_observer('pitch_bend', self._pitch_bend_changed)
         self.attach_observer('poly_voices', self._poly_voices_changed)
         self.attach_observer('modulation_wave', self._modulation_wave_changed)
+
+        # Hardware reset to force the drives to match the DriveSynth's state
+        self.hardware_reset()
 
     #----------------------Inherited from from Synth---------------------------#
   
@@ -261,6 +267,25 @@ class DriveSynth(Synth):
         # call super to reset mute state/set defaults       
         super().reset() 
         self.logger.info('DriveSynth reset')
+    
+    def hardware_reset(self) -> None:
+        """
+            Immediately forces all drives to match the DriveSynth's states.  
+            Resets all voices and force un-mutes the DriveSynth.
+        """
+        self.mute()  # Ensure all drives are quiet
+        self.reset() # Release the mute
+
+        # Invoke all properties that use Drives() calls in order to write the
+        # properties to the Drives
+        self.bow = self.bow
+        self.spin = self.spin
+        self.modulation_rate = self.modulation_rate
+        self.modulation = self.modulation
+
+        self.logger.info('DriveSynth hardware reset')
+
+
 
     #--------------------Overridden from Synth---------------------------------#
 

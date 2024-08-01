@@ -18,7 +18,6 @@ from mido.ports import BaseInput, BaseOutput
 
 import time
 import logging
-from threading import Thread
 
 
 class FlopPianoApp(App):
@@ -34,35 +33,25 @@ class FlopPianoApp(App):
             screen_timeout:float = None,
             ) -> None:
         
-        super().__init__(theme, handle_resize = False)    
-
-        self.logger = logging.getLogger(__name__)
-
-
-        self._splash_start = splash_start
-        self._screen_timeout = screen_timeout
-
-        # The Synth
-        self._synth = synth 
-        # The keyboard
-        self._keyboard = keyboard 
-        # The MIDI input port
-        self._input_port = input_port
-        # The MIDI output port
-        self._output_port = output_port
-
-        # The scene that was active before the screen saver
-        self._last_scene = None 
-        # The time that the screen was last drawn
-        self._last_draw_time = None
-        # A flag to force a redraw
-        self._needs_redraw = False
-        # A flag to allow the piano keys' midi to be injected
-        self._loopback = True
-
+        super().__init__(theme, handle_resize = False)
+        self.logger = logging.getLogger(__name__)        
+        self._splash_start = splash_start # Start with a splash screen?        
+        self._screen_timeout = screen_timeout # Timeout for the screen saver
+        self._synth = synth # DriveSynth to sound all music on floppy drives
+        self._keyboard = keyboard # MIDIKeyboard to generate notes  
+        self._input_port = input_port # MIDI input
+        self._output_port = output_port #MIDI output
+        self._last_scene = None # Scene that was active before the screen saver
+        self._last_draw_time = None # Time that the screen was last drawn
+        self._needs_redraw = False # A flag to force a redraw
+        self._loopback = True # Allow the piano keys' midi to be injected?
+        # A Non-blocking MIDIPlayer
         self._midi_player = MIDIPlayer(on_stop=self._synth.reset)
   
     def run(self) -> bool:
+        # Ensure a start with a fresh synth
+        self._synth.hardware_reset()
+
         # Run the splash screens 
         if self._splash_start:
             #Use asciimatics to play the splash sequence, blocks until done
@@ -70,9 +59,6 @@ class FlopPianoApp(App):
                 splash_screen, 
                 catch_interrupt=True, 
                 arguments=[self._synth])
-
-        # Start with a fresh synth
-        self._synth.reset()
 
         # Handle errors and application exit
         try:
@@ -208,5 +194,3 @@ class FlopPianoApp(App):
                             clear=True
                         )]
                     )
-
-

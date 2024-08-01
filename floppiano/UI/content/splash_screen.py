@@ -53,7 +53,6 @@ class SlidingFloppie(Effect):
     @property
     def stop_frame(self): return 0
 
-
 def jb_splash(screen:Screen) -> Scene: 
     """
         Generates Jacob's Splash Screen as a Scene

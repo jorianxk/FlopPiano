@@ -370,5 +370,16 @@ if __name__ == '__main__':
     THEMES.pop('tlj256')
 
     # Run until the app self terminates
-    while Startup().get_app().run(): pass
+    num_restarts = 0
+    while True:
+        # Get the app from the startup/bootstrap to detect all devices etc
+        floppiano_app = Startup().get_app()        
+        # If the app has been restarted force off the splash screen
+        if num_restarts > 0: floppiano_app._splash_start = False
+        # FlopPiano.run() will block until the app has terminated. 
+        # if run() returns true, the app wants to be restarted.
+        if floppiano_app.run(): num_restarts +=1
+        else: break
+
+
 

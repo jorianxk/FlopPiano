@@ -7,7 +7,6 @@ import textwrap
 from floppiano.UI.util import time2frames
 
 
-
 class OffsetFlake(_Flake):
 
     def __init__(self, screen, y_offset: int = 0):
@@ -29,7 +28,6 @@ class OffsetFlake(_Flake):
         super()._reseed()
         #self._y = self._start_line + randint(0, self._rate)
         self._y = self._start_line + randint(0, self._rate)
-
 
 class OffsetSnow(Snow):
 
@@ -58,7 +56,6 @@ class OffsetSnow(Snow):
             for char in self._chars:
                 char.update((self._stop_frame == 0) or (
                     self._stop_frame - frame_no > 100))
-
 
 class ErrorBox(Effect):
 
@@ -127,7 +124,6 @@ class ErrorBox(Effect):
 
     @property
     def stop_frame(self): return 0
-
 
 def dead_screen(screen:Screen, error_msg:str = None , repeat = False):
     # No error message, use a generic one
