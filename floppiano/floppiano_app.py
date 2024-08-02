@@ -2,8 +2,8 @@ from floppiano import VERSION
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
-    splash_screen, dead_screen, rick_roll_screen, FloppySaver, MainTab, MIDIPlayerTab, AboutTab,
-    SettingsTab)
+    splash_screen, dead_screen, rick_roll_screen, FloppySaver, MainTab, 
+    MIDIPlayerTab, AboutTab, SettingsTab)
 
 from floppiano.synths import DriveSynth
 from floppiano.devices import MIDIKeyboard
