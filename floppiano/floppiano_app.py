@@ -2,7 +2,8 @@ from floppiano import VERSION
 from floppiano.UI.app import App
 from floppiano.UI.tabs import TabGroup
 from floppiano.UI.content import (
-    splash_screen, dead_screen, FloppySaver, MainTab, MIDIPlayerTab ,AboutTab)
+    splash_screen, dead_screen, rick_roll_screen, FloppySaver, MainTab, MIDIPlayerTab, AboutTab,
+    SettingsTab)
 
 from floppiano.synths import DriveSynth
 from floppiano.devices import MIDIKeyboard
@@ -75,7 +76,7 @@ class FlopPianoApp(App):
                 f'Error: {str(e)}'
             ))
             #Do not reset the synth incase a BusException caused the crash
-            #ie. NO self._synth.reset() call
+            #ie. NO self._synth.reset()or hardware_reset() call
             self.reset() # Kill the screen
             return True # Return True to restart the app
 
@@ -128,6 +129,15 @@ class FlopPianoApp(App):
             self._needs_redraw =True
         if action == 'loopback':
             self._loopback = args
+        if action == 'rick_roll':
+            # Ensure no midi is playing
+            self._midi_player.stop() 
+             # Reset the synth
+            self._synth.reset()
+            # Play the rick roll
+            Screen.wrapper(rick_roll_screen, catch_interrupt=True)
+            # Raise an error to restart the application
+            raise RuntimeError('Floppie died from embarrassment.')
     
     def resource(self, resource: str, args=None):
         if resource == 'synth':
@@ -143,6 +153,7 @@ class FlopPianoApp(App):
         tab_group.add_tab(MainTab(self, 'Main'))
         tab_group.add_tab(MIDIPlayerTab(self, "MIDI Player"))
         tab_group.add_tab(AboutTab(self, 'About'))
+        tab_group.add_tab(SettingsTab(self, 'Settings'))
         tab_group.fix()        
         return (tab_group.tabs, None)
 
