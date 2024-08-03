@@ -69,7 +69,7 @@ class MainTab(Tab):
                 on_update = lambda: self._synth.__getattribute__('pitch_bend_range'), 
                 on_change = lambda x: self._synth.__setattr__('pitch_bend_range', x),
                 frame = self._frame,
-                tool_tip = "Changes how far the pitchwheel will bend a note at it's extreme position.")
+                tool_tip = "Changes how far the pitchwheel will bend a note at its extreme position.")
         )
 
         self._settings.append(

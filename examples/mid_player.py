@@ -4,7 +4,7 @@ import logging
 import time
 from floppiano.midi import MIDIUtil
 
-transpose = -12
+transpose = 0
 
 #test_midi_file = 'assets/MIDI/Beethoven-Moonlight-Sonata.mid'
 #test_midi_file = 'assets/MIDI/bloody.mid'
@@ -17,10 +17,11 @@ transpose = -12
 #test_midi_file = 'assets/MIDI/Hyrule_Castle_-_Zelda_A_Link_to_the_Past.mid'
 #test_midi_file = 'assets/MIDI/level1.mid'
 #test_midi_file = 'assets/MIDI/metallica-one.mid'
-test_midi_file = 'assets/MIDI/Sarias_Song_piano.mid'
+#test_midi_file = 'assets/MIDI/Sarias_Song_piano.mid'
 #test_midi_file = 'assets/MIDI/The-Entertainer.mid'
 #test_midi_file = 'assets/MIDI/zelda_deep.mid'
-
+#test_midi_file = 'assets/MIDI/jacob/Never-Gonna-Give-You-Up-3.mid'
+#test_midi_file = 'assets/roll.mid'
 #test_midi_file = 'assets/MIDI/jacob/bach-bourree-in-e-minor-guitar.mid'
 #test_midi_file = 'assets/MIDI/jacob/CallOfKtulu.mid'
 #test_midi_file = 'assets/MIDI/jacob/cs3-5bou.mid'
@@ -33,7 +34,9 @@ test_midi_file = 'assets/MIDI/Sarias_Song_piano.mid'
 #test_midi_file = 'assets/MIDI/jacob/CallOfKtulu_nodrums.mid'
 #test_midi_file = 'assets/MIDI/jacob/mario_nopercussion.mid'
 
-
+#test_midi_file = 'assets/MIDI/jacob/STARTREKTHEMOTIONPICTURE.MID'
+#test_midi_file = 'assets/MIDI/jacob/KLINGON.MID'
+test_midi_file = 'assets/MIDI/jacob/startrek_auto_transposed.mid'
 
 logging.basicConfig(level=logging.DEBUG)
 

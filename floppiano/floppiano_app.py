@@ -105,8 +105,9 @@ class FlopPianoApp(App):
                 #Get the messages from the input port
                 if(not self._input_port.closed): 
                     input_msg = self._input_port.receive(block=False)
-                    #TODO: input when MIDI player?
-                    if input_msg is not None: 
+                    # Don't let the input message be a clock, 
+                    # it slows down everything because they are so frequent
+                    if input_msg is not None and input_msg.type!='clock': 
                         # If we have a message parse it
                         outgoing.extend(
                             self._synth.parse([input_msg], "input_port"))

@@ -29,6 +29,7 @@ try:
     with mido.open_input(usb_interface) as inport:
             for msg in inport:
                 synth.parse([msg])
+                print(msg.type)
 except KeyboardInterrupt:
     print("Exiting..")
 finally:

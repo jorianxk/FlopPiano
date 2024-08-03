@@ -516,8 +516,9 @@ class MIDIKeyboard(KeyboardListener):
                     channel = self._channel)            
             self._output.append(msg)
         else:
-            #TODO: easter egg? key 34 or 35 in octave 7
-            pass
+            # TODO EasterEggs
+            raise NotImplementedError("You pressed the secret buttons")
+   
     
     def _octave_up_key(self, pressed: bool) -> None:
         # On an octave up press shift octave up
